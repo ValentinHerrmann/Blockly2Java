@@ -120,7 +120,7 @@ export function getType(var_type) {
 };*/
 
 //returns variable type by searching for usage context.
-export function getVariableType(workSpace, varId) {
+export function getVariableType(workSpace, varId, useCompares) {
   //if the variable is used for a forLoop, it's an int
   let blocks = workSpace.getBlocksByType('controls_for',true);
   for (let i = 0; i < blocks.length; i++) {
@@ -159,7 +159,10 @@ export function getVariableType(workSpace, varId) {
       if (blocks[i].getParent() != null) {
         //logic compares need to be handled differently if they are a parent Block
         if (blocks[i].getParent().type === 'logic_compare') {
-          return 'float'
+          if(useCompares)
+          {
+            return compareControl(workSpace, blocks[i].getParent(), varId)
+          }
         }
         //control if it is used to set a variable. if yes, use that type
         if (blocks[i].getParent().type === 'variables_set') {
@@ -177,13 +180,39 @@ export function getVariableType(workSpace, varId) {
   }
   for (let i = 0;i < vars.length; i++)
   {
-    varType = getVariableType(workSpace, vars[i]);
+    varType = getVariableType(workSpace, vars[i], true);
     if(varType !== 'var') {
       return varType;
     }
   }
   return varType;
 };
+
+//takes a logic_compare block and checks what is compared
+//only to be used by the getVarType function
+export function compareControl(workSpace, block, varId) {
+  if(block.type !== 'logic_compare') {
+    return null;
+  }
+
+  let left = block.getInputTargetBlock('A');
+  let right = block.getInputTargetBlock('B');
+  if(left === null || right === null){
+    return 'var';
+  }
+  else if(left.type === 'variables_get' && left.getFieldValue('VAR') === varId) {
+    if(right.type === 'variables_get'){
+      return getVariableType(workSpace, right.getFieldValue('VAR'), false);
+    }
+    return getType(right.type);
+  }
+  else if(right.type === 'variables_get' && right.getFieldValue('VAR') === varId){
+    if(left.type === 'variables_get'){
+      return getVariableType(workSpace, left.getFieldValue('VAR'), false);
+    }
+    return getType(left.type);
+  }
+}
 
 /**
  * JavaScript code generator class.
@@ -339,7 +368,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
       if(!par) {
         let name = this.nameDB_.getName(variables[i].getId(), Blockly.Names.NameType.VARIABLE);
-        let type = getVariableType(workspace, variables[i].getId());
+        let type = getVariableType(workspace, variables[i].getId(), true);
         let definition = def_map.get(type);
         if(type === 'var')
         {
