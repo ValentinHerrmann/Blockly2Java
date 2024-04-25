@@ -9,7 +9,8 @@ import * as Blockly from 'blockly';
 // import {forBlock} from './generators/java';
 import {javaGenerator, warningNote} from './generators/java';
 import {save, load} from './serialization';
-import {toolbox} from './toolbox';
+import {toolbox as unused} from './toolbox';
+import {toolbox} from './toolboxGrade9';
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
 
