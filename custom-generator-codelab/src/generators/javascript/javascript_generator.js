@@ -79,7 +79,7 @@ export function getType(var_type) {
     case 'lists_length': case 'lists_getIndex': case 'text_length': case 'text_indexOf':
       return TYPES.INTEGER;
     case 'colour_picker': case 'colour_random': case 'colour_rgb': case 'colour_blend':
-    case 'text': case 'text_multiline': case 'text_join': case 'text_charAt': case 'text_getSubstring': case 'text_changeCase': case 'text_trim':
+    case 'text': case 'text_multiline': case 'text_join': case 'text_charAt': case 'text_getSubstring': case 'text_changeCase': case 'text_trim': case 'text_print':
       return TYPES.STRING;
     case 'math_number': case 'math_arithmetic': case 'math_single': case 'math_trig': case 'math_constant': case 'math_number_property': case 'math_round': case 'math_on_list': case 'math_modulo': case 'math_constrain': case 'math_random_int': case 'math_random_float':
       return TYPES.FLOAT;
@@ -313,14 +313,15 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
           this.nameDB_.getName(devVarList[i], Blockly.Names.NameType.DEVELOPER_VARIABLE));
     }
 
+
     let def_map = new Map();
-    def_map.set(TYPES.BOOLEAN, "");
-    def_map.set(TYPES.INTEGER, "");
-    def_map.set(TYPES.STRING, "");
-    def_map.set(TYPES.FLOAT, "");
-    def_map.set(TYPES.LIST, "");
-    def_map.set(TYPES.OBJECT, "");
-    def_map.set(TYPES.UNKNOWN, "");
+    def_map.set(TYPES.BOOLEAN, []);
+    def_map.set(TYPES.INTEGER, []);
+    def_map.set(TYPES.STRING, []);
+    def_map.set(TYPES.FLOAT, []);
+    def_map.set(TYPES.LIST, []);
+    def_map.set(TYPES.OBJECT, []);
+    def_map.set(TYPES.UNKNOWN, []);
 
 
     // Add user variables, but only ones that are being used.
@@ -370,23 +371,35 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         let name = this.nameDB_.getName(variables[i].getId(), Blockly.Names.NameType.VARIABLE);
         let type = getVariableType(workspace, variables[i].getId(), true);
         let definition = def_map.get(type);
+
+
         if(type === 'var')
         {
           definition += type + ' ' + name + ' = 0;\n';
         }
+        else
+        {
+          definition.push(type + " " + name);
+        }
+        /*
         else if (definition === "") {
           definition = type + " " + name;
         } else {
           definition += ", " + name;
-        }
+        }*/
         def_map.set(type, definition);
       }
     }
 
     let variable_definitions = "";
-    for (let [key, value] of def_map) {
-      if (value !== "" && key !== 'var') {
-        variable_definitions += value + ";\n";
+    for (let [key, value] of def_map) 
+    {
+      if (value.length > 0 && key !== 'var') 
+      {
+        for(let v of value)
+        {
+          variable_definitions += v + ";\n";
+        }
       }
       if(key === 'var')
       {
