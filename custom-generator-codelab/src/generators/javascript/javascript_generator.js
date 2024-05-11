@@ -65,7 +65,7 @@ export const TYPES = {
   BOOLEAN: 'boolean',
   INTEGER: 'int',
   STRING: 'String',
-  FLOAT: 'float',
+  FLOAT: 'double',
   LIST: 'List<Object>',
   OBJECT: 'Object',
   UNKNOWN: 'var',
