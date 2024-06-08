@@ -192,7 +192,7 @@ export function math_change(block, generator) {
   // Add to a variable in place.
   const argument0 = generator.valueToCode(block, 'DELTA', Order.ADDITION) || '0';
   const varName = generator.getVariableName(block.getFieldValue('VAR'));
-  return `${varName} = (${varName} instanceof Number ? ${varName}.intValue() : 0) + ${argument0};\n`;
+  return `${varName} += ${argument0};\n`;
 }
 
 
