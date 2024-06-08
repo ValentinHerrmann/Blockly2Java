@@ -65,7 +65,7 @@ export const TYPES = {
   BOOLEAN: 'boolean',
   INTEGER: 'int',
   STRING: 'String',
-  FLOAT: 'double',
+  DOUBLE: 'double',
   LIST: 'List<Object>',
   OBJECT: 'Object',
   UNKNOWN: 'var',
@@ -74,16 +74,53 @@ export const TYPES = {
 //converts a block type into a variable type
 export function getType(var_type) {
   switch (var_type) {
-    case 'logic_compare': case 'logic_operation': case 'logic_negate': case 'logic_boolean': case 'text_isEmpty': case 'lists_isEmpty': case 'controls_if':
+    case 'logic_compare': 
+    case 'logic_operation': 
+    case 'logic_negate': 
+    case 'logic_boolean': 
+    case 'text_isEmpty': 
+    case 'lists_isEmpty': 
+    case 'controls_if':
       return TYPES.BOOLEAN;
-    case 'lists_length': case 'lists_getIndex': case 'text_length': case 'text_indexOf':
+    case 'lists_length': 
+    case 'lists_getIndex': 
+    case 'text_length': 
+    case 'text_indexOf':
+    case 'math_random_int':
       return TYPES.INTEGER;
-    case 'colour_picker': case 'colour_random': case 'colour_rgb': case 'colour_blend':
-    case 'text': case 'text_multiline': case 'text_join': case 'text_charAt': case 'text_getSubstring': case 'text_changeCase': case 'text_trim': case 'text_print':
+    case 'colour_picker': 
+    case 'colour_random': 
+    case 'colour_rgb': 
+    case 'colour_blend':
+    case 'text': 
+    case 'text_multiline': 
+    case 'text_join': 
+    case 'text_charAt': 
+    case 'text_getSubstring': 
+    case 'text_changeCase': 
+    case 'text_trim': 
+    case 'text_print':
+    case 'text_append':
       return TYPES.STRING;
-    case 'math_number': case 'math_arithmetic': case 'math_single': case 'math_trig': case 'math_constant': case 'math_number_property': case 'math_round': case 'math_on_list': case 'math_modulo': case 'math_constrain': case 'math_random_int': case 'math_random_float':
-      return TYPES.FLOAT;
-    case 'lists_create_empty': case 'lists_create_with': case 'lists_repeat': case 'lists_getSublist': case 'lists_split': case 'lists_sort':
+    case 'math_number': 
+    case 'math_arithmetic': 
+    case 'math_single': 
+    case 'math_trig': 
+    case 'math_constant': 
+    case 'math_number_property': 
+    case 'math_round': 
+    case 'math_on_list': 
+    case 'math_modulo': 
+    case 'math_constrain':  
+    case 'math_random_float': 
+    case 'math_change':
+      return TYPES.DOUBLE;
+    case 'lists_create_empty': 
+    case 'lists_create_with': 
+    case 'lists_repeat': 
+    case 'lists_getSublist': 
+    case 'lists_split': 
+    case 'lists_sort':
       return TYPES.LIST;
     case 'logic_null':
       return TYPES.OBJECT;
@@ -318,7 +355,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     def_map.set(TYPES.BOOLEAN, []);
     def_map.set(TYPES.INTEGER, []);
     def_map.set(TYPES.STRING, []);
-    def_map.set(TYPES.FLOAT, []);
+    def_map.set(TYPES.DOUBLE, []);
     def_map.set(TYPES.LIST, []);
     def_map.set(TYPES.OBJECT, []);
     def_map.set(TYPES.UNKNOWN, []);
@@ -375,7 +412,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
         if(type === 'var')
         {
-          definition += type + ' ' + name + ' = 0;\n';
+          definition += 'double ' + name + ' = 0; \n';
         }
         else
         {
