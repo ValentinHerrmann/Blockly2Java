@@ -92,7 +92,8 @@ export function text_join(block, generator) {
         elements[i] = generator.valueToCode(block, 'ADD' + i,
             Order.NONE) || "\"\"";
       }
-      const code = "String.join(\"\", Arrays.asList(" + elements.join(',') + "))";
+      const code = elements.join('+');
+      //const code = "String.join(\"\", Arrays.asList(" + elements.join(',') + "))";
       return [code, Order.FUNCTION_CALL];
     }
   }

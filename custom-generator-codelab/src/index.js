@@ -44,11 +44,16 @@ const runCode = () => {
       }
   }
   code = codeLines.join("\n");
+  code = code.replaceAll('    // Describe this function...\n','');
+  if(codePrefix === '')
+  {
+    codePrefix = 'import java.utils.*; \n\npublic class MeineKlasse { \n'
+  }
   code = codePrefix + code + '}';
 
   if(codeSplitByFirstWarning.length > 1)
   {
-    codeDiv.innerText = code + "\n\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
+    codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
   }
   else
   {
