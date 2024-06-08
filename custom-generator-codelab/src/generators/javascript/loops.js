@@ -78,22 +78,29 @@ export function controls_for(block, generator) {
   let branch = generator.statementToCode(block, 'DO');
   branch = generator.addLoopTrap(branch, block);
   let code;
-  if (Blockly.utils.string.isNumber(argument0) && Blockly.utils.string.isNumber(argument1) &&
-      Blockly.utils.string.isNumber(increment)) {
-    // All arguments are simple numbers.
-    const up = Number(argument0) <= Number(argument1);
-    code = 'for (' + variable0 + ' = ' + argument0 + '; ' + variable0 +
-        (up ? ' < ' : ' > ') + argument1 + '; ' + variable0;
-    const step = Number(increment); //Math.abs(Number(increment));
-    if (step === 1) {
-      code += '++'; // up ? '++' : '--';
-    } else if (step === -1) {
-      code += '--';
-    } else {
-      code += (step >= 0 ? ' += ' : ' -= ') + Math.abs(step);
-    }
+
+
+  const up = Number(argument0) <= Number(argument1);
+  code = 'for (int ' + variable0 + ' = ' + argument0 + '; ' + variable0 +
+      (up ? ' < ' : ' > ') + argument1 + '; ' + variable0;
+
+  var inc = '';
+  const step = Number(increment); //Math.abs(Number(increment));
+  if (step === 1) { inc += '++'; } 
+  else if (step === -1) { inc += '--'; } 
+  else if (!Blockly.utils.string.isNumber(increment)) { 
+    inc += ' += ' + increment; } 
+  else {
+    inc += (step < 0 ? ' -= ' : ' += ') + Math.abs(step);
+  }
+
+  if (Blockly.utils.string.isNumber(argument0) && Blockly.utils.string.isNumber(argument1)) 
+  {    
+    code += inc;
     code += ') {\n' + branch + '}\n';
-  } else {
+  } 
+  else 
+  {
     code = '';
     // Cache non-trivial values to variables to prevent repeated look-ups.
     let startVar = argument0;
@@ -112,18 +119,18 @@ export function controls_for(block, generator) {
     // changes during loop execution.
     const incVar = generator.nameDB_.getDistinctName(
         variable0 + '_inc', Blockly.Names.NameType.VARIABLE);
-    code += 'int ' + incVar + ' = ';
-    if (Blockly.utils.string.isNumber(increment)) {
-      code += /*Math.abs(*/increment/*)*/ + ';\n';
-    } else {
-      code += 'Math.abs(' + increment + ');\n';
-    }
-    code += 'if (' + startVar + ' > ' + endVar + ') {\n';
-    code += generator.INDENT + incVar + ' = -' + incVar + ';\n';
-    code += '}\n';
-    code += 'for (' + variable0 + ' = ' + startVar + '; ' + incVar +
-        ' >= 0 ? ' + variable0 + ' <= ' + endVar + ' : ' + variable0 +
-        ' >= ' + endVar + '; ' + variable0 + ' += ' + incVar + ') {\n' +
+
+    var comparison = ' != ';
+    if(Blockly.utils.string.isNumber(increment))
+      {
+        comparison = Number(increment) < 0 ? ' > ' : ' < '
+      }
+        
+    const cast = Blockly.utils.string.isNumber(startVar) ? '' : '(int)';
+    code += 
+    'for (int ' + variable0 + ' = ' + cast + startVar + '; ' + 
+        variable0 + comparison + endVar + '; ' + 
+        variable0 + inc + ') {\n' +
         branch + '}\n';
   }
   return code;
