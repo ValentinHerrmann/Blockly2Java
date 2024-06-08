@@ -68,6 +68,7 @@ export const TYPES = {
   DOUBLE: 'double',
   LIST: 'List<Object>',
   OBJECT: 'Object',
+  FORINT: 'forint',
   UNKNOWN: 'var',
 };
 
@@ -88,6 +89,19 @@ export function getType(var_type) {
     case 'text_indexOf':
     case 'math_random_int':
       return TYPES.INTEGER;
+    case 'math_number': 
+    case 'math_arithmetic': 
+    case 'math_single': 
+    case 'math_trig': 
+    case 'math_constant': 
+    case 'math_number_property': 
+    case 'math_round': 
+    case 'math_on_list': 
+    case 'math_modulo': 
+    case 'math_constrain':  
+    case 'math_random_float': 
+    case 'math_change':
+        return TYPES.DOUBLE;
     case 'colour_picker': 
     case 'colour_random': 
     case 'colour_rgb': 
@@ -102,19 +116,6 @@ export function getType(var_type) {
     case 'text_print':
     case 'text_append':
       return TYPES.STRING;
-    case 'math_number': 
-    case 'math_arithmetic': 
-    case 'math_single': 
-    case 'math_trig': 
-    case 'math_constant': 
-    case 'math_number_property': 
-    case 'math_round': 
-    case 'math_on_list': 
-    case 'math_modulo': 
-    case 'math_constrain':  
-    case 'math_random_float': 
-    case 'math_change':
-      return TYPES.DOUBLE;
     case 'lists_create_empty': 
     case 'lists_create_with': 
     case 'lists_repeat': 
@@ -162,12 +163,12 @@ export function getVariableType(workSpace, varId, useCompares) {
   let blocks = workSpace.getBlocksByType('controls_for',true);
   for (let i = 0; i < blocks.length; i++) {
     if(blocks[i].getFieldValue('VAR') === varId) {
-      return TYPES.INTEGER;
+      return TYPES.FORINT;
     }
   }
 
   let varType = 'var'
-  const vars = [];
+  const varsAssignedToThis = [];
   let c = 0;
   //search if the variable is ever set
   blocks = workSpace.getBlocksByType('variables_set',true);
@@ -176,8 +177,9 @@ export function getVariableType(workSpace, varId, useCompares) {
       if (blocks[i].getInputTargetBlock('VALUE') != null) {
         //control if it's set to another variable- if yes, use its type.
         if(blocks[i].getInputTargetBlock('VALUE').type === 'variables_get') {
+
           if(blocks[i].getInputTargetBlock('VALUE').getFieldValue('VAR') !== varId) {
-            vars[c] = blocks[i].getInputTargetBlock('VALUE').getFieldValue('VAR');
+            varsAssignedToThis[c] = blocks[i].getInputTargetBlock('VALUE').getFieldValue('VAR');
             c++;
           }
         }
@@ -189,6 +191,8 @@ export function getVariableType(workSpace, varId, useCompares) {
       }
     }
   }
+  const varsAssignedFromThis = [];
+  c = 0;
   //search if the variable is ever used
   blocks = workSpace.getBlocksByType('variables_get',true);
   for (let i = 0; i < blocks.length; i++) {
@@ -204,7 +208,7 @@ export function getVariableType(workSpace, varId, useCompares) {
         //control if it is used to set a variable. if yes, use that type
         if (blocks[i].getParent().type === 'variables_set') {
           if(blocks[i].getParent().getFieldValue('VAR') !== varId) {
-            vars[c] = blocks[i].getParent().getFieldValue('VAR');
+            varsAssignedFromThis[c] = blocks[i].getParent().getFieldValue('VAR');
             c++;
           }
         }
@@ -215,9 +219,24 @@ export function getVariableType(workSpace, varId, useCompares) {
       }
     }
   }
-  for (let i = 0;i < vars.length; i++)
+  for (let i = 0;i < varsAssignedToThis.length; i++)
   {
-    varType = getVariableType(workSpace, vars[i], true);
+    varType = getVariableType(workSpace, varsAssignedToThis[i], true);
+    alert(varId + '  To this: ' + varType);
+    if(varType === 'forint') {
+      return 'int';
+    }
+    if(varType !== 'var') {
+      return varType;
+    }
+  }
+  for (let i = 0;i < varsAssignedFromThis.length; i++)
+  {
+    varType = getVariableType(workSpace, varsAssignedFromThis[i], true);
+    alert(varId + '  From this: ' + varType);
+    if(varType === 'forint') {
+      return 'int';
+    }
     if(varType !== 'var') {
       return varType;
     }
@@ -358,6 +377,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     def_map.set(TYPES.DOUBLE, []);
     def_map.set(TYPES.LIST, []);
     def_map.set(TYPES.OBJECT, []);
+    def_map.set(TYPES.FORINT, []);
     def_map.set(TYPES.UNKNOWN, []);
 
 
@@ -412,18 +432,16 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
         if(type === 'var')
         {
-          definition += 'double ' + name + ' = 0; \n';
+          definition.push('double ' + name);
+        }
+        if(type === 'forint')
+        {
+          definition.push('int ' + name);
         }
         else
         {
-          definition.push(type + " " + name);
+          definition.push(type + ' ' + name);
         }
-        /*
-        else if (definition === "") {
-          definition = type + " " + name;
-        } else {
-          definition += ", " + name;
-        }*/
         def_map.set(type, definition);
       }
     }
@@ -431,16 +449,12 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     let variable_definitions = "";
     for (let [key, value] of def_map) 
     {
-      if (value.length > 0 && key !== 'var') 
+      if (value.length > 0) 
       {
         for(let v of value)
         {
-          variable_definitions += v + ";\n";
+          variable_definitions += 'private ' + v + ";\n";
         }
-      }
-      if(key === 'var')
-      {
-        variable_definitions += value;
       }
     }
     this.definitions_['variables'] = variable_definitions;
