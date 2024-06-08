@@ -83,12 +83,14 @@ export function controls_for(block, generator) {
     // All arguments are simple numbers.
     const up = Number(argument0) <= Number(argument1);
     code = 'for (' + variable0 + ' = ' + argument0 + '; ' + variable0 +
-        (up ? ' <= ' : ' >= ') + argument1 + '; ' + variable0;
-    const step = Math.abs(Number(increment));
+        (up ? ' < ' : ' > ') + argument1 + '; ' + variable0;
+    const step = Number(increment); //Math.abs(Number(increment));
     if (step === 1) {
-      code += up ? '++' : '--';
+      code += '++'; // up ? '++' : '--';
+    } else if (step === -1) {
+      code += '--';
     } else {
-      code += (up ? ' += ' : ' -= ') + step;
+      code += (step >= 0 ? ' += ' : ' -= ') + Math.abs(step);
     }
     code += ') {\n' + branch + '}\n';
   } else {
@@ -112,7 +114,7 @@ export function controls_for(block, generator) {
         variable0 + '_inc', Blockly.Names.NameType.VARIABLE);
     code += 'int ' + incVar + ' = ';
     if (Blockly.utils.string.isNumber(increment)) {
-      code += Math.abs(increment) + ';\n';
+      code += /*Math.abs(*/increment/*)*/ + ';\n';
     } else {
       code += 'Math.abs(' + increment + ');\n';
     }
