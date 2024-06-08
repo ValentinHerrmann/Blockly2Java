@@ -244,6 +244,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   return varType;
 };
 
+
 //takes a logic_compare block and checks what is compared
 //only to be used by the getVarType function
 export function compareControl(workSpace, block, varId) {
