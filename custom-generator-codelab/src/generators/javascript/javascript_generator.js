@@ -222,7 +222,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   for (let i = 0;i < varsAssignedToThis.length; i++)
   {
     varType = getVariableType(workSpace, varsAssignedToThis[i], true);
-    alert(varId + '  To this: ' + varType);
+    //alert(varId + '  To this: ' + varType);
     if(varType === 'forint') {
       return 'int';
     }
@@ -233,7 +233,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   for (let i = 0;i < varsAssignedFromThis.length; i++)
   {
     varType = getVariableType(workSpace, varsAssignedFromThis[i], true);
-    alert(varId + '  From this: ' + varType);
+    //alert(varId + '  From this: ' + varType);
     if(varType === 'forint') {
       return 'int';
     }
