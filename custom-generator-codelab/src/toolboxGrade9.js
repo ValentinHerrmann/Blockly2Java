@@ -30,10 +30,11 @@ export const toolbox = {
                     'kind': 'block',
                     'type': 'logic_null',
                 },
-                {
-                    'kind': 'block',
-                    'type': 'logic_ternary',
-                },
+                // Type determination too complicated
+                //{
+                //    'kind': 'block',
+                //    'type': 'logic_ternary',
+                //},
             ],
         },
         {
@@ -67,7 +68,7 @@ export const toolbox = {
                             'shadow': {
                                 'type': 'math_number',
                                 'fields': {
-                                    'NUM': 1,
+                                    'NUM': 0,
                                 },
                             },
                         },
@@ -89,10 +90,11 @@ export const toolbox = {
                         },
                     },
                 },
+                /* Only useful if used with lists/arrays
                 {
                     'kind': 'block',
                     'type': 'controls_forEach',
-                },
+                },*/
                 {
                     'kind': 'block',
                     'type': 'controls_flow_statements',
@@ -225,6 +227,7 @@ export const toolbox = {
                         },
                     },
                 },
+                /* Con easily be replaced with native operations
                 {
                     'kind': 'block',
                     'type': 'math_constrain',
@@ -254,7 +257,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },
+                },*/
                 {
                     'kind': 'block',
                     'type': 'math_random_int',
@@ -281,6 +284,7 @@ export const toolbox = {
                     'kind': 'block',
                     'type': 'math_random_float',
                 },
+                /* WTF
                 {
                     'kind': 'block',
                     'type': 'math_atan2',
@@ -302,7 +306,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },
+                },*/
             ],
         },
         {
@@ -314,14 +318,16 @@ export const toolbox = {
                     'kind': 'block',
                     'type': 'text',
                 },
+                /* In Java unnötig
                 {
                     'kind': 'block',
                     'type': 'text_multiline',
-                },
+                },*/
                 {
                     'kind': 'block',
                     'type': 'text_join',
                 },
+                /* Type determination for item not working
                 {
                     'kind': 'block',
                     'type': 'text_append',
@@ -335,7 +341,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },
+                },*/
                 {
                     'kind': 'block',
                     'type': 'text_length',
@@ -350,6 +356,7 @@ export const toolbox = {
                         },
                     },
                 },
+                /* Can easily be replaced with String.length==0 (reduce number of blocks)
                 {
                     'kind': 'block',
                     'type': 'text_isEmpty',
@@ -363,7 +370,8 @@ export const toolbox = {
                             },
                         },
                     },
-                },
+                },*/
+                /* Type determination for item not working
                 {
                     'kind': 'block',
                     'type': 'text_indexOf',
@@ -382,7 +390,8 @@ export const toolbox = {
                             },
                         },
                     },
-                },
+                },*/
+                /* Too complicated if char not already known (if not, this is basically a substring)
                 {
                     'kind': 'block',
                     'type': 'text_charAt',
@@ -393,7 +402,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },
+                },*/
                 {
                     'kind': 'block',
                     'type': 'text_getSubstring',
@@ -488,11 +497,12 @@ export const toolbox = {
                         "TEXT": {
                             "shadow": {
                                 "type": "text",
-                                "fields": {"TEXT": "abc"}
+                                "fields": { "TEXT": "abc" }
                             }
                         }
                     }
                 },
+                /* Type determination too complicated and uses gui --> replace with scanner when reusing
                 {
                     "kind": "BLOCK",
                     "type": "text_prompt_ext",
@@ -504,7 +514,7 @@ export const toolbox = {
                             }
                         }
                     }
-                },
+                },*/
             ],
         },
         {
