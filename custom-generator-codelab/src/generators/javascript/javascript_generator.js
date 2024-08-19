@@ -193,6 +193,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   }
   const varsAssignedFromThis = [];
   c = 0;
+
   //search if the variable is ever used
   blocks = workSpace.getBlocksByType('variables_get',true);
   for (let i = 0; i < blocks.length; i++) {
