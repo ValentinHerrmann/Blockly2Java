@@ -368,7 +368,6 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     let c = 0;
     // Iterate through every block and add each variable to the list.
     for (let i = 0; i < blocks.length; i++) {
-      console.log(blocks[i].type + ' attached to ' + blocks[i].getRootBlock().type);
       if((blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
           blocks[i].getRootBlock().type === 'procedures_defreturn') &&
         blocks[i].type !== 'procedures_defnoreturn' &&
@@ -382,7 +381,6 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
             if (id) {
               variables[c] = variable;
               c++;
-              console.log(variable.name);
             }
           }
         }
