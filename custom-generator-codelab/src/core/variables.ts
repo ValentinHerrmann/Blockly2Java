@@ -39,13 +39,16 @@ export function allUsedVarModels(ws: Workspace): VariableModel[] {
   const variables = new Set<VariableModel>();
   // Iterate through every block and add each variable to the set.
   for (let i = 0; i < blocks.length; i++) {
-    const blockVariables = blocks[i].getVarModels();
-    if (blockVariables) {
-      for (let j = 0; j < blockVariables.length; j++) {
-        const variable = blockVariables[j];
-        const id = variable.getId();
-        if (id) {
-          variables.add(variable);
+    if(blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
+        blocks[i].getRootBlock().type === 'procedures_defreturn') {
+      const blockVariables = blocks[i].getVarModels();
+      if (blockVariables) {
+        for (let j = 0; j < blockVariables.length; j++) {
+          const variable = blockVariables[j];
+          const id = variable.getId();
+          if (id) {
+            variables.add(variable);
+          }
         }
       }
     }

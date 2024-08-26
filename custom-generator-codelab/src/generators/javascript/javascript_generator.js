@@ -101,6 +101,7 @@ export function getType(var_type) {
     case 'math_constrain':  
     case 'math_random_float': 
     case 'math_change':
+    case 'controls_repeat_ext':
         return TYPES.DOUBLE;
     case 'colour_picker': 
     case 'colour_random': 
@@ -132,30 +133,6 @@ export function getType(var_type) {
   return TYPES.UNKNOWN;
 }
 
-/*function getVariableTypes(ws) {
-  const varTypes = new Map();
-  const blocks = ws.getAllBlocks(false);
-  // Iterate through every block and add each variable to the set.
-  for (let i = 0; i < blocks.length; i++) {
-    const blockVariables = blocks[i].getVarModels();
-    if (blocks[i].type === 'variables_set' && blocks[i].getInputTargetBlock('VALUE') != null) {
-      console.log("Block type: " + blocks[i].type + ", " + blocks[i].getInputTargetBlock('VALUE').type);
-      const var_type = blocks[i].getInputTargetBlock('VALUE').type;
-      varTypes.set(blocks[i].getFieldValue('VAR'), getType(var_type));
-    } else if (blocks[i].type === 'variables_get') {
-
-    } else if (blocks[i].type === 'lists_create_with') {
-
-    }
-    if (blockVariables) {
-      for (let j = 0; j < blockVariables.length; j++) {
-        const variable = blockVariables[j];
-        const id = variable.getId();
-      }
-    }
-  }
-  return varTypes;
-};*/
 
 //returns variable type by searching for usage context.
 export function getVariableType(workSpace, varId, useCompares) {
@@ -183,8 +160,8 @@ export function getVariableType(workSpace, varId, useCompares) {
             c++;
           }
         }
-        const var_type = blocks[i].getInputTargetBlock('VALUE').type;
-        varType = getType(var_type);
+        const blockType = blocks[i].getInputTargetBlock('VALUE').type;
+        varType = getType(blockType);
       }
       if(varType !== 'var') {
         return varType;
@@ -193,6 +170,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   }
   const varsAssignedFromThis = [];
   c = 0;
+
   //search if the variable is ever used
   blocks = workSpace.getBlocksByType('variables_get',true);
   for (let i = 0; i < blocks.length; i++) {
@@ -219,6 +197,8 @@ export function getVariableType(workSpace, varId, useCompares) {
       }
     }
   }
+
+
   for (let i = 0;i < varsAssignedToThis.length; i++)
   {
     varType = getVariableType(workSpace, varsAssignedToThis[i], true);
@@ -382,15 +362,35 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     def_map.set(TYPES.UNKNOWN, []);
 
 
-    // Add user variables, but only ones that are being used.
-    const variables = Blockly.Variables.allUsedVarModels(workspace);
+    // Add user variables, but excludes untranslated, unused and parameters.
+    const blocks = workspace.getAllBlocks(false);
+    const variables = [];
+    let c = 0;
+    // Iterate through every block and add each variable to the list.
+    for (let i = 0; i < blocks.length; i++) {
+      if((blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
+          blocks[i].getRootBlock().type === 'procedures_defreturn') &&
+        blocks[i].type !== 'procedures_defnoreturn' &&
+        blocks[i].type !== 'procedures_defreturn' &&
+        blocks[i].type !== 'controls_for') {
+        const blockVariables = blocks[i].getVarModels();
+        if (blockVariables) {
+          for (let j = 0; j < blockVariables.length; j++) {
+            const variable = blockVariables[j];
+            const id = variable.getId();
+            if (id) {
+              variables[c] = variable;
+              c++;
+            }
+          }
+        }
+      }
+    }
 
     // Find variables used as parameters or in foreach loops
-    const blocks = workspace.getAllBlocks(false);
-    workspace.getBlocksByType()
     let funcs = [];
     let params = [];
-    let c = 0;
+    c = 0;
 
     for(let b = 0; b < blocks.length; b++)
     {
