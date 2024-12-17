@@ -29,36 +29,9 @@ var codePrefix = '';
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
 const runCode = () => {
+  
   let code = javaGenerator.workspaceToCode(ws);
-  let warning = '';
-
-  let codeSplitByFirstWarning = code.split("!!!",2)
-  code = codeSplitByFirstWarning[0];
-
-  let codeLines = code.split("\n");
-  for(let i=0; i<codeLines.length; i++)
-  {
-      if(codeLines[i] != "")
-      {
-        codeLines[i] = "    " + codeLines[i];
-      }
-  }
-  code = codeLines.join("\n");
-  code = code.replaceAll('    // Describe this function...\n','');
-  if(codePrefix === '')
-  {
-    codePrefix = 'import java.utils.*; \n\npublic class MeineKlasse { \n'
-  }
-  code = codePrefix + code + '}';
-
-  if(codeSplitByFirstWarning.length > 1)
-  {
-    codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
-  }
-  else
-  {
-    codeDiv.innerText = code;
-  }
+  code = globalCodeModification(code);
 
   postCode(code,"java").then(data => {
     console.log(data);
@@ -152,4 +125,36 @@ function getSavedXml() {
     xhttp.open("GET", url, true);
     console.log(">>> GET: " + url)
     xhttp.send();
+}
+
+function globalCodeModification(code) {
+  let codeSplitByFirstWarning = code.split("!!!",2)
+  code = codeSplitByFirstWarning[0];
+
+  let codeLines = code.split("\n");
+  for(let i=0; i<codeLines.length; i++)
+  {
+      if(codeLines[i] != "")
+      {
+        codeLines[i] = "    " + codeLines[i];
+      }
+  }
+
+  code = codeLines.join("\n");
+  code = code.replaceAll('    // Describe this function...\n','');
+  if(codePrefix === '')
+  {
+    codePrefix = 'import java.util.*; \n\npublic class MeineKlasse { \n'
+  }
+  code = codePrefix + code + '}';
+
+  if(codeSplitByFirstWarning.length > 1)
+  {
+    codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
+  }
+  else
+  {
+    codeDiv.innerText = code;
+  }
+  return code;
 }
