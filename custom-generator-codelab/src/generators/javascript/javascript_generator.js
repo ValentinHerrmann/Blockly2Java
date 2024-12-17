@@ -433,7 +433,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
         if(type === 'var')
         {
-          definition.push('double ' + name);
+          // TODO: investigate why this was here
+          //definition.push('double ' + name);
         }
         if(type === 'forint')
         {
@@ -448,13 +449,20 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     }
 
     let variable_definitions = "";
+    console.log(def_map);
     for (let [key, value] of def_map) 
     {
       if (value.length > 0) 
       {
-        for(let v of value)
+        let uniqueValues = [...new Set(value)];
+        for(let v of uniqueValues)
         {
-          variable_definitions += 'private ' + v + ";\n";
+          if(!v.includes('var ')){          
+            variable_definitions += 'private ' + v + ";\n";
+          }
+          else {
+            console.log('Variable ' + v + ' not defined');
+          }
         }
       }
     }
