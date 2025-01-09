@@ -148,13 +148,40 @@ function globalCodeModification(code) {
   }
   code = codePrefix + code + '}';
 
-  if(codeSplitByFirstWarning.length > 1)
+
+  let regex = 'public class [^\{]+';
+  let classHeader = code.match(regex);
+  if(classHeader != null)
   {
-    codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
+    classHeader = classHeader[0].replace('public class','').trim();
+    console.log("Class Header: " + classHeader);
   }
   else
   {
-    codeDiv.innerText = code;
+    console.log("Class Header not found");
   }
+  
+  let ctrMethod = code.match("public void " + classHeader + "\\(");
+  console.log(ctrMethod[0]);
+
+  code = code.replace("public void " + classHeader + "\\(", "");
+  console.log(code);
+
+
+
+
+
+  
+
+  if(codeSplitByFirstWarning.length > 1)
+    {
+      codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
+    }
+    else
+    {
+      codeDiv.innerText = code;
+    }
+
+
   return code;
 }
