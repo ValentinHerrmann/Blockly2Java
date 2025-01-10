@@ -130,25 +130,28 @@ function getSavedXml() {
 function globalCodeModification(code) {
   let codeSplitByFirstWarning = code.split("!!!",2)
   code = codeSplitByFirstWarning[0];
-
-  let codeLines = code.split("\n");
-  for(let i=0; i<codeLines.length; i++)
-  {
-      if(codeLines[i] != "")
-      {
-        codeLines[i] = "    " + codeLines[i];
-      }
-  }
-
-  code = codeLines.join("\n");
+  code = indentation(code);
   code = code.replaceAll('    // Describe this function...\n','');
-  if(codePrefix === '')
-  {
-    codePrefix = 'import java.util.*; \n\npublic class MeineKlasse { \n'
-  }
-  code = codePrefix + code + '}';
+
+  code = defaultCodePrefix(code);
+  code = constructors(code);
+  code = mainMethod(code);
+  
+  if(codeSplitByFirstWarning.length > 1)
+    {
+      codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
+    }
+    else
+    {
+      codeDiv.innerText = code;
+    }
 
 
+  return code;
+}
+
+
+function constructors(code){
   let regex = 'public class [^\{]+';
   let classHeader = code.match(regex);
   if(classHeader != null)
@@ -164,24 +167,35 @@ function globalCodeModification(code) {
   let ctrMethod = code.match("public void " + classHeader + "\\(");
   console.log(ctrMethod[0]);
 
-  code = code.replace("public void " + classHeader + "\\(", "");
+  code = code.replace("public void " + classHeader + "(", "public " + classHeader + "(");
   console.log(code);
 
+  return code;
+}
 
+function mainMethod(code) {
+  let mainMethod = 'public void main(';
+  code = code.replace(mainMethod, 'public static void main(');
+  return code;
+}
 
+function defaultCodePrefix(code) {
+  if(codePrefix === '')
+  {
+    codePrefix = 'import java.util.*; \n\npublic class MeineKlasse { \n'
+  }
+  return codePrefix + code + '}';
+}
 
-
-  
-
-  if(codeSplitByFirstWarning.length > 1)
-    {
-      codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
-    }
-    else
-    {
-      codeDiv.innerText = code;
-    }
-
-
+function indentation(code) {
+  let codeLines = code.split("\n");
+  for(let i=0; i<codeLines.length; i++)
+  {
+      if(codeLines[i] != "")
+      {
+        codeLines[i] = "    " + codeLines[i];
+      }
+  }
+  code = codeLines.join("\n");
   return code;
 }
