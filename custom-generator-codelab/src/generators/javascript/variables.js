@@ -27,7 +27,7 @@ export function variables_set(block, generator) {
   const varName = generator.getVariableName(block.getFieldValue('VAR'));
   if(argument0 === '')
     {
-      return '// ' + varName + ' = ' + argument0 + ';  // Wert fehlt --> wird ignoriert\n';
+      return '// ' + varName + ' = ' + argument0 + ';    // Wert fehlt\n';
     }
   // console.log("variables_set: " + varName + ' = ' + argument0 + ';\n');
   return varName + ' = ' + argument0 + ';\n';
