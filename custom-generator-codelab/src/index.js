@@ -32,15 +32,14 @@ const runCode = () => {
   
   let code = javaGenerator.workspaceToCode(ws);
   code = globalCodeModification(code);
-
-  postCode(code,"java").then(data => {
-    console.log(data);
-  });
-
+  console.log(code);
   
+  postCode(code,"java").then(data => {
+    console.log("Java Code successfully sent to BlueJ");
+  });
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
   postCode(dom,"xml").then(data => {
-    console.log(dom);
+    console.log("XML Code successfully sent to BlueJ");
   });
 
 };
@@ -129,31 +128,31 @@ function getSavedXml() {
 
 function globalCodeModification(code) {
   let codeSplitByFirstWarning = code.split("!!!",2)
-  code = codeSplitByFirstWarning[0];
-  code = indentation(code);
-  code = code.replaceAll('    // Describe this function...\n','');
 
-  code = defaultCodePrefix(code);
-  code = constructors(code);
-  code = mainMethod(code);
+  var modCode = codeSplitByFirstWarning[0];
+
+  modCode = indentation(modCode);
+  modCode = modCode.replaceAll('    // Describe this function...\n','');
+  modCode = defaultCodePrefix(modCode);
+  modCode = constructors(modCode);
+  modCode = mainMethod(modCode);
   
   if(codeSplitByFirstWarning.length > 1)
     {
-      codeDiv.innerText = code + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
+      codeDiv.innerText = modCode + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
     }
     else
     {
-      codeDiv.innerText = code;
+      codeDiv.innerText = modCode;
     }
-
-
-  return code;
+  console.log("Global code modification successful");
+  return modCode;
 }
 
 
-function constructors(code){
+function constructors(modCode){
   let regex = 'public class [^\{]+';
-  let classHeader = code.match(regex);
+  let classHeader = modCode.match(regex);
   if(classHeader != null)
   {
     classHeader = classHeader[0].replace('public class','').trim();
@@ -164,31 +163,28 @@ function constructors(code){
     console.log("Class Header not found");
   }
   
-  let ctrMethod = code.match("public void " + classHeader + "\\(");
-  console.log(ctrMethod[0]);
+  // let ctrMethod = modCode.match("public void " + classHeader + "\\(");
 
-  code = code.replace("public void " + classHeader + "(", "public " + classHeader + "(");
-  console.log(code);
-
-  return code;
+  modCode = modCode.replace("public void " + classHeader + "(", "public " + classHeader + "(");
+  return modCode;
 }
 
-function mainMethod(code) {
+function mainMethod(modCode) {
   let mainMethod = 'public void main(';
-  code = code.replace(mainMethod, 'public static void main(');
-  return code;
+  modCode = modCode.replace(mainMethod, 'public static void main(');
+  return modCode;
 }
 
-function defaultCodePrefix(code) {
+function defaultCodePrefix(modCode) {
   if(codePrefix === '')
   {
     codePrefix = 'import java.util.*; \n\npublic class MeineKlasse { \n'
   }
-  return codePrefix + code + '}';
+  return codePrefix + modCode + '}';
 }
 
-function indentation(code) {
-  let codeLines = code.split("\n");
+function indentation(modCode) {
+  let codeLines = modCode.split("\n");
   for(let i=0; i<codeLines.length; i++)
   {
       if(codeLines[i] != "")
@@ -196,6 +192,6 @@ function indentation(code) {
         codeLines[i] = "    " + codeLines[i];
       }
   }
-  code = codeLines.join("\n");
-  return code;
+  modCode = codeLines.join("\n");
+  return modCode;
 }
