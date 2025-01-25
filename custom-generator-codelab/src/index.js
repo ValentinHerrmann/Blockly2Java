@@ -142,7 +142,7 @@ function globalCodeModification(code) {
   modCode = modCode.replaceAll('    // Describe this function...\n','');
   modCode = defaultCodePrefix(modCode);
   // modCode = constructors(modCode);
-  modCode = mainMethod(modCode);
+  // modCode = mainMethod(modCode);
   
   if(codeSplitByFirstWarning.length > 1)
     {

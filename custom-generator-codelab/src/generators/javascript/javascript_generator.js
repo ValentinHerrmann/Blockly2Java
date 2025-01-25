@@ -15,7 +15,6 @@ import * as Blockly from 'blockly/core';
 //import { block } from 'blockly/core/tooltip';
 // import type {Block} from '../../core/block.js';
 // import {CodeGenerator} from 'blockly/core/generator.js';
-// import {Names, NameType} from 'blockly/core/names.js';
 // import type {Workspace} from '../../core/workspace.js';
 // import {inputTypes} from 'blockly/core/inputs/input_types.js';
 
@@ -158,7 +157,12 @@ export function getType(var_type) {
 }
 
 
-
+export function adjustStaticName(name) {
+  if(name.startsWith('static_')) {
+    return name.replace('static_', '');
+  }
+  return name;
+}
 
 //returns variable type by searching for usage context.
 export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
@@ -462,39 +466,51 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
       if(!par) {
         let name = this.nameDB_.getName(variables[i].getId(), Blockly.Names.NameType.VARIABLE);
-        let type = getVariableType(workspace, variables[i].getId(), true);
-        let definition = def_map.get(type);
-
-
-        if(type === 'var')
+        let orgType = getVariableType(workspace, variables[i].getId(), true);
+        let type = orgType;
+        let definition = def_map.get(orgType);
+        
+        if(orgType === 'var')
         {
           // TODO: investigate why this was here
           //definition.push('double ' + name);
         }
-        if(type === 'forint')
+        if(orgType === 'forint')
         {
           definition.push('int ' + name);
         }
         else
         {
+          if(name.startsWith('static_'))
+          {
+            name = name.replace('static_', '');
+            type = 'static ' + orgType;
+          }
           definition.push(type + ' ' + name);
         }
-        def_map.set(type, definition);
+        def_map.set(orgType, definition);
       }
     }
 
     let variable_definitions = "";
-    //console.log("definition map");
-    //console.log(def_map);
-    for (let [key, value] of def_map) 
+    for (let [key, value] of def_map)
     {
       if (value.length > 0) 
       {
         let uniqueValues = [...new Set(value)];
         for(let v of uniqueValues)
         {
-          if(!v.includes('var ')){          
-            variable_definitions += 'private ' + v + ";\n";
+          if(!v.includes('var ')){
+            let comment = '\n'; 
+            let modifier = 'private ';
+            let varName = substringAfterLastSpace(v);
+            console.log('Variable: ' + varName + " | " + v);
+            console.log(variable_definitions);
+            if(variable_definitions.includes(" "+varName+";")) {
+              comment = "// Attribut doppelt! \n";
+              modifier = '//'+modifier;
+            }
+            variable_definitions += modifier + v + "; "+comment;
           }
           else {
             console.log('Variable ' + v + ' not defined');
@@ -524,6 +540,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     this.isInitialized = false;
 
     this.nameDB_.reset();
+    console.log(definitions);
     return definitions.join('\n\n') + '\n\n\n' + code;
   }
 
@@ -669,4 +686,14 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     }
     return at;
   }
+
+}
+
+
+function substringAfterLastSpace(str) {
+  let lastIndex = str.lastIndexOf(' ');
+  if (lastIndex === -1) {
+    return str; // Kein Leerzeichen gefunden, gesamte Zeichenkette zurückgeben
+  }
+  return str.substring(lastIndex + 1);
 }

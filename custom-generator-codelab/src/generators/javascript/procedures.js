@@ -11,7 +11,7 @@
 // Former goog.module ID: Blockly.JavaScript.procedures
 
 import { javascriptGenerator } from 'blockly/javascript.js';
-import {getType, getVariableType, Order, getClassName, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, Order, getClassName, TYPES, adjustStaticName} from './javascript_generator.js';
 import * as Blockly from "blockly";
 
 export function procedures_defreturn(block, generator) {
@@ -77,13 +77,12 @@ export function procedures_defreturn(block, generator) {
     }
   }
 
-  let retTypeVal = returnType + ' ';
-  if (returnType === 'void' && funcName === getClassName()) {
-    retTypeVal = '';
-    console.log("Class Name: " + getClassName());
-    //block.type = "__class__"+getClassName();
-  } 
-  let code = 'public ' + retTypeVal + funcName + '(' + args.join(', ') + ') {\n' + xfix1 +
+  let retTypeVal = ' ' + returnType + ' ';
+  if(funcName.startsWith('static_')){
+    retTypeVal = ' static' + retTypeVal;
+  }
+
+  let code = 'public' + retTypeVal + adjustStaticName(funcName) + '(' + args.join(', ') + ') {\n' + xfix1 +
       loopTrap + branch + xfix2 + returnValue + '}';
   code = generator.scrub_(block, code);
   // Add % so as not to collide with helper functions in definitions list.

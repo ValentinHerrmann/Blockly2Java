@@ -191,7 +191,7 @@ export function math_number_property(block, generator) {
 export function math_change(block, generator) {
   // Add to a variable in place.
   const argument0 = generator.valueToCode(block, 'DELTA', Order.ADDITION) || '0';
-  const varName = generator.getVariableName(block.getFieldValue('VAR'));
+  const varName = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   return `${varName} += ${argument0};\n`;
 }
 
