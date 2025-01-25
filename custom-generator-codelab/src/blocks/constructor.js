@@ -29,13 +29,9 @@ Blockly.Blocks["defconstructor"] = {
       var name = this.arguments_[i];
       var argument = document.createElement('arg');
 
-      //console.log("Name: " + name);
-      //console.log("Prefix: " + prefix);
-
       if (!name.startsWith(prefix)) {
         name = prefix + name;
       }
-      //console.log("Name: " + name);
 
       this.arguments_[i] = name;
       argument.setAttribute('name', name);
@@ -47,14 +43,23 @@ Blockly.Blocks["defconstructor"] = {
       argument.setAttribute('varid', id);
       container.appendChild(argument);
     }
+    this.updateShape_();
     return container;
   },
 
   domToMutation: function (xmlElement) {
     this.arguments_ = [];
+
     for (var i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
       if (childNode.nodeName.toLowerCase() == 'arg') {
-        this.arguments_.push(childNode.getAttribute('name'));
+        var name = childNode.getAttribute('name');
+        if (!name.startsWith(prefix)) {
+          name = prefix + name;
+        }
+        this.arguments_.push(name);
+        if(childNode) {
+          childNode.setAttribute('name', name);
+        }
       }
     }
     this.updateShape_();
@@ -79,7 +84,12 @@ Blockly.Blocks["defconstructor"] = {
     this.arguments_ = [];
     var connections = [];
     while (itemBlock) {
-      this.arguments_.push(itemBlock.getFieldValue('NAME'));
+      var name = itemBlock.getFieldValue('NAME');
+      if (!name.startsWith(prefix)) {
+        name = prefix + name;
+      }
+      itemBlock.setFieldValue(name, 'NAME');
+      this.arguments_.push(name);
       connections.push(itemBlock.valueConnection_);
       itemBlock = itemBlock.nextConnection &&
         itemBlock.nextConnection.targetBlock();
@@ -88,20 +98,22 @@ Blockly.Blocks["defconstructor"] = {
   },
 
   updateShape_: function () {
-    console.log(this.inputList);
     if (this.getInput('ARGUMENTS')) {
       this.removeInput('ARGUMENTS');
     }
-    //const topLine = this.getInput('TOP_LINE');
-    //console.log("topLine:", topLine);
-
     if (this.arguments_.length) {
+      console.log("Arguments: " + this.arguments_);
       let joinedArgs = this.arguments_.join(", ");
-      const topLine = this.getInput('TOP_LINE');
+      let topLine = this.getInput('TOP_LINE');
       if (topLine) {
         topLine.fieldRow = topLine.fieldRow.slice(0, 1);
         topLine.appendField("with: " + joinedArgs);
       }
+    }
+    else {
+      console.log("No arguments");
+      let topLine = this.getInput('TOP_LINE');
+      topLine.fieldRow = topLine.fieldRow.slice(0, 1);
     }
   },
   getVarModels: function() {
