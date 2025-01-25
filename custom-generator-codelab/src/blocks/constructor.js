@@ -202,7 +202,7 @@ Blockly.Blocks['callconstructor'] = {
         .appendField("Objekt erstellen");
     this.setPreviousStatement(false, null);
     this.setNextStatement(false, null);
-    this.setOutput(true,null);
+    this.setOutput(true, 'CLASS');
     this.setColour(230);
     this.setTooltip('');
     this.setHelpUrl('');

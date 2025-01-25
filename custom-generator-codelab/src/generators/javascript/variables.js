@@ -22,9 +22,12 @@ export function variables_get(block, generator) {
 
 export function variables_set(block, generator) {
   // Variable setter.
+  //console.log("variables_set: "+ block);
   const argument0 = generator.valueToCode(
                         block, 'VALUE', Order.ASSIGNMENT) || '';
+  //console.log("argument0: "+ argument0);                        
   const varName = generator.getVariableName(block.getFieldValue('VAR'));
+  //console.log("varName: "+ varName);       
   if(argument0 === '')
     {
       return '// ' + varName + ' = ' + argument0 + ';    // Wert fehlt\n';

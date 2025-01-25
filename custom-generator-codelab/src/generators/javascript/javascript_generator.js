@@ -12,11 +12,23 @@
 // Former goog.module ID: Blockly.JavaScript
 
 import * as Blockly from 'blockly/core';
+//import { block } from 'blockly/core/tooltip';
 // import type {Block} from '../../core/block.js';
 // import {CodeGenerator} from 'blockly/core/generator.js';
 // import {Names, NameType} from 'blockly/core/names.js';
 // import type {Workspace} from '../../core/workspace.js';
 // import {inputTypes} from 'blockly/core/inputs/input_types.js';
+
+
+let className = "MeineKlasse";
+
+export function setClassName(name) {
+  className = name;
+}
+
+export function getClassName() {
+  return className;
+}
 
 /**
  * Order of operation ENUMs.
@@ -70,16 +82,16 @@ export const TYPES = {
   OBJECT: 'Object',
   FORINT: 'forint',
   UNKNOWN: 'var',
-  CLASS: '__class__'
+  CLASS: getClassName()
 };
+
+
+export const validRoots = ['procedures_defnoreturn', 'procedures_defreturn', 'defconstructor'];
 
 //converts a block type into a variable type
 export function getType(var_type) {
-  if (var_type.startsWith("__class__")) {
-    console.log("Class type: " + var_type);
-    return TYPES.CLASS;
-    return var_type.substring(9); // Return the rest of var_type after "__class__"
-  }
+  console.log("getType: " + var_type);
+
   switch (var_type) {
     case 'logic_compare': 
     case 'logic_operation': 
@@ -132,6 +144,9 @@ export function getType(var_type) {
       return TYPES.LIST;
     case 'logic_null':
       return TYPES.OBJECT;
+    case 'CLASS':
+    case 'callconstructor':
+      return TYPES.CLASS;
     default:
       console.log("Unknown type: " + var_type);
       //return TYPES.OBJECT;
@@ -140,15 +155,7 @@ export function getType(var_type) {
   return TYPES.UNKNOWN;
 }
 
-let className = "MeineKlasse";
 
-export function setClassName(name) {
-  className = name;
-}
-
-export function getClassName() {
-  return className;
-}
 
 
 //returns variable type by searching for usage context.
@@ -353,6 +360,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
   init(workspace) {
     super.init(workspace);
 
+    console.log("Init Java Generator");
+
     if (!this.nameDB_) {
       this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
     } else {
@@ -381,6 +390,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     def_map.set(TYPES.OBJECT, []);
     def_map.set(TYPES.FORINT, []);
     def_map.set(TYPES.UNKNOWN, []);
+    def_map.set(TYPES.CLASS, []);
 
 
     // Add user variables, but excludes untranslated, unused and parameters.
@@ -389,14 +399,9 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     let c = 0;
     // Iterate through every block and add each variable to the list.
     for (let i = 0; i < blocks.length; i++) {
-      if(
-          (
-            blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
-            blocks[i].getRootBlock().type === 'procedures_defreturn'
-          ) &&
-          blocks[i].type !== 'procedures_defnoreturn' &&
-          blocks[i].type !== 'procedures_defreturn' &&
-          blocks[i].type !== 'controls_for') 
+      if( validRoots.includes(blocks[i].getRootBlock().type)
+          &&
+          !(validRoots.includes(blocks[i].type)))
         {
         const blockVariables = blocks[i].getVarModels();
         if (blockVariables) {
@@ -419,8 +424,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
     for(let b = 0; b < blocks.length; b++)
     {
-      if(blocks[b].type === 'procedures_defnoreturn' ||
-          blocks[b].type === 'procedures_defreturn' ||
+      if(validRoots.includes(blocks[b].type) ||
           blocks[b].type === 'controls_forEach')
       {
         funcs[c] = blocks[b];

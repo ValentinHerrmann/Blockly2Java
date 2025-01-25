@@ -15,10 +15,8 @@ import {getType, getVariableType, Order, getClassName, TYPES} from './javascript
 import * as Blockly from "blockly";
 
 export function defconstructor(block, generator) {
-    console.log("\n\nTRANSLATING DEF CONSTUCTUR");
   const funcName = getClassName(); //generator.getProcedureName(block.getFieldValue('NAME'));
   let xfix1 = '';
-  console.log(generator.STATEMENT_PREFIX);
   if (generator.STATEMENT_PREFIX) {
     xfix1 += generator.injectId(
         generator.STATEMENT_PREFIX, block);
@@ -37,9 +35,7 @@ export function defconstructor(block, generator) {
           generator.INFINITE_LOOP_TRAP, block),
         generator.INDENT);
   }
-  console.log("Loop Trap: " + loopTrap);
-  console.log("Statement to Code: " + generator.statementToCode(block, 'STACK'));
-  console.log("Block: " + block);
+  //console.log("Block: " + block);
   
 
   const branch = generator.statementToCode(block, 'STACK');
@@ -50,7 +46,7 @@ export function defconstructor(block, generator) {
   const args = [];
   //const variables = block.getVars();
   const variables = block.arguments_;
-  console.log("Variables: " + variables);
+  //console.log("Variables: " + variables);
 
   if(variables !== null) {
     let vars = block.getVarModels();
@@ -67,7 +63,7 @@ export function defconstructor(block, generator) {
       args[i] = paramTypes[i] + ' ' + variables[i];
     }
   }
-  console.log("Arguments: " + args);
+  //console.log("Arguments: " + args);
 
   let code = 'public ' + funcName + '(' + args.join(', ') + ') {\n' + xfix1 +
       loopTrap + branch + xfix2 + '}';
@@ -82,12 +78,12 @@ export function defconstructor(block, generator) {
 //export const procedures_defnoreturn = procedures_defreturn;
 
 export function callconstructor(block, generator) {
-  console.log("\n\nTRANSLATING CALL CONSTUCTUR");
+  //console.log("\n\nTRANSLATING CALL CONSTUCTUR");
   const funcName = getClassName(); //generator.getProcedureName(block.getFieldValue('NAME'));
-  console.log("Function Name: " + funcName);
+  //console.log("Function Name: " + funcName);
   const args = [];
   const variables = block.getVars();
-  console.log("Variables: " + variables);
+  //console.log("Variables: " + variables);
   for (let i = 0; i < variables.length; i++) {
     args[i] = generator.valueToCode(block, 'ARG' + i, Order.NONE) ||
         'null';

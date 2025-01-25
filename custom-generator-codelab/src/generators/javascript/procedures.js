@@ -15,10 +15,6 @@ import {getType, getVariableType, Order, getClassName, TYPES} from './javascript
 import * as Blockly from "blockly";
 
 export function procedures_defreturn(block, generator) {
-  // Define a procedure with a return value.
-  // console.log("Yippie");
-  // throw new Error("DUmmy")
-  //console.log("yeah");
   const funcName = generator.getProcedureName(block.getFieldValue('NAME'));
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
@@ -62,7 +58,7 @@ export function procedures_defreturn(block, generator) {
 
   const args = [];
   const variables = block.getVars();
-  console.log("Variables: " + variables.join(', '));
+  //console.log("Variables: " + variables.join(', '));
 
 
   if(variables !== null) {
