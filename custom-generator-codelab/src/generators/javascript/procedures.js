@@ -53,6 +53,9 @@ export function procedures_defreturn(block, generator) {
     {
       const id = block.getInputTargetBlock('RETURN').getFieldValue('VAR');
       returnType = getVariableType(ws, id, true);
+      if(returnType === 'var') {
+        returnType = 'Object';
+      }
     }
   }
 

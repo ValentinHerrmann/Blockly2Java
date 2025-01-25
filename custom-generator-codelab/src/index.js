@@ -18,6 +18,7 @@ import {toolbox} from './toolboxGrade9';
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
 import {ctrCount, setClassName, getClassName} from "./generators/javascript/javascript_generator";
+//import { exceptions } from 'blockly/core/icons.js';
 
 
 // Register the blocks and generator with Blockly
@@ -30,6 +31,7 @@ const codeDiv = document.getElementById('generatedCode').firstChild;
 const blocklyDiv = document.getElementById('blocklyDiv');
 export const ws = Blockly.inject(blocklyDiv, {toolbox});
 var codePrefix = '';
+var restFailCount = 0;
 // This function resets the code and output divs, shows the
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
@@ -97,7 +99,15 @@ async function postCode(code,typ) {
     {
       xhttp.setRequestHeader("Content-type", "text/java");
     }
-    xhttp.send(code);
+    try {
+      if(restFailCount < 20) {
+        xhttp.send(code);
+      }
+    }
+    catch (e) {
+      restFailCount++;
+      console.log(restFailCount + ". REST-Call failed: " + e);
+    }
 }
 
 
@@ -134,7 +144,16 @@ function getSavedXml() {
     };
     xhttp.open("GET", url, true);
     console.log(">>> GET: " + url)
-    xhttp.send();
+    
+    try {
+      if(restFailCount < 20) {
+        xhttp.send();
+      }
+    }
+    catch (e) {
+      restFailCount++;
+      console.log(restFailCount + ". REST-Call failed: " + e);
+    }
 }
 
 function globalCodeModification(code) {

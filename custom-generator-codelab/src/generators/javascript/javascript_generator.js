@@ -167,7 +167,7 @@ export function adjustStaticName(name) {
 //returns variable type by searching for usage context.
 export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
   if(recursionDeepness==10){
-    console.log("Get Variable Type at deepness: " + recursionDeepness);
+    console.log("Get Variable (try: " + (11-recursionDeepness) + "): " + varId);
   }
 
   //let varName = CodeGenerator.getVariableName(varId);
@@ -240,8 +240,6 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
   {
     let b = blocks[blockNr];
-    //console.log("Input list: "+b.inputList);
-    //console.log(b.arguments_);
 
     for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
     {
@@ -293,6 +291,8 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
     }
   }
 
+
+  
 
 
 
@@ -567,7 +567,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         for(let v of uniqueValues)
         {
           //console.log('Variable: ' + v);
-          if(!v.includes('var ')){
+          //if(v.includes('var ')){
+
             let comment = '\n'; 
             let modifier = 'private ';
             let varName = substringAfterLastSpace(v);
@@ -577,11 +578,12 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
               comment = "// Attribut doppelt! \n";
               modifier = '//'+modifier;
             }
+            v=v.replace('var ', 'Object ');
             variable_definitions += modifier + v + "; "+comment;
-          }
-          else {
-            console.log('Variable ' + v + ' not defined');
-          }
+          // }
+          // else {
+          //   console.log('Variable ' + v + ' not defined');
+          // }
         }
       }
     }
