@@ -12,9 +12,10 @@
 // Former goog.module ID: Blockly.JavaScript
 
 import * as Blockly from 'blockly/core';
+//\import { block } from 'blockly/core/tooltip';
 //import { block } from 'blockly/core/tooltip';
 // import type {Block} from '../../core/block.js';
-// import {CodeGenerator} from 'blockly/core/generator.js';
+
 // import type {Workspace} from '../../core/workspace.js';
 // import {inputTypes} from 'blockly/core/inputs/input_types.js';
 
@@ -149,7 +150,6 @@ export function getType(var_type) {
     case 'callconstructor':
       return TYPES.CLASS;
     default:
-      console.log("Unknown type: " + var_type);
       //return TYPES.OBJECT;
       break;
   }
@@ -166,6 +166,12 @@ export function adjustStaticName(name) {
 
 //returns variable type by searching for usage context.
 export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
+  if(recursionDeepness==10){
+    console.log("Get Variable Type at deepness: " + recursionDeepness);
+  }
+
+  //let varName = CodeGenerator.getVariableName(varId);
+
   //if the variable is used for a forLoop, it's an int
   let blocks = workSpace.getBlocksByType('controls_for',true);
   for (let i = 0; i < blocks.length; i++) {
@@ -227,6 +233,71 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
       }
     }
   }
+
+  // Search for the variable in the callconstructor blocks
+  blocks = workSpace.getBlocksByType('callconstructor',true);
+
+  for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
+  {
+    let b = blocks[blockNr];
+    //console.log("Input list: "+b.inputList);
+    //console.log(b.arguments_);
+
+    for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
+    {
+      //console.log(b.inputList[inputNr]);
+
+
+      if(b.inputList[inputNr].connection != null) {
+        let paramId = b.inputList[inputNr].name;
+        //console.log("ParamId: "+paramId);
+
+        if(paramId === varId) {
+          let inputBlock = b.inputList[inputNr].connection.targetBlock();
+          console.log(inputBlock);
+          if(inputBlock != null) {
+            //console.log(inputBlock.type);
+            return getType(inputBlock.type);
+          }
+        }
+      }
+    }
+  }
+
+  // Search for the variable in the callconstructor blocks
+
+  let returnBlocks = workSpace.getBlocksByType('procedures_callreturn',true);
+  let noReturnBlocks = workSpace.getBlocksByType('procedures_callnoreturn',true);
+
+  if(!noReturnBlocks) {
+    blocks = returnBlocks;
+  }
+  else if(!returnBlocks) {
+    blocks = noReturnBlocks;
+  }
+  else { 
+    blocks = returnBlocks.concat(noReturnBlocks);
+  }
+
+  for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
+  {
+    let b = blocks[blockNr];
+    for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
+    {
+      if(b.inputList[inputNr].connection) {
+        let paramId = b.getVarModels()[inputNr-1].getId()
+        if(paramId === varId) {
+          let inputBlock = b.inputList[inputNr].connection.targetBlock();
+          if(inputBlock) {
+            return getType(inputBlock.type);
+          }
+        }
+      }
+    }
+  }
+
+
+
 
   if(recursionDeepness <= 0) {
     console.log("Recursion limit reached while searching for variable type");
@@ -366,8 +437,6 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
   init(workspace) {
     super.init(workspace);
 
-    console.log("Init Java Generator");
-
     if (!this.nameDB_) {
       this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
     } else {
@@ -406,7 +475,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     ctrCount = 0;
     // Iterate through every block and add each variable to the list.
     for (let i = 0; i < blocks.length; i++) {
-      if (blocks[i].getRootBlock().type === 'defconstructor') {
+      if (blocks[i].type === 'defconstructor') {
         ctrCount++;
       }
       if( validRoots.includes(blocks[i].getRootBlock().type)
@@ -500,12 +569,13 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         let uniqueValues = [...new Set(value)];
         for(let v of uniqueValues)
         {
+          //console.log('Variable: ' + v);
           if(!v.includes('var ')){
             let comment = '\n'; 
             let modifier = 'private ';
             let varName = substringAfterLastSpace(v);
-            console.log('Variable: ' + varName + " | " + v);
-            console.log(variable_definitions);
+            //console.log('Variable: ' + varName + " | " + v);
+            //console.log(variable_definitions);
             if(variable_definitions.includes(" "+varName+";")) {
               comment = "// Attribut doppelt! \n";
               modifier = '//'+modifier;

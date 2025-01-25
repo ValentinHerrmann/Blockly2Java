@@ -17,7 +17,7 @@ import {toolbox} from './toolboxGrade9';
 
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
-import {ctrCount} from "./generators/javascript/javascript_generator";
+import {ctrCount, setClassName} from "./generators/javascript/javascript_generator";
 
 
 // Register the blocks and generator with Blockly
@@ -109,6 +109,10 @@ function loadXmlToWorkspace(xhttp) {
   console.log(array[1]);
 
   codePrefix = array[0];
+  let className = findClassName(codePrefix);
+  console.log("Class Name: " + className);
+  setClassName(className);
+
   var xml = Blockly.utils.xml.textToDom(array[1]);
   Blockly.getMainWorkspace().clear();
 
@@ -159,6 +163,23 @@ function globalCodeModification(code) {
   }
   console.log("Global code modification successful");
   return modCode;
+}
+
+
+function findClassName(codePrefix)  {
+  let regex = 'public class [^\{]+';
+  let classHeader = codePrefix.match(regex);
+  if(classHeader != null)
+  {
+    classHeader = classHeader[0].replace('public class','').trim();
+    console.log("Class Header: " + classHeader);
+    return classHeader;
+  }
+  else
+  {
+    console.log("Class Header not found");
+    return "MeineKlasse";
+  }
 }
 
 

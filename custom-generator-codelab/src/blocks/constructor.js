@@ -239,19 +239,26 @@ Blockly.Blocks['callconstructor'] = {
 
   updateShape_: function() {
     // Entfernen Sie alle vorhandenen Argumenteingaben
-    for (var i = 0; this.getInput('ARG' + i); i++) {
-      this.removeInput('ARG' + i);
-    }
+
     let ctrBlocks = this.workspace.getBlocksByType('defconstructor');
     if(ctrBlocks.length > 0) {
       let ctrBlock = ctrBlocks[0];
       this.arguments_ = ctrBlock.arguments_;
-      console.log("ctrArgs: "+this.arguments_);
+      //console.log("ctrArgs: "+this.arguments_);
       // Fügen Sie neue Argumenteingaben hinzu
       for (var i = 0; i < this.arguments_.length; i++) {
-        this.appendValueInput('ARG' + i)
+        var name = this.arguments_[i];
+        var id = this.workspace.getVariable(name).getId();
+        console.log("id: "+id);
+        console.log("name: "+name);
+
+        if(this.getInput(id)) {
+          this.removeInput(id);
+        }
+
+        this.appendValueInput(id)
           .setCheck(null)
-          .appendField(this.arguments_[i]);
+          .appendField(name);
       }
     }
   }
