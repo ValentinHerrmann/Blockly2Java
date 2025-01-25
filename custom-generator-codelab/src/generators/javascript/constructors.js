@@ -89,6 +89,6 @@ export function callconstructor(block, generator) {
     args[i] = generator.valueToCode(block, 'ARG' + i, Order.NONE) ||
         'null';
   }
-  const code = funcName + '(' + args.join(', ') + ')';
+  const code = 'new ' + funcName + '(' + args.join(', ') + ')';
   return [code, Order.FUNCTION_CALL];
 };

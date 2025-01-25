@@ -30,6 +30,8 @@ export function getClassName() {
   return className;
 }
 
+export var ctrCount = 0;
+
 /**
  * Order of operation ENUMs.
  * https://developer.mozilla.org/en/JavaScript/Reference/Operators/Operator_Precedence
@@ -397,8 +399,12 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     const blocks = workspace.getAllBlocks(false);
     const variables = [];
     let c = 0;
+    ctrCount = 0;
     // Iterate through every block and add each variable to the list.
     for (let i = 0; i < blocks.length; i++) {
+      if (blocks[i].getRootBlock().type === 'defconstructor') {
+        ctrCount++;
+      }
       if( validRoots.includes(blocks[i].getRootBlock().type)
           &&
           !(validRoots.includes(blocks[i].type)))

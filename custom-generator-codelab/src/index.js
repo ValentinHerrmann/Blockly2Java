@@ -17,6 +17,7 @@ import {toolbox} from './toolboxGrade9';
 
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
+import {ctrCount} from "./generators/javascript/javascript_generator";
 
 
 // Register the blocks and generator with Blockly
@@ -151,6 +152,11 @@ function globalCodeModification(code) {
     {
       codeDiv.innerText = modCode;
     }
+
+  if(ctrCount > 1)
+  {
+    codeDiv.innerText = codeDiv.innerText + "\n!!! Warnung, maximal ein Konstruktor erlaubt !!!";
+  }
   console.log("Global code modification successful");
   return modCode;
 }

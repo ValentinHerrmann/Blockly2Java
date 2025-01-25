@@ -2,13 +2,14 @@ import { icons } from 'blockly/core';
 import { prototype } from 'blockly/core';
 
 import * as Blockly from 'blockly/core';
+import {getClassName} from '../generators/javascript/javascript_generator';
 
 let prefix = "_";
 
 Blockly.Blocks["defconstructor"] = {
   init: function () {
     this.appendDummyInput('TOP_LINE')
-      .appendField("Konstruktor");
+      .appendField("Konstruktor "+getClassName());
     this.appendStatementInput("STACK")
       .setCheck(null)
       .appendField("do");
@@ -102,7 +103,7 @@ Blockly.Blocks["defconstructor"] = {
       this.removeInput('ARGUMENTS');
     }
     if (this.arguments_.length) {
-      console.log("Arguments: " + this.arguments_);
+      //console.log("Arguments: " + this.arguments_);
       let joinedArgs = this.arguments_.join(", ");
       let topLine = this.getInput('TOP_LINE');
       if (topLine) {
@@ -111,7 +112,7 @@ Blockly.Blocks["defconstructor"] = {
       }
     }
     else {
-      console.log("No arguments");
+      //console.log("No arguments");
       let topLine = this.getInput('TOP_LINE');
       topLine.fieldRow = topLine.fieldRow.slice(0, 1);
     }
@@ -169,7 +170,7 @@ Blockly.Blocks['argument_input'] = {
   init: function () {
     this.appendDummyInput()
       .appendField('input name')
-      .appendField(new Blockly.FieldTextInput('x'), 'NAME');
+      .appendField(new Blockly.FieldTextInput('_x'), 'NAME');
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(230);
@@ -203,7 +204,7 @@ Blockly.Blocks['argument_input'] = {
 Blockly.Blocks['callconstructor'] = {
   init: function () {
     this.appendDummyInput()
-      .appendField("Objekt erstellen");
+      .appendField("new "+getClassName());
     this.setPreviousStatement(false, null);
     this.setNextStatement(false, null);
     this.setOutput(true, 'CLASS');
@@ -216,6 +217,7 @@ Blockly.Blocks['callconstructor'] = {
 
   mutationToDom: function () {
     var container = document.createElement('mutation');
+    
 
     for (var i = 0; i < this.arguments_.length; i++) {
       var argument = document.createElement('arg');
@@ -235,17 +237,22 @@ Blockly.Blocks['callconstructor'] = {
     this.updateShape_();
   },
 
-  updateShape_: function () {
+  updateShape_: function() {
     // Entfernen Sie alle vorhandenen Argumenteingaben
     for (var i = 0; this.getInput('ARG' + i); i++) {
       this.removeInput('ARG' + i);
     }
-
-    // Fügen Sie neue Argumenteingaben hinzu
-    for (var i = 0; i < this.arguments_.length; i++) {
-      this.appendValueInput('ARG' + i)
-        .setCheck(null)
-        .appendField(this.arguments_[i]);
+    let ctrBlocks = this.workspace.getBlocksByType('defconstructor');
+    if(ctrBlocks.length > 0) {
+      let ctrBlock = ctrBlocks[0];
+      this.arguments_ = ctrBlock.arguments_;
+      console.log("ctrArgs: "+this.arguments_);
+      // Fügen Sie neue Argumenteingaben hinzu
+      for (var i = 0; i < this.arguments_.length; i++) {
+        this.appendValueInput('ARG' + i)
+          .setCheck(null)
+          .appendField(this.arguments_[i]);
+      }
     }
   }
 };
