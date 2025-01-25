@@ -70,10 +70,16 @@ export const TYPES = {
   OBJECT: 'Object',
   FORINT: 'forint',
   UNKNOWN: 'var',
+  CLASS: '__class__'
 };
 
 //converts a block type into a variable type
 export function getType(var_type) {
+  if (var_type.startsWith("__class__")) {
+    console.log("Class type: " + var_type);
+    return TYPES.CLASS;
+    return var_type.substring(9); // Return the rest of var_type after "__class__"
+  }
   switch (var_type) {
     case 'logic_compare': 
     case 'logic_operation': 
@@ -127,15 +133,26 @@ export function getType(var_type) {
     case 'logic_null':
       return TYPES.OBJECT;
     default:
-      // console.log("Unknown type: " + var_type);
+      console.log("Unknown type: " + var_type);
+      //return TYPES.OBJECT;
       break;
   }
   return TYPES.UNKNOWN;
 }
 
+let className = "MeineKlasse";
+
+export function setClassName(name) {
+  className = name;
+}
+
+export function getClassName() {
+  return className;
+}
+
 
 //returns variable type by searching for usage context.
-export function getVariableType(workSpace, varId, useCompares) {
+export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
   //if the variable is used for a forLoop, it's an int
   let blocks = workSpace.getBlocksByType('controls_for',true);
   for (let i = 0; i < blocks.length; i++) {
@@ -198,10 +215,13 @@ export function getVariableType(workSpace, varId, useCompares) {
     }
   }
 
-
+  if(recursionDeepness <= 0) {
+    console.log("Recursion limit reached while searching for variable type");
+    return varType;
+  }
   for (let i = 0;i < varsAssignedToThis.length; i++)
   {
-    varType = getVariableType(workSpace, varsAssignedToThis[i], true);
+    varType = getVariableType(workSpace, varsAssignedToThis[i], true, recursionDeepness-1);
     //alert(varId + '  To this: ' + varType);
     if(varType === 'forint') {
       return 'int';
@@ -212,7 +232,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   }
   for (let i = 0;i < varsAssignedFromThis.length; i++)
   {
-    varType = getVariableType(workSpace, varsAssignedFromThis[i], true);
+    varType = getVariableType(workSpace, varsAssignedFromThis[i], true, recursionDeepness-1);
     //alert(varId + '  From this: ' + varType);
     if(varType === 'forint') {
       return 'int';
@@ -288,6 +308,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     // a || (b || c) -> a || b || c
     [Order.LOGICAL_OR, Order.LOGICAL_OR]
   ];
+
 
   constructor(name) {
     super(name ?? 'Java');
@@ -368,11 +389,15 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     let c = 0;
     // Iterate through every block and add each variable to the list.
     for (let i = 0; i < blocks.length; i++) {
-      if((blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
-          blocks[i].getRootBlock().type === 'procedures_defreturn') &&
-        blocks[i].type !== 'procedures_defnoreturn' &&
-        blocks[i].type !== 'procedures_defreturn' &&
-        blocks[i].type !== 'controls_for') {
+      if(
+          (
+            blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
+            blocks[i].getRootBlock().type === 'procedures_defreturn'
+          ) &&
+          blocks[i].type !== 'procedures_defnoreturn' &&
+          blocks[i].type !== 'procedures_defreturn' &&
+          blocks[i].type !== 'controls_for') 
+        {
         const blockVariables = blocks[i].getVarModels();
         if (blockVariables) {
           for (let j = 0; j < blockVariables.length; j++) {
@@ -449,6 +474,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     }
 
     let variable_definitions = "";
+    console.log("definition map");
     console.log(def_map);
     for (let [key, value] of def_map) 
     {
@@ -541,7 +567,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
    * @protected
    */
   scrub_(block, code, opt_thisOnly) {
-    if (!(block.getRootBlock().type === 'procedures_defnoreturn' || block.getRootBlock().type ==='procedures_defreturn')) {
+    if (!(block.getRootBlock().type === 'procedures_defnoreturn' || block.getRootBlock().type ==='procedures_defreturn' || block.getRootBlock().type === 'defconstructor')) {
       return '!!! Warnung, ein Block wurde nicht übersetzt !!!';
     }
       let commentCode = '';
