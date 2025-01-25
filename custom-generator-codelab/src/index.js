@@ -6,11 +6,11 @@
 
 import * as Blockly from 'blockly';
 // import {blocks} from './blocks/text';
-// mport {forBlock} from './generators/java';
+// import {forBlock} from './generators/java';
 import {javaGenerator, warningNote} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox as unused} from './toolbox';
-//import * as CTR from './blocks/constructor.js';
+import * as CTR from './blocks/constructor.js';
 //import * as CTR2 from './blocks/constructor2.js';
 import {toolbox} from './toolboxGrade9';
 

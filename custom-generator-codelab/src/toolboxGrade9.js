@@ -502,6 +502,8 @@ export const toolbox = {
                         }
                     }
                 },
+                
+
                 /* Type determination too complicated and uses gui --> replace with scanner when reusing
                 {
                     "kind": "BLOCK",
@@ -522,7 +524,7 @@ export const toolbox = {
         },
         {
             'kind': 'category',
-            'name': 'Variablen',
+            'name': 'Variablen/Attribute',
             'categorystyle': 'variable_category',
             'custom': 'VARIABLE',
         },
@@ -531,6 +533,25 @@ export const toolbox = {
             'name': 'Methoden',
             'categorystyle': 'procedure_category',
             'custom': 'PROCEDURE',
-        },
+        },        
+        {
+            kind: "category",
+            name: "Klassen",
+            colour: 260,
+                contents: [
+                {
+                    kind: "block",
+                    type: "defconstructor"
+                },
+                // {
+                //     kind: "block",
+                //     type: "custom_constructordef"
+                // }
+                {
+                   kind: "block",
+                   type: "callconstructor"
+                }
+            ]
+        }
     ],
 };
