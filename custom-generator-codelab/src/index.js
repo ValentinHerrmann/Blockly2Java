@@ -6,11 +6,14 @@
 
 import * as Blockly from 'blockly';
 // import {blocks} from './blocks/text';
-// import {forBlock} from './generators/java';
+// mport {forBlock} from './generators/java';
 import {javaGenerator, warningNote} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox as unused} from './toolbox';
+//import * as CTR from './blocks/constructor.js';
+//import * as CTR2 from './blocks/constructor2.js';
 import {toolbox} from './toolboxGrade9';
+
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
 
@@ -32,14 +35,15 @@ const runCode = () => {
   
   let code = javaGenerator.workspaceToCode(ws);
   code = globalCodeModification(code);
-  console.log(code);
+  
   
   postCode(code,"java").then(data => {
-    console.log("Java Code successfully sent to BlueJ");
+    console.log("Java Code successfully sent to BlueJ:\n\n"+code);
+
   });
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
   postCode(dom,"xml").then(data => {
-    console.log("XML Code successfully sent to BlueJ");
+    console.log("XML Code successfully sent to BlueJ\n\n"+dom);
   });
 
 };
@@ -134,7 +138,7 @@ function globalCodeModification(code) {
   modCode = indentation(modCode);
   modCode = modCode.replaceAll('    // Describe this function...\n','');
   modCode = defaultCodePrefix(modCode);
-  modCode = constructors(modCode);
+  // modCode = constructors(modCode);
   modCode = mainMethod(modCode);
   
   if(codeSplitByFirstWarning.length > 1)
