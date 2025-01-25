@@ -11,6 +11,7 @@ import {javaGenerator, warningNote} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox as unused} from './toolbox';
 import * as CTR from './blocks/constructor.js';
+//import {proceduresFlyoutCallback} from './blocks/constructor2.js';
 //import * as CTR2 from './blocks/constructor2.js';
 import {toolbox} from './toolboxGrade9';
 
@@ -26,7 +27,7 @@ import {javascriptGenerator} from "blockly/javascript";
 const codeDiv = document.getElementById('generatedCode').firstChild;
 //const outputDiv = scriptscriptdocumentscript.getElementById('output');
 const blocklyDiv = document.getElementById('blocklyDiv');
-const ws = Blockly.inject(blocklyDiv, {toolbox});
+export const ws = Blockly.inject(blocklyDiv, {toolbox});
 var codePrefix = '';
 // This function resets the code and output divs, shows the
 // generated code from the workspace, and evals the code.
@@ -43,13 +44,14 @@ const runCode = () => {
   });
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
   postCode(dom,"xml").then(data => {
-    //console.log("XML Code successfully sent to BlueJ\n\n"+dom);
+    console.log("XML Code successfully sent to BlueJ\n\n"+dom);
   });
 
 };
 
 // Load the initial state from storage and run the code.
 load(ws);
+//ws.registerToolboxCategoryCallback('MY_PROCEDURES', proceduresFlyoutCallback);
 getSavedXml();
 runCode();
 

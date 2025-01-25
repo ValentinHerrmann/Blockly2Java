@@ -533,7 +533,7 @@ export const toolbox = {
             'name': 'Methoden',
             'categorystyle': 'procedure_category',
             'custom': 'PROCEDURE',
-        },        
+        },             
         {
             kind: "category",
             name: "Klassen",
@@ -543,10 +543,6 @@ export const toolbox = {
                     kind: "block",
                     type: "defconstructor"
                 },
-                // {
-                //     kind: "block",
-                //     type: "custom_constructordef"
-                // }
                 {
                    kind: "block",
                    type: "callconstructor"

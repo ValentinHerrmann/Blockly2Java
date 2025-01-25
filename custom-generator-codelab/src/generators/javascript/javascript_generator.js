@@ -90,7 +90,7 @@ export const validRoots = ['procedures_defnoreturn', 'procedures_defreturn', 'de
 
 //converts a block type into a variable type
 export function getType(var_type) {
-  console.log("getType: " + var_type);
+  //console.log("getType: " + var_type);
 
   switch (var_type) {
     case 'logic_compare': 
@@ -478,8 +478,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     }
 
     let variable_definitions = "";
-    console.log("definition map");
-    console.log(def_map);
+    //console.log("definition map");
+    //console.log(def_map);
     for (let [key, value] of def_map) 
     {
       if (value.length > 0) 

@@ -59,6 +59,7 @@ export function defconstructor(block, generator) {
         paramTypes[j] = 'Object';
       }
     }
+    console.log("variables: " + variables);
     for (let i = 0; i < variables.length; i++) {
       args[i] = paramTypes[i] + ' ' + variables[i];
     }
