@@ -84,7 +84,7 @@ export const TYPES = {
   OBJECT: 'Object',
   FORINT: 'forint',
   UNKNOWN: 'var',
-  CLASS: getClassName()
+  CLASS: '__CLASS__'
 };
 
 
@@ -245,16 +245,13 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
 
     for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
     {
-      //console.log(b.inputList[inputNr]);
-
-
       if(b.inputList[inputNr].connection != null) {
         let paramId = b.inputList[inputNr].name;
         //console.log("ParamId: "+paramId);
 
         if(paramId === varId) {
           let inputBlock = b.inputList[inputNr].connection.targetBlock();
-          console.log(inputBlock);
+          //console.log(inputBlock);
           if(inputBlock != null) {
             //console.log(inputBlock.type);
             return getType(inputBlock.type);

@@ -17,7 +17,7 @@ import {toolbox} from './toolboxGrade9';
 
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
-import {ctrCount, setClassName} from "./generators/javascript/javascript_generator";
+import {ctrCount, setClassName, getClassName} from "./generators/javascript/javascript_generator";
 
 
 // Register the blocks and generator with Blockly
@@ -145,6 +145,9 @@ function globalCodeModification(code) {
   modCode = indentation(modCode);
   modCode = modCode.replaceAll('    // Describe this function...\n','');
   modCode = defaultCodePrefix(modCode);
+
+  modCode = modCode.replaceAll('__CLASS__',getClassName());
+
   // modCode = constructors(modCode);
   // modCode = mainMethod(modCode);
   
@@ -164,6 +167,7 @@ function globalCodeModification(code) {
   console.log("Global code modification successful");
   return modCode;
 }
+
 
 
 function findClassName(codePrefix)  {

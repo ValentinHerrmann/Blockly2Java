@@ -249,8 +249,8 @@ Blockly.Blocks['callconstructor'] = {
       for (var i = 0; i < this.arguments_.length; i++) {
         var name = this.arguments_[i];
         var id = this.workspace.getVariable(name).getId();
-        console.log("id: "+id);
-        console.log("name: "+name);
+        //console.log("id: "+id);
+        //console.log("name: "+name);
 
         if(this.getInput(id)) {
           this.removeInput(id);

@@ -79,16 +79,32 @@ export function defconstructor(block, generator) {
 //export const procedures_defnoreturn = procedures_defreturn;
 
 export function callconstructor(block, generator) {
-  //console.log("\n\nTRANSLATING CALL CONSTUCTUR");
+  console.log("\n\nTRANSLATING CALL CONSTUCTUR");
   const funcName = getClassName(); //generator.getProcedureName(block.getFieldValue('NAME'));
   //console.log("Function Name: " + funcName);
   const args = [];
-  const variables = block.getVars();
-  //console.log("Variables: " + variables);
-  for (let i = 0; i < variables.length; i++) {
-    args[i] = generator.valueToCode(block, 'ARG' + i, Order.NONE) ||
-        'null';
-  }
+  console.log(block);
+  const variables = block.childBlocks_;
+  console.log("Variables: "+variables);
+
+  for (let inputNr = 1; inputNr < block.inputList.length; inputNr++) {
+      if(block.inputList[inputNr].connection != null) {
+        let inputBlock = block.inputList[inputNr].connection.targetBlock();
+        console.log("Input block: "+inputBlock);
+        let paramId = block.inputList[inputNr].name
+        console.log("ParamId: "+paramId);
+        if(inputBlock != null) {
+          let val = generator.valueToCode(block, paramId, Order.NONE);
+          console.log("Value: "+val);
+          args[inputNr-1] = val;
+        }
+        else {
+          args[inputNr-1] = 'null';
+        }
+      }
+    }
+    console.log("Args: "+args);
+
   const code = 'new ' + funcName + '(' + args.join(', ') + ')';
   return [code, Order.FUNCTION_CALL];
 };
