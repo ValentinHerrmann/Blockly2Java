@@ -65,8 +65,7 @@ export function controls_whileUntil(block, generator) {
 
 export function controls_for(block, generator) {
   // For loop in Java.
-  const variable0 =
-      generator.getVariableName(block.getFieldValue('VAR'));
+  const variable0 = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   // console.log("ForType: " + block.getField('VAR').type);
   const argument0 =
       generator.valueToCode(block, 'FROM', Order.ASSIGNMENT) || '0';
@@ -139,7 +138,7 @@ export function controls_for(block, generator) {
 export function controls_forEach(block, generator) {
   // For each loop in Java.
   const variable0 =
-      generator.getVariableName(block.getFieldValue('VAR'));
+      adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   const argument0 =
       generator.valueToCode(block, 'LIST', Order.ASSIGNMENT) ||
       '[]';

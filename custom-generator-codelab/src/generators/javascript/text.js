@@ -101,7 +101,7 @@ export function text_join(block, generator) {
 
 export function text_append(block, generator) {
   // Append to a variable in place in Java.
-  const varName = generator.getVariableName(block.getFieldValue('VAR'));
+  const varName = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   const value = generator.valueToCode(block, 'TEXT',
       Order.NONE) || "\"\"";
   const code = varName + " += " +

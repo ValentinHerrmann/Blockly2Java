@@ -12,11 +12,25 @@
 // Former goog.module ID: Blockly.JavaScript
 
 import * as Blockly from 'blockly/core';
+//\import { block } from 'blockly/core/tooltip';
+//import { block } from 'blockly/core/tooltip';
 // import type {Block} from '../../core/block.js';
-// import {CodeGenerator} from 'blockly/core/generator.js';
-// import {Names, NameType} from 'blockly/core/names.js';
+
 // import type {Workspace} from '../../core/workspace.js';
 // import {inputTypes} from 'blockly/core/inputs/input_types.js';
+
+
+let className = "MeineKlasse";
+
+export function setClassName(name) {
+  className = name;
+}
+
+export function getClassName() {
+  return className;
+}
+
+export var ctrCount = 0;
 
 /**
  * Order of operation ENUMs.
@@ -70,10 +84,16 @@ export const TYPES = {
   OBJECT: 'Object',
   FORINT: 'forint',
   UNKNOWN: 'var',
+  CLASS: '__CLASS__'
 };
+
+
+export const validRoots = ['procedures_defnoreturn', 'procedures_defreturn', 'defconstructor'];
 
 //converts a block type into a variable type
 export function getType(var_type) {
+  //console.log("getType: " + var_type);
+
   switch (var_type) {
     case 'logic_compare': 
     case 'logic_operation': 
@@ -126,16 +146,32 @@ export function getType(var_type) {
       return TYPES.LIST;
     case 'logic_null':
       return TYPES.OBJECT;
+    case 'CLASS':
+    case 'callconstructor':
+      return TYPES.CLASS;
     default:
-      // console.log("Unknown type: " + var_type);
+      //return TYPES.OBJECT;
       break;
   }
   return TYPES.UNKNOWN;
 }
 
 
+export function adjustStaticName(name) {
+  if(name.startsWith('static_')) {
+    return name.replace('static_', '');
+  }
+  return name;
+}
+
 //returns variable type by searching for usage context.
-export function getVariableType(workSpace, varId, useCompares) {
+export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
+  if(recursionDeepness==10){
+    console.log("Get Variable (try: " + (11-recursionDeepness) + "): " + varId);
+  }
+
+  //let varName = CodeGenerator.getVariableName(varId);
+
   //if the variable is used for a forLoop, it's an int
   let blocks = workSpace.getBlocksByType('controls_for',true);
   for (let i = 0; i < blocks.length; i++) {
@@ -198,10 +234,75 @@ export function getVariableType(workSpace, varId, useCompares) {
     }
   }
 
+  // Search for the variable in the callconstructor blocks
+  blocks = workSpace.getBlocksByType('callconstructor',true);
 
+  for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
+  {
+    let b = blocks[blockNr];
+
+    for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
+    {
+      if(b.inputList[inputNr].connection != null) {
+        let paramId = b.inputList[inputNr].name;
+        //console.log("ParamId: "+paramId);
+
+        if(paramId === varId) {
+          let inputBlock = b.inputList[inputNr].connection.targetBlock();
+          //console.log(inputBlock);
+          if(inputBlock != null) {
+            //console.log(inputBlock.type);
+            return getType(inputBlock.type);
+          }
+        }
+      }
+    }
+  }
+
+  // Search for the variable in the callconstructor blocks
+
+  let returnBlocks = workSpace.getBlocksByType('procedures_callreturn',true);
+  let noReturnBlocks = workSpace.getBlocksByType('procedures_callnoreturn',true);
+
+  if(!noReturnBlocks) {
+    blocks = returnBlocks;
+  }
+  else if(!returnBlocks) {
+    blocks = noReturnBlocks;
+  }
+  else { 
+    blocks = returnBlocks.concat(noReturnBlocks);
+  }
+
+  for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
+  {
+    let b = blocks[blockNr];
+    for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
+    {
+      if(b.inputList[inputNr].connection) {
+        let paramId = b.getVarModels()[inputNr-1].getId()
+        if(paramId === varId) {
+          let inputBlock = b.inputList[inputNr].connection.targetBlock();
+          if(inputBlock) {
+            return getType(inputBlock.type);
+          }
+        }
+      }
+    }
+  }
+
+
+  
+
+
+
+  if(recursionDeepness <= 0) {
+    console.log("Recursion limit reached while searching for variable type");
+    return varType;
+  }
   for (let i = 0;i < varsAssignedToThis.length; i++)
   {
-    varType = getVariableType(workSpace, varsAssignedToThis[i], true);
+    varType = getVariableType(workSpace, varsAssignedToThis[i], true, recursionDeepness-1);
     //alert(varId + '  To this: ' + varType);
     if(varType === 'forint') {
       return 'int';
@@ -212,7 +313,7 @@ export function getVariableType(workSpace, varId, useCompares) {
   }
   for (let i = 0;i < varsAssignedFromThis.length; i++)
   {
-    varType = getVariableType(workSpace, varsAssignedFromThis[i], true);
+    varType = getVariableType(workSpace, varsAssignedFromThis[i], true, recursionDeepness-1);
     //alert(varId + '  From this: ' + varType);
     if(varType === 'forint') {
       return 'int';
@@ -289,6 +390,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     [Order.LOGICAL_OR, Order.LOGICAL_OR]
   ];
 
+
   constructor(name) {
     super(name ?? 'Java');
     this.isInitialized = false;
@@ -360,19 +462,23 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     def_map.set(TYPES.OBJECT, []);
     def_map.set(TYPES.FORINT, []);
     def_map.set(TYPES.UNKNOWN, []);
+    def_map.set(TYPES.CLASS, []);
 
 
     // Add user variables, but excludes untranslated, unused and parameters.
     const blocks = workspace.getAllBlocks(false);
     const variables = [];
     let c = 0;
+    ctrCount = 0;
     // Iterate through every block and add each variable to the list.
     for (let i = 0; i < blocks.length; i++) {
-      if((blocks[i].getRootBlock().type === 'procedures_defnoreturn' ||
-          blocks[i].getRootBlock().type === 'procedures_defreturn') &&
-        blocks[i].type !== 'procedures_defnoreturn' &&
-        blocks[i].type !== 'procedures_defreturn' &&
-        blocks[i].type !== 'controls_for') {
+      if (blocks[i].type === 'defconstructor') {
+        ctrCount++;
+      }
+      if( validRoots.includes(blocks[i].getRootBlock().type)
+          &&
+          !(validRoots.includes(blocks[i].type)))
+        {
         const blockVariables = blocks[i].getVarModels();
         if (blockVariables) {
           for (let j = 0; j < blockVariables.length; j++) {
@@ -394,8 +500,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
     for(let b = 0; b < blocks.length; b++)
     {
-      if(blocks[b].type === 'procedures_defnoreturn' ||
-          blocks[b].type === 'procedures_defreturn' ||
+      if(validRoots.includes(blocks[b].type) ||
           blocks[b].type === 'controls_forEach')
       {
         funcs[c] = blocks[b];
@@ -427,42 +532,58 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
       if(!par) {
         let name = this.nameDB_.getName(variables[i].getId(), Blockly.Names.NameType.VARIABLE);
-        let type = getVariableType(workspace, variables[i].getId(), true);
-        let definition = def_map.get(type);
-
-
-        if(type === 'var')
+        let orgType = getVariableType(workspace, variables[i].getId(), true);
+        let type = orgType;
+        let definition = def_map.get(orgType);
+        
+        if(orgType === 'var')
         {
           // TODO: investigate why this was here
           //definition.push('double ' + name);
         }
-        if(type === 'forint')
+        if(orgType === 'forint')
         {
           definition.push('int ' + name);
         }
         else
         {
+          if(name.startsWith('static_'))
+          {
+            name = name.replace('static_', '');
+            type = 'static ' + orgType;
+          }
           definition.push(type + ' ' + name);
         }
-        def_map.set(type, definition);
+        def_map.set(orgType, definition);
       }
     }
 
     let variable_definitions = "";
-    console.log(def_map);
-    for (let [key, value] of def_map) 
+    for (let [key, value] of def_map)
     {
       if (value.length > 0) 
       {
         let uniqueValues = [...new Set(value)];
         for(let v of uniqueValues)
         {
-          if(!v.includes('var ')){          
-            variable_definitions += 'private ' + v + ";\n";
-          }
-          else {
-            console.log('Variable ' + v + ' not defined');
-          }
+          //console.log('Variable: ' + v);
+          //if(v.includes('var ')){
+
+            let comment = '\n'; 
+            let modifier = 'private ';
+            let varName = substringAfterLastSpace(v);
+            //console.log('Variable: ' + varName + " | " + v);
+            //console.log(variable_definitions);
+            if(variable_definitions.includes(" "+varName+";")) {
+              comment = "// Attribut doppelt! \n";
+              modifier = '//'+modifier;
+            }
+            v=v.replace('var ', 'Object ');
+            variable_definitions += modifier + v + "; "+comment;
+          // }
+          // else {
+          //   console.log('Variable ' + v + ' not defined');
+          // }
         }
       }
     }
@@ -488,6 +609,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     this.isInitialized = false;
 
     this.nameDB_.reset();
+    console.log(definitions);
     return definitions.join('\n\n') + '\n\n\n' + code;
   }
 
@@ -541,7 +663,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
    * @protected
    */
   scrub_(block, code, opt_thisOnly) {
-    if (!(block.getRootBlock().type === 'procedures_defnoreturn' || block.getRootBlock().type ==='procedures_defreturn')) {
+    if (!(block.getRootBlock().type === 'procedures_defnoreturn' || block.getRootBlock().type ==='procedures_defreturn' || block.getRootBlock().type === 'defconstructor')) {
       return '!!! Warnung, ein Block wurde nicht übersetzt !!!';
     }
       let commentCode = '';
@@ -633,4 +755,14 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     }
     return at;
   }
+
+}
+
+
+function substringAfterLastSpace(str) {
+  let lastIndex = str.lastIndexOf(' ');
+  if (lastIndex === -1) {
+    return str; // Kein Leerzeichen gefunden, gesamte Zeichenkette zurückgeben
+  }
+  return str.substring(lastIndex + 1);
 }

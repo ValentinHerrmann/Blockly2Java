@@ -10,12 +10,11 @@
 
 // Former goog.module ID: Blockly.JavaScript.procedures
 
-import {getType, getVariableType, Order, TYPES} from './javascript_generator.js';
+import { javascriptGenerator } from 'blockly/javascript.js';
+import {getType, getVariableType, Order, getClassName, TYPES, adjustStaticName} from './javascript_generator.js';
 import * as Blockly from "blockly";
 
-
 export function procedures_defreturn(block, generator) {
-  // Define a procedure with a return value.
   const funcName = generator.getProcedureName(block.getFieldValue('NAME'));
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
@@ -54,11 +53,17 @@ export function procedures_defreturn(block, generator) {
     {
       const id = block.getInputTargetBlock('RETURN').getFieldValue('VAR');
       returnType = getVariableType(ws, id, true);
+      if(returnType === 'var') {
+        returnType = 'Object';
+      }
     }
   }
 
   const args = [];
   const variables = block.getVars();
+  //console.log("Variables: " + variables.join(', '));
+
+
   if(variables !== null) {
     let vars = block.getVarModels();
     let paramTypes = [];
@@ -75,7 +80,12 @@ export function procedures_defreturn(block, generator) {
     }
   }
 
-  let code = 'public ' + returnType + ' ' + funcName + '(' + args.join(', ') + ') {\n' + xfix1 +
+  let retTypeVal = ' ' + returnType + ' ';
+  if(funcName.startsWith('static_')){
+    retTypeVal = ' static' + retTypeVal;
+  }
+
+  let code = 'public' + retTypeVal + adjustStaticName(funcName) + '(' + args.join(', ') + ') {\n' + xfix1 +
       loopTrap + branch + xfix2 + returnValue + '}';
   code = generator.scrub_(block, code);
   // Add % so as not to collide with helper functions in definitions list.
@@ -97,6 +107,7 @@ export function procedures_callreturn(block, generator) {
         'null';
   }
   const code = funcName + '(' + args.join(', ') + ')';
+  //console.log(code);
   return [code, Order.FUNCTION_CALL];
 };
 

@@ -10,21 +10,24 @@
 
 // Former goog.module ID: Blockly.JavaScript.variables
 
-import {Order} from './javascript_generator.js';
+import {Order,adjustStaticName} from './javascript_generator.js';
 
 
 export function variables_get(block, generator) {
   // Variable getter.
-  const code = generator.getVariableName(block.getFieldValue('VAR'));
+  const code = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   // console.log("variables_get: " + code);
   return [code, Order.ATOMIC];
 };
 
 export function variables_set(block, generator) {
   // Variable setter.
+  //console.log("variables_set: "+ block);
   const argument0 = generator.valueToCode(
                         block, 'VALUE', Order.ASSIGNMENT) || '';
-  const varName = generator.getVariableName(block.getFieldValue('VAR'));
+  //console.log("argument0: "+ argument0);                        
+  const varName = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  //console.log("varName: "+ varName);       
   if(argument0 === '')
     {
       return '// ' + varName + ' = ' + argument0 + ';    // Wert fehlt\n';

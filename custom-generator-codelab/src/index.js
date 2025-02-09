@@ -10,9 +10,15 @@ import * as Blockly from 'blockly';
 import {javaGenerator, warningNote} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox as unused} from './toolbox';
+import * as CTR from './blocks/constructor.js';
+//import {proceduresFlyoutCallback} from './blocks/constructor2.js';
+//import * as CTR2 from './blocks/constructor2.js';
 import {toolbox} from './toolboxGrade9';
+
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
+import {ctrCount, setClassName, getClassName} from "./generators/javascript/javascript_generator";
+//import { exceptions } from 'blockly/core/icons.js';
 
 
 // Register the blocks and generator with Blockly
@@ -23,8 +29,9 @@ import {javascriptGenerator} from "blockly/javascript";
 const codeDiv = document.getElementById('generatedCode').firstChild;
 //const outputDiv = scriptscriptdocumentscript.getElementById('output');
 const blocklyDiv = document.getElementById('blocklyDiv');
-const ws = Blockly.inject(blocklyDiv, {toolbox});
+export const ws = Blockly.inject(blocklyDiv, {toolbox});
 var codePrefix = '';
+var restFailCount = 0;
 // This function resets the code and output divs, shows the
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
@@ -32,20 +39,22 @@ const runCode = () => {
   
   let code = javaGenerator.workspaceToCode(ws);
   code = globalCodeModification(code);
-  console.log(code);
+  
   
   postCode(code,"java").then(data => {
-    console.log("Java Code successfully sent to BlueJ");
+    //console.log("Java Code successfully sent to BlueJ:\n\n"+code);
+
   });
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
   postCode(dom,"xml").then(data => {
-    console.log("XML Code successfully sent to BlueJ");
+    console.log("XML Code successfully sent to BlueJ\n\n"+dom);
   });
 
 };
 
 // Load the initial state from storage and run the code.
 load(ws);
+//ws.registerToolboxCategoryCallback('MY_PROCEDURES', proceduresFlyoutCallback);
 getSavedXml();
 runCode();
 
@@ -90,7 +99,15 @@ async function postCode(code,typ) {
     {
       xhttp.setRequestHeader("Content-type", "text/java");
     }
-    xhttp.send(code);
+    try {
+      if(restFailCount < 20) {
+        xhttp.send(code);
+      }
+    }
+    catch (e) {
+      restFailCount++;
+      console.log(restFailCount + ". REST-Call failed: " + e);
+    }
 }
 
 
@@ -102,6 +119,10 @@ function loadXmlToWorkspace(xhttp) {
   console.log(array[1]);
 
   codePrefix = array[0];
+  let className = findClassName(codePrefix);
+  console.log("Class Name: " + className);
+  setClassName(className);
+
   var xml = Blockly.utils.xml.textToDom(array[1]);
   Blockly.getMainWorkspace().clear();
 
@@ -123,7 +144,16 @@ function getSavedXml() {
     };
     xhttp.open("GET", url, true);
     console.log(">>> GET: " + url)
-    xhttp.send();
+    
+    try {
+      if(restFailCount < 20) {
+        xhttp.send();
+      }
+    }
+    catch (e) {
+      restFailCount++;
+      console.log(restFailCount + ". REST-Call failed: " + e);
+    }
 }
 
 function globalCodeModification(code) {
@@ -134,8 +164,11 @@ function globalCodeModification(code) {
   modCode = indentation(modCode);
   modCode = modCode.replaceAll('    // Describe this function...\n','');
   modCode = defaultCodePrefix(modCode);
-  modCode = constructors(modCode);
-  modCode = mainMethod(modCode);
+
+  modCode = modCode.replaceAll('__CLASS__',getClassName());
+
+  // modCode = constructors(modCode);
+  // modCode = mainMethod(modCode);
   
   if(codeSplitByFirstWarning.length > 1)
     {
@@ -145,8 +178,31 @@ function globalCodeModification(code) {
     {
       codeDiv.innerText = modCode;
     }
+
+  if(ctrCount > 1)
+  {
+    codeDiv.innerText = codeDiv.innerText + "\n!!! Warnung, maximal ein Konstruktor erlaubt !!!";
+  }
   console.log("Global code modification successful");
   return modCode;
+}
+
+
+
+function findClassName(codePrefix)  {
+  let regex = 'public class [^\{]+';
+  let classHeader = codePrefix.match(regex);
+  if(classHeader != null)
+  {
+    classHeader = classHeader[0].replace('public class','').trim();
+    console.log("Class Header: " + classHeader);
+    return classHeader;
+  }
+  else
+  {
+    console.log("Class Header not found");
+    return "MeineKlasse";
+  }
 }
 
 
