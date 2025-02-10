@@ -42,7 +42,7 @@ const runCode = () => {
   
   
   postCode(code,"java").then(data => {
-    //console.log("Java Code successfully sent to BlueJ:\n\n"+code);
+    console.log("Java Code successfully sent to BlueJ:\n\n"+code);
 
   });
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
