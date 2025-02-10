@@ -26,4 +26,4 @@ jobs:
       run: |
         cd custom-generator-codelab
         npm run-script build
-        npx webpack
+        
