@@ -29,19 +29,18 @@ jobs:
       url: https://valentinherrmann.github.io/
     runs-on: ubuntu-latest
     steps:
-      - name: Build NPM
-        run: |
-          ls -l
-          npm ci
-          npm run build --if-present
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Build project
+        run: |
+          cd custom-generator-codelab
+          npm ci
+          npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: './custom-generator-codelab/dist/'
       - name: Deploy to GitHub Pages
         id: deployment
