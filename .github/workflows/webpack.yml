@@ -1,4 +1,4 @@
-name: Build and push to github pages
+name: Build and Deploy to Github Pages
 
 on: [push]
 
@@ -30,7 +30,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git init
-          git remote add origin https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git
+          git remote rm origin
+          git remote add origin git@github.com:ValentinHerrmann/ValentinHerrmann.github.io.git
           git add .
           git commit -m "Compiled Blockly2Java"
           git push origin main
