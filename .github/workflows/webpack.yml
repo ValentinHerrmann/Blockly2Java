@@ -24,5 +24,6 @@ jobs:
 
     - name: Build
       run: |
-        npm install
+        cd custom-generator-codelab
+        npm run-script build
         npx webpack
