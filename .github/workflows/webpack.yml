@@ -34,6 +34,7 @@ jobs:
           mv custom-generator-codelab/dist/bundle.js repo
           mv custom-generator-codelab/dist/bundle.js.LICENSE.txt repo
           mv custom-generator-codelab/dist/index.html repo
+          cd repo
           git commit -m "Compiled Blockly2Java"
           git push
 
