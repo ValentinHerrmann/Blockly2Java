@@ -30,12 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Build project
-        run: |
-          cd custom-generator-codelab
-          npm ci
-          npm run build
+        uses: actions/checkout@v4c
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
