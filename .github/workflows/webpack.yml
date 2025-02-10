@@ -33,6 +33,7 @@ jobs:
           mv custom-generator-codelab/dist/bundle.js.LICENSE.txt repo
           mv custom-generator-codelab/dist/index.html repo
           cd repo
+          ls -l
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "Compiled Blockly2Java"
