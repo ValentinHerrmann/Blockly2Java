@@ -33,6 +33,6 @@ jobs:
           git remote add origin https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git
           git add .
           git commit -m "Compiled Blockly2Java"
-          git push -u origin main
+          git push origin main
 
 
