@@ -13,11 +13,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-      - name: Clone Github Pages Repo
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git clone https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git .
 
       - name: Build NPM
         run: |
@@ -32,8 +27,13 @@ jobs:
 
       - name: Commit & push artifacts
         run: |
-          git add --all
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git clone https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git repo
+          mv bundle.js repo
+          mv bundle.js.LICENSE.txt repo
+          mv index.html repo
           git commit -m "Compiled Blockly2Java"
-          git push origin main
+          git push
 
 
