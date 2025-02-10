@@ -31,9 +31,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git clone https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git repo
-          mv bundle.js repo
-          mv bundle.js.LICENSE.txt repo
-          mv index.html repo
+          mv custom-generator-codelab/dist/bundle.js repo
+          mv custom-generator-codelab/dist/bundle.js.LICENSE.txt repo
+          mv custom-generator-codelab/dist/index.html repo
           git commit -m "Compiled Blockly2Java"
           git push
 
