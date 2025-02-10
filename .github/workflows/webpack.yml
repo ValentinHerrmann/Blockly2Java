@@ -28,13 +28,13 @@ jobs:
       - name: Commit & push artifacts
         run: |
           ls -l
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git clone https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git repo
           mv custom-generator-codelab/dist/bundle.js repo
           mv custom-generator-codelab/dist/bundle.js.LICENSE.txt repo
           mv custom-generator-codelab/dist/index.html repo
           cd repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "Compiled Blockly2Java"
           git push
 
