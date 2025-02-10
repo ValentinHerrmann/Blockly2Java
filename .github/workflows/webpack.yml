@@ -29,9 +29,9 @@ jobs:
         run: |
           ls -l
           git clone https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git repo
-          mv custom-generator-codelab/dist/bundle.js repo
-          mv custom-generator-codelab/dist/bundle.js.LICENSE.txt repo
-          mv custom-generator-codelab/dist/index.html repo
+          mv -f custom-generator-codelab/dist/bundle.js repo
+          mv -f custom-generator-codelab/dist/bundle.js.LICENSE.txt repo
+          mv -f custom-generator-codelab/dist/index.html repo
           cd repo
           ls -l
           git config user.name "github-actions[bot]"
