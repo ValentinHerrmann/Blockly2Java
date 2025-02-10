@@ -27,6 +27,7 @@ jobs:
 
       - name: Commit & push artifacts
         run: |
+          ls -l
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git clone https://github.com/ValentinHerrmann/ValentinHerrmann.github.io.git repo
