@@ -20,8 +20,8 @@ jobs:
       - name: Commit files
         run: |
           ls -l
-          git clone https://github.com/ValentinHerrmann/B2J_dist.git B2J_dist
-          git remote set-url --push origin https://ValentinHerrmann::${{ secrets.GH_TOK }}@github.com/your/repo
+          git clone https://ValentinHerrmann:${{ secrets.GH_TOK }}@github.com/ValentinHerrmann/B2J_dist.git B2J_dist
+          git remote set-url --push origin https://ValentinHerrmann:${{ secrets.GH_TOK }}@github.com/ValentinHerrmann/B2J_dist.git
           cp -r custom-generator-codelab/dist/* B2J_dist
           cd B2J_dist
           git config user.name "GitHub Actions"
