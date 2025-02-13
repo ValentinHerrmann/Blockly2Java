@@ -18,11 +18,14 @@ jobs:
           npm run build --if-present
           cd dist
           ls -l
+      - name: Clone GuillaumeFalourd/formulas-training PRIVATE repository
+        uses: GuillaumeFalourd/clone-github-repo-action@v2.3
+        with:
+          owner: 'ValentinHerrmann'
+          repository: 'B2J_dist'
+          access-token: ${{ secrets.GH_TOK }}
       - name: Commit files
         run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git clone https://github.com/ValentinHerrmann/B2J_dist.git B2J_dist
           cp -r custom-generator-codelab/dist/* B2J_dist
           cd B2J_dist
           git add *
@@ -31,5 +34,6 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GH_TOK }}
+          repository: ValentinHerrmann/B2J_dist
           branch: main
 
