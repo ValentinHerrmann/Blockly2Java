@@ -12,9 +12,7 @@ jobs:
           token: ${{ secrets.GH_TOK }}
       - name: npm install, build
         run: |
-          cd custom-generator-codelab/dist
-          ls -l
-          cd ..
+          cd custom-generator-codelab
           npm run build --if-present
           cd dist
           ls -l
