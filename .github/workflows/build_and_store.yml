@@ -11,17 +11,14 @@ jobs:
         with:
           submodules: true
           token: ${{ secrets.GH_TOK }}
-      - name: Initialize submodules
-        run: |
-          git submodule update --init --recursive
       - name: npm install, build
         run: |
-          cd custom-generator-codelab
-          npm run build --if-present
+          cd custom-generator-codelab/dist
           ls -l
-
-
-
+          cd ..
+          npm run build --if-present
+          cd dist
+          ls -l
       - name: Commit files
         run: |
             cd custom-generator-codelab/dist
