@@ -15,8 +15,12 @@ jobs:
         run: |
           cd custom-generator-codelab
           npm run build --if-present
+          ls -l
       - name: Commit and push submodule changes
         run: |
+          ls -l
+          cd custom-generator-codelab/dist/
+          ls -l
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git pull
