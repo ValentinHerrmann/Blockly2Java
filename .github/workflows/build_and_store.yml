@@ -9,7 +9,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true
           token: ${{ secrets.GH_TOK }}
       - name: npm install, build
         run: |
@@ -21,13 +20,13 @@ jobs:
           ls -l
       - name: Commit files
         run: |
-            cd custom-generator-codelab/dist
-            ls -l
-            git rm --cached . -rf
-            git add *
-            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git commit -a -m "Add changes"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git clone https://github.com/ValentinHerrmann/B2J_dist.git B2J_dist
+          cp -r custom-generator-codelab/dist/* B2J_dist
+          cd B2J_dist
+          git add *
+          git commit -a -m "Add changes"
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
