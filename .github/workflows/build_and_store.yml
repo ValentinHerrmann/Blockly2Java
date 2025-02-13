@@ -28,6 +28,8 @@ jobs:
         run: |
           cp -r custom-generator-codelab/dist/* B2J_dist
           cd B2J_dist
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git add *
           git commit -a -m "Add changes"
       - name: Push changes
