@@ -15,8 +15,8 @@ jobs:
           cd custom-generator-codelab
           npm run build --if-present
           cd dist
+          echo $(git rev-parse HEAD) > latest_commit.txt
           ls -l
-
       - name: Commit files
         run: |
           ls -l
