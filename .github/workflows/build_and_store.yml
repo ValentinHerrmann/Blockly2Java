@@ -1,4 +1,4 @@
-name: Node CI
+name: Build and Push to B2J_dist 
 
 on: [push]
 
