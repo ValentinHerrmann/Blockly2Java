@@ -19,6 +19,7 @@ jobs:
         -   name: Release
             uses: softprops/action-gh-release@v2
             with:
+                body_path: CHANGELOG.MD
                 files: |
                     custom-generator-codelab/dist/bundle.js
                     custom-generator-codelab/dist/index.html
