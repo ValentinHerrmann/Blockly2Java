@@ -10,7 +10,7 @@
 
 // Former goog.module ID: Blockly.JavaScript.texts
 
-import {Order} from './javascript_generator.js';
+import {Order,adjustStaticName} from './javascript_generator.js';
 
 
 /**

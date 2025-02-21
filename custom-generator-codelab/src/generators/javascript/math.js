@@ -11,7 +11,7 @@
 
 // Former goog.module ID: Blockly.JavaScript.math
 
-import {Order} from './javascript_generator.js';
+import {Order,adjustStaticName} from './javascript_generator.js';
 
 
 export function math_number(block, generator) {
