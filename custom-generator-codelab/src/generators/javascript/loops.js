@@ -13,7 +13,7 @@
 import * as Blockly from 'blockly/core';
 // import * as stringUtils from 'blockly/core/utils/string.js';
 // import {NameType} from 'blockly/core/names.js';
-import {Order, TYPES} from './javascript_generator.js';
+import {Order, TYPES, adjustStaticName} from './javascript_generator.js';
 
 
 export function controls_repeat_ext(block, generator) {
@@ -24,20 +24,15 @@ export function controls_repeat_ext(block, generator) {
     repeats = String(Number(block.getFieldValue('TIMES')));
   } else {
     // Externe Zahl.
-    repeats =
-        generator.valueToCode(block, 'TIMES', Order.ASSIGNMENT) ||
-        '0';
+    repeats = generator.valueToCode(block, 'TIMES', Order.ASSIGNMENT) || '0';
   }
   let branch = generator.statementToCode(block, 'DO');
   branch = generator.addLoopTrap(branch, block);
   let code = '';
-  const loopVar =
-      generator.nameDB_.getDistinctName('count', Blockly.Names.NameType.VARIABLE);
+  const loopVar = generator.nameDB_.getDistinctName('count', Blockly.Names.NameType.VARIABLE);
   let endVar = repeats;
   if (!repeats.match(/^\w+$/) && !Blockly.utils.string.isNumber(repeats)) {
-    endVar =
-        generator.nameDB_.getDistinctName(
-            'repeat_end', Blockly.Names.NameType.VARIABLE);
+    endVar = generator.nameDB_.getDistinctName('repeat_end', Blockly.Names.NameType.VARIABLE);
     code += 'int ' + endVar + ' = ' + repeats + ';\n';
   }
   code += '\nfor (int ' + loopVar + ' = 0; ' + loopVar + ' < ' + endVar + '; ' +
@@ -67,12 +62,9 @@ export function controls_for(block, generator) {
   // For loop in Java.
   const variable0 = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   // console.log("ForType: " + block.getField('VAR').type);
-  const argument0 =
-      generator.valueToCode(block, 'FROM', Order.ASSIGNMENT) || '0';
-  const argument1 =
-      generator.valueToCode(block, 'TO', Order.ASSIGNMENT) || '0';
-  const increment =
-      generator.valueToCode(block, 'BY', Order.ASSIGNMENT) || '1';
+  const argument0 = generator.valueToCode(block, 'FROM', Order.ASSIGNMENT) || '0';
+  const argument1 = generator.valueToCode(block, 'TO', Order.ASSIGNMENT) || '0';
+  const increment = generator.valueToCode(block, 'BY', Order.ASSIGNMENT) || '1';
   // argument0.includes(".") || increment.includes(".") ? generator.getName(block.getFieldValue('VAR'), ) : generator.getName(block.getFieldValue('VAR'), TYPES.INTEGER);
   let branch = generator.statementToCode(block, 'DO');
   branch = generator.addLoopTrap(branch, block);
