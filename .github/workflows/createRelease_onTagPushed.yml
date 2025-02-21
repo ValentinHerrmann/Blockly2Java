@@ -20,5 +20,7 @@ jobs:
             uses: softprops/action-gh-release@v2
             with:
                 files: |
-                    custom-generator-codelab/dist/
+                    custom-generator-codelab/dist/bundle.js
+                    custom-generator-codelab/dist/index.html
+                    custom-generator-codelab/dist/bundle.js.LICENSE.txt
                 token: ${{ secrets.GH_TOK }}
