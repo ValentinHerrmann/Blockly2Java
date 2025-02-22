@@ -21,8 +21,9 @@ jobs:
         -   name: Release
             uses: softprops/action-gh-release@v2
             with:
-                body_path: CHANGELOG.MD
+                body_path: B2J_CHANGELOG.MD
                 files: |
                     custom-generator-codelab/dist/Blockly2Java.tar.gz
+                    B2J_CHANGELOG.MD
                 token: ${{ secrets.GH_TOK }}
 
