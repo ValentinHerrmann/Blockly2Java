@@ -23,6 +23,6 @@ jobs:
             with:
                 body_path: CHANGELOG.MD
                 files: |
-                    custom-generator-codelab/Blockly2Java.tar.gz
+                    custom-generator-codelab/dist/Blockly2Java.tar.gz
                 token: ${{ secrets.GH_TOK }}
 
