@@ -16,7 +16,8 @@ jobs:
                 cd custom-generator-codelab
                 npm ci
                 npm run build
-                tar -czf Blockly2Java.tar.gz dist
+                cd dist
+                tar -czf Blockly2Java.tar.gz *
         -   name: Release
             uses: softprops/action-gh-release@v2
             with:
