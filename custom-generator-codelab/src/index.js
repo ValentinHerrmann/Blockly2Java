@@ -21,6 +21,37 @@ import {ctrCount, setClassName, getClassName} from "./generators/javascript/java
 //import { exceptions } from 'blockly/core/icons.js';
 
 
+
+// --------------- Launch RestAPI ---------------
+
+const { exec } = require('child_process');
+const path = require('path');
+
+// Starte den REST-API-Server
+const restApiPath = path.join(__dirname, 'restAPI.js');
+exec(`node ${restApiPath}`, (error, stdout, stderr) => {
+  if (error) {
+    console.error(`Error starting REST API: ${error.message}`);
+    return;
+  }
+  if (stderr) {
+    console.error(`REST API stderr: ${stderr}`);
+    return;
+  }
+  console.log(`REST API stdout: ${stdout}`);
+});
+
+
+// ----------------------------------------------
+
+
+
+
+
+
+
+
+
 // Register the blocks and generator with Blockly
 // Blockly.common.defineBlocks(blocks);
 // Object.assign(javaGenerator.forBlock, forBlock);
