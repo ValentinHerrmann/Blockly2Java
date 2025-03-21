@@ -30,8 +30,10 @@ const codeDiv = document.getElementById('generatedCode').firstChild;
 //const outputDiv = scriptscriptdocumentscript.getElementById('output');
 const blocklyDiv = document.getElementById('blocklyDiv');
 export const ws = Blockly.inject(blocklyDiv, {toolbox});
+
 var codePrefix = '';
-var restFailCount = 0;
+var restCount = 0;
+var restInitSuccess = false;
 // This function resets the code and output divs, shows the
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
@@ -40,14 +42,13 @@ const runCode = () => {
   let code = javaGenerator.workspaceToCode(ws);
   code = globalCodeModification(code);
   
-  
   postCode(code,"java").then(data => {
-    console.log("Java Code successfully sent to BlueJ:\n\n"+code);
+    //console.log("Java Code successfully sent to BlueJ:\n\n"+code);
 
   });
+
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
   postCode(dom,"xml").then(data => {
-    console.log("XML Code successfully sent to BlueJ\n\n"+dom);
   });
 
 };
@@ -83,13 +84,29 @@ ws.addChangeListener((e) => {
 
 async function postCode(code,typ) {
 
+  if(!restInitSuccess) 
+  {
+    Logging.log("REST-Service not yet initialized. Code not posted.");
+    return;
+  }
+
+
   let url = 'http://localhost:8081/api';
 
+  
+  const rc = restCount++;
   var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
          if (this.readyState == 4 && this.status == 200) {
+          console.log(`<<< POST-${typ}[${rc}]: ${this.status}`);
+         }
+         else if(this.readyState == 4) {
+          console.log(`<<< POST-${typ}[${rc}]: ${this.status}`);
+          showCodeDiv(true);
          }
     };
+
+    console.log(`>>> POST-${typ}[${rc}]: ${url}`);
     xhttp.open("POST", url, true);
     if(typ=="xml")
     {
@@ -99,35 +116,42 @@ async function postCode(code,typ) {
     {
       xhttp.setRequestHeader("Content-type", "text/java");
     }
-    try {
-      if(restFailCount < 20) {
-        xhttp.send(code);
-      }
-    }
-    catch (e) {
-      restFailCount++;
-      console.log(restFailCount + ". REST-Call failed: " + e);
-    }
+
+    xhttp.send(code);
+
 }
 
 
 function loadXmlToWorkspace(xhttp) {
-  console.log("loadXmlToWorkspace");
-  console.log(xhttp.response);
+  console.log(">>> loadXmlToWorkspace");
+  //console.log(xhttp.response);
   const array = xhttp.response.split("|||||",2);
   console.log(array[0]);
   console.log(array[1]);
 
   codePrefix = array[0];
   let className = findClassName(codePrefix);
-  console.log("Class Name: " + className);
   setClassName(className);
 
   var xml = Blockly.utils.xml.textToDom(array[1]);
   Blockly.getMainWorkspace().clear();
 
   Blockly.Xml.domToWorkspace(xml,Blockly.getMainWorkspace());
-  console.log("Workspace updated");
+  runCode();
+  console.log("<<< loadXmlToWorkspace");
+}
+
+function showCodeDiv(show) {
+  console.log("showCodeDiv("+show+")");
+  const pane = document.getElementById('outputPane'); 
+  if(show) {
+    pane.style.flex = '0 0 400px';
+    pane.style.margin = '1rem';
+  }
+  else {
+    pane.style.flex = '0px';
+    pane.style.margin = '1px';
+  }
 }
 
 function getSavedXml() {
@@ -135,25 +159,23 @@ function getSavedXml() {
 
   let url = 'http://localhost:8081/api';
 
+  const rc = restCount++;
   var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
          if (this.readyState == 4 && this.status == 200) {
+          console.log(`<<< GET[${rc}]: ${this.status}`);
+          restInitSuccess = true;
+          showCodeDiv(false);
           loadXmlToWorkspace(this);
          }
-         console.log("<<< GET Response: "+this.status)
+         else if(this.readyState == 4) {
+          console.log(`<<< GET[${rc}]: ${this.status}`);
+          showCodeDiv(true);
+         }
     };
     xhttp.open("GET", url, true);
-    console.log(">>> GET: " + url)
-    
-    try {
-      if(restFailCount < 20) {
-        xhttp.send();
-      }
-    }
-    catch (e) {
-      restFailCount++;
-      console.log(restFailCount + ". REST-Call failed: " + e);
-    }
+    console.log(`>>> GET[${rc}]: ${url}`);
+    xhttp.send();
 }
 
 function globalCodeModification(code) {
@@ -195,7 +217,7 @@ function findClassName(codePrefix)  {
   if(classHeader != null)
   {
     classHeader = classHeader[0].replace('public class','').trim();
-    console.log("Class Header: " + classHeader);
+    //console.log("Class Header: " + classHeader);
     return classHeader;
   }
   else
