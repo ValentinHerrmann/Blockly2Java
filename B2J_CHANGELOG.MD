@@ -5,8 +5,6 @@
 - Hide java-code window if connected to BlueJ (https://github.com/ValentinHerrmann/BlueJBlocklyExtension/pull/18).
 - Extended readme.
 
-
-
 ### [Version 1.6](https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/1.6)
 - publish release as Blockly2Java.tar.gz instead of single files
 
