@@ -16,4 +16,3 @@ jobs:
         changelog=$(cat B2J_CHANGELOG.MD)
         echo $changelog
         gh pr edit ${{ github.event.pull_request.number }} --body "$changelog"
-

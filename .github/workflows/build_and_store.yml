@@ -28,7 +28,7 @@ jobs:
           git config user.email "actions@github.com"
               if [[ `git status --porcelain` ]]; then
                 git add *
-                git commit -m "Add changes"
+                git commit -m $(git rev-parse HEAD)
                 git push
               else
                 echo "No changes to commit"
