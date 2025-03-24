@@ -86,14 +86,14 @@ async function postCode(code,typ) {
 
   if(!restInitSuccess) 
   {
-    Logging.log("REST-Service not yet initialized. Code not posted.");
+    console.log("REST-Service not yet initialized. Code not posted.");
     return;
   }
 
 
   let url = 'http://localhost:8081/api';
 
-  
+
   const rc = restCount++;
   var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
@@ -146,7 +146,7 @@ function showCodeDiv(show) {
   const pane = document.getElementById('outputPane'); 
   if(show) {
     pane.style.flex = '0 0 400px';
-    pane.style.margin = '1rem';
+    pane.style.margin = '10px';
   }
   else {
     pane.style.flex = '0px';
