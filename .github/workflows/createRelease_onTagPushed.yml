@@ -1,4 +1,4 @@
-name: Create Release and Deploy to Pages
+name: (on tag push) Create Release and Deploy to Pages
 
 on:
   push:
