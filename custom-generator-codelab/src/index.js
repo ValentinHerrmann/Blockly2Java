@@ -145,7 +145,7 @@ function showCodeDiv(show) {
   console.log("showCodeDiv("+show+")");
   const pane = document.getElementById('outputPane'); 
   if(show) {
-    pane.style.flex = '0 0 400px';
+    pane.style.flex = '0 0 500px';
     pane.style.margin = '10px';
   }
   else {
