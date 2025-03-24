@@ -1,5 +1,10 @@
 ## Changelog: [Blockly2Java](https://github.com/ValentinHerrmann/Blockly2Java)
 
+### [Version 1.8](https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/1.8)
+#### Pull Request https://github.com/ValentinHerrmann/Blockly2Java/pull/11:
+- Fixed type determination via increase block.
+- Fixed graphics bug in BlueJ-Mode (now: no trash can visible in no-blockly-mode).
+
 ### [Version 1.7](https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/1.7)
 #### Pull Request https://github.com/ValentinHerrmann/Blockly2Java/pull/9:
 - Try posting code to BlueJ only if connected (initial GET request for xml from BlueJ was successful).

@@ -204,6 +204,29 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
       }
     }
   }
+
+  
+  //search if the variable is ever set
+  blocks = workSpace.getBlocksByType('math_change',true);
+  for (let i = 0; i < blocks.length; i++) {
+    console.log(blocks[i]);
+    console.log(blocks[i].getFieldValue('VAR'));
+
+    if(blocks[i].getFieldValue('VAR') === varId) {
+        const inputList = blocks[i].inputList;
+        let blockType = 'math_number';
+        if(inputList.length > 0) {
+          let blockType = inputList[0].connection.targetBlock().type;
+        }
+        console.log(blockType);
+        varType = getType(blockType);
+      if(varType !== 'var') {
+        return varType;
+      }
+    }
+  }
+
+
   const varsAssignedFromThis = [];
   c = 0;
 
