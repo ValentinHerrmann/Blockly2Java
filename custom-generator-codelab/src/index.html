@@ -3,12 +3,48 @@
    <head>
      <meta charset="utf-8" />
      <title>Blockly</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+    <link rel="preload" href="lib/monaco-editor/dev/vs/editor/editor.main.js" as="script">
+    <link rel="preload" href="lib/monaco-editor/dev/vs/editor/editor.main.nls.de.js" as="script">
+
+    <link rel='stylesheet' type='text/css' media='screen' href='assets/fonts/fonts.css'>
+    
+    <script src="lib/p5.js/p5.js"></script>    
+    <script src="lib/pako/pako.js"></script>
+    <script src="lib/jszip/jszip.js"></script>
+    <script src="lib/upng/UPNG.js"></script>
+
+    <script src="lib/markdownit/markdownit.min.js"></script>
+    <script src="lib/monaco-editor/dev/vs/loader.js"></script>
+    <script src="lib/howler/howler.core.min.js"></script>
+
+    <script type="module" crossorigin src="online-ide-embedded.js"></script>
+    <link rel="stylesheet" href="online-ide-embedded.css">
    </head>
+
+
+
+
    <body>
     <div id="pageContainer">
         <div id="outputPane">
-            <pre id="generatedCode"><code></code></pre>
-            <div id="output"></div>
+            <div id="ide" class="java-online" style="width: calc(100% - 20px); height: 100vh; margin-left: 0px"
+              data-java-online="{
+              'id': 'Java', 
+              'speed': 1000, 
+              'withBottomPanel': true ,
+              'withPCode': false ,
+              'withConsole': true ,
+              'withFileList': true ,
+              'withErrorList': true,
+              'enableFileAccess': true
+              }">
+              <script type="text/plain" title="Test2.java" data-type="java">
+                World w = new World();
+                new Circle(200, 200, 100);
+              </script>
+            </div>
         </div>
       <div id="blocklyDiv"></div>
     </div>

@@ -18,6 +18,7 @@ import {toolbox} from './toolboxGrade9';
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
 import {ctrCount, setClassName, getClassName} from "./generators/javascript/javascript_generator";
+
 //import { exceptions } from 'blockly/core/icons.js';
 
 
@@ -26,7 +27,7 @@ import {ctrCount, setClassName, getClassName} from "./generators/javascript/java
 // Object.assign(javaGenerator.forBlock, forBlock);
 
 // Set up UI elements and inject Blockly
-const codeDiv = document.getElementById('generatedCode').firstChild;
+//const codeDiv = document.getElementById('generatedCode').firstChild;
 //const outputDiv = scriptscriptdocumentscript.getElementById('output');
 const blocklyDiv = document.getElementById('blocklyDiv');
 export const ws = Blockly.inject(blocklyDiv, {toolbox});
@@ -38,11 +39,11 @@ var restInitSuccess = false;
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
 const runCode = () => {
-  
+  getClassName_fromIDE();
   let code = javaGenerator.workspaceToCode(ws);
   code = globalCodeModification(code);
   
-  postCode(code,"java").then(data => {
+  /*postCode(code,"java").then(data => {
     //console.log("Java Code successfully sent to BlueJ:\n\n"+code);
 
   });
@@ -50,13 +51,13 @@ const runCode = () => {
   let dom = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(ws));
   postCode(dom,"xml").then(data => {
   });
-
+*/
 };
 
 // Load the initial state from storage and run the code.
 load(ws);
 //ws.registerToolboxCategoryCallback('MY_PROCEDURES', proceduresFlyoutCallback);
-getSavedXml();
+//getSavedXml();
 runCode();
 
 // Every time the workspace changes state, save the changes to storage.
@@ -121,6 +122,21 @@ async function postCode(code,typ) {
 
 }
 
+function getClassName_fromIDE() {
+  let className = 'MeineKlasse';
+  if (('selected_file_name' in window)) 
+  {
+    console.log("selected_file_name: " + window.selected_file_name);
+    className = window.selected_file_name.replace('.java','');
+  }
+  else
+  {
+    console.log("selected_file_name not available, using default class name");
+  }
+  console.log("Class Name: " + className);
+  setClassName(className);
+}
+
 
 function loadXmlToWorkspace(xhttp) {
   console.log(">>> loadXmlToWorkspace");
@@ -130,8 +146,9 @@ function loadXmlToWorkspace(xhttp) {
   console.log(array[1]);
 
   codePrefix = array[0];
-  let className = findClassName(codePrefix);
-  setClassName(className);
+  //let className =  findClassName(codePrefix);
+  
+  getClassName_fromIDE();
 
   var xml = Blockly.utils.xml.textToDom(array[1]);
   Blockly.getMainWorkspace().clear();
@@ -179,19 +196,93 @@ function getSavedXml() {
 }
 
 function globalCodeModification(code) {
+  
+
+
   let codeSplitByFirstWarning = code.split("!!!",2)
 
   var modCode = codeSplitByFirstWarning[0];
+  console.log("Code1: " + modCode);
 
   modCode = indentation(modCode);
+  console.log("Code2: " + modCode);
+
   modCode = modCode.replaceAll('    // Describe this function...\n','');
+  console.log("Code3: " + modCode);
   modCode = defaultCodePrefix(modCode);
+  console.log("Code4: " + modCode);
+
+
+
 
   modCode = modCode.replaceAll('__CLASS__',getClassName());
 
+  console.log("Code5: " + modCode);
+
   // modCode = constructors(modCode);
   // modCode = mainMethod(modCode);
+  const ide = document.getElementById('ide');
+  if (ide) {
+
+    /*
+    const script = document.createElement('script');
+    script.type = 'text/plain';
+    script.title = 'Test2.java'
+    script.text = '// Additional script for IDE';
+    ide.appendChild(script);
+
+    let test1 = document.createElement('script');
+    test1.type = 'text/plain';
+    test1.id = 'Test1';
+    test1.title = 'Test1'
+    test1.text = modCode;
+
+    let test1Old = document.getElementById('Test1');
+    console.log("test1Old: " + test1Old);
+    console.log(test1Old.text);
+
+    
+    console.log("test1: " + test1);
+    console.log(test1.text);
+
+    ide.removeChild(test1Old);
+    ide.appendChild(test1);
+
+    console.log("Versuch 1 fertig");*/
+
+  console.log("Here we go!");
+
+  if (!('online_ide_access' in window)) {
+    console.warn('online_ide_access is not available on window.');
+    return modCode;
+  }
   
+  //@ts-ignore
+  let ideAccess = window.online_ide_access.getIDE('Java');
+  //console.log("IDE: " + ideAccess);
+  let files = ideAccess.getFiles();
+
+  let selectedFileName = '';
+  if ('selected_file_name' in window) {
+    selectedFileName = window.selected_file_name;
+  }
+  else {
+    console.warn('selected_file_name is not available on window.');
+  }
+
+  //console.log("Files: " + files);
+  for(let i = 0; i < files.length; i++){
+    let file = files[i];
+
+    if(file.getName() == selectedFileName || selectedFileName == '') {
+      console.log('Name: ' + file.getName());
+      //console.log('Quelltext:' + file.getText());
+      file.setText(modCode);
+    }
+    }
+  }
+
+  /*
   if(codeSplitByFirstWarning.length > 1)
     {
       codeDiv.innerText = modCode + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
@@ -201,10 +292,15 @@ function globalCodeModification(code) {
       codeDiv.innerText = modCode;
     }
 
+  //console.log("Code: " + code);
+
   if(ctrCount > 1)
   {
     codeDiv.innerText = codeDiv.innerText + "\n!!! Warnung, maximal ein Konstruktor erlaubt !!!";
   }
+    */
+  
+
   console.log("Global code modification successful");
   return modCode;
 }
@@ -222,6 +318,9 @@ function findClassName(codePrefix)  {
   }
   else
   {
+
+
+
     console.log("Class Header not found");
     return "MeineKlasse";
   }
@@ -254,10 +353,7 @@ function mainMethod(modCode) {
 }
 
 function defaultCodePrefix(modCode) {
-  if(codePrefix === '')
-  {
-    codePrefix = 'import java.util.*; \n\npublic class MeineKlasse { \n'
-  }
+  codePrefix = 'public class ' + getClassName() + ' { \n'
   return codePrefix + modCode + '}';
 }
 
