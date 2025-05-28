@@ -202,23 +202,22 @@ function globalCodeModification(code) {
   let codeSplitByFirstWarning = code.split("!!!",2)
 
   var modCode = codeSplitByFirstWarning[0];
-  console.log("Code1: " + modCode);
-
+  
   modCode = indentation(modCode);
-  console.log("Code2: " + modCode);
-
+  
   modCode = modCode.replaceAll('    // Describe this function...\n','');
-  console.log("Code3: " + modCode);
   modCode = defaultCodePrefix(modCode);
-  console.log("Code4: " + modCode);
-
+  
 
 
 
   modCode = modCode.replaceAll('__CLASS__',getClassName());
 
-  console.log("Code5: " + modCode);
-
+  
+  if(modCode.includes('public static void main()')) {
+    modCode += '\n\n\n// main()-Methode starten\n'+getClassName()+'.main();';
+  }
+  
   // modCode = constructors(modCode);
   // modCode = mainMethod(modCode);
   const ide = document.getElementById('ide');
