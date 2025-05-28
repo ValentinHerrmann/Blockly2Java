@@ -1,0 +1,10 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "npmstart",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/custom-generator-codelab ; npm run-script build"
+        }
+    ]
+}
