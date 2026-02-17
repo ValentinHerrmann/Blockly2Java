@@ -92,8 +92,17 @@ if (mode === '--build-from-submodule' || !mode) {
     fs.copyFileSync(sourceMapPath, path.join(PUBLIC_DIR, 'online-ide-embedded.js.map'));
   }
   
-  // Copy public directory contents
-  console.log('Copying lib and assets...');
+  // Copy assets from dist (JavaScript module chunks)
+  console.log('Copying built assets (JS modules)...');
+  const distAssetsDir = path.join(distDir, 'assets');
+  if (fs.existsSync(distAssetsDir)) {
+    copyRecursive(distAssetsDir, assetsDir);
+  } else {
+    console.warn('Warning: No dist/assets directory found');
+  }
+  
+  // Copy public directory contents (fonts, graphics, etc.)
+  console.log('Copying lib and static assets...');
   const publicLibDir = path.join(onlineIdeDir, 'public', 'lib');
   const publicAssetsDir = path.join(onlineIdeDir, 'public', 'assets');
   
@@ -106,7 +115,7 @@ if (mode === '--build-from-submodule' || !mode) {
   if (fs.existsSync(publicAssetsDir)) {
     copyRecursive(publicAssetsDir, assetsDir);
   } else {
-    console.warn('Warning: No assets directory found');
+    console.warn('Warning: No public/assets directory found');
   }
   
   process.chdir(__dirname);
@@ -147,8 +156,17 @@ if (mode === '--build-from-submodule' || !mode) {
     fs.copyFileSync(sourceMapPath, path.join(PUBLIC_DIR, 'online-ide-embedded.js.map'));
   }
   
-  // Copy public directory contents
-  console.log('Copying lib and assets...');
+  // Copy assets from dist (JavaScript module chunks)
+  console.log('Copying built assets (JS modules)...');
+  const distAssetsDir = path.join(distDir, 'assets');
+  if (fs.existsSync(distAssetsDir)) {
+    copyRecursive(distAssetsDir, assetsDir);
+  } else {
+    console.warn('Warning: No dist/assets directory found');
+  }
+  
+  // Copy public directory contents (fonts, graphics, etc.)
+  console.log('Copying lib and static assets...');
   const publicLibDir = path.join(onlineIdeDir, 'public', 'lib');
   const publicAssetsDir = path.join(onlineIdeDir, 'public', 'assets');
   
@@ -161,7 +179,7 @@ if (mode === '--build-from-submodule' || !mode) {
   if (fs.existsSync(publicAssetsDir)) {
     copyRecursive(publicAssetsDir, assetsDir);
   } else {
-    console.warn('Warning: No assets directory found');
+    console.warn('Warning: No public/assets directory found');
   }
   
   process.chdir(__dirname);
