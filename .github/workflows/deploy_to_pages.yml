@@ -41,23 +41,35 @@ jobs:
       - name: Generate build cache key
         id: build-cache-key
         run: |
-          # Create hash of all files that affect the build
-          HASH=$(cat \
+          # Use git commit hashes for source code and hash config files
+          # This is fast and reliable - same content = same hash
+          
+          # Get main repo commit hash for Blockly2Java source
+          MAIN_COMMIT=$(git rev-parse HEAD:custom-generator-codelab)
+          
+          # Get submodule commit hash for OnlineIDE
+          SUBMODULE_COMMIT=$(git rev-parse HEAD:custom-generator-codelab/online-ide-source)
+          
+          # Hash critical config files that affect the build
+          CONFIG_HASH=$(cat \
             custom-generator-codelab/package.json \
             custom-generator-codelab/webpack.config.js \
-            $(find custom-generator-codelab/src -type f 2>/dev/null || echo "") \
-            $(find custom-generator-codelab/blocks -type f 2>/dev/null || echo "") \
-            $(find custom-generator-codelab/core -type f 2>/dev/null || echo "") \
-            $(find custom-generator-codelab/generators -type f 2>/dev/null || echo "") \
-            $(find custom-generator-codelab/public -type f 2>/dev/null || echo "") \
-            $(find custom-generator-codelab/online-ide-source/src -type f 2>/dev/null || echo "") \
             custom-generator-codelab/online-ide-source/package.json \
             custom-generator-codelab/online-ide-source/vite.config.ts \
             custom-generator-codelab/online-ide-source/vite.config-embedded.ts \
-            CNAME 2>/dev/null \
-            | sha256sum | awk '{print $1}')
+            2>/dev/null | sha256sum | awk '{print $1}')
+          
+          # Add CNAME if it exists
+          CNAME_HASH=$(cat CNAME 2>/dev/null | sha256sum | awk '{print $1}' || echo "none")
+          
+          # Combine all hashes
+          HASH=$(echo "${MAIN_COMMIT}${SUBMODULE_COMMIT}${CONFIG_HASH}${CNAME_HASH}" | sha256sum | awk '{print $1}')
+          
           echo "hash=$HASH" >> $GITHUB_OUTPUT
           echo "Build cache key: $HASH"
+          echo "  Main commit: $MAIN_COMMIT"
+          echo "  Submodule commit: $SUBMODULE_COMMIT"
+          echo "  Config hash: $CONFIG_HASH"
       
       - name: Cache build artifacts
         id: cache-build
