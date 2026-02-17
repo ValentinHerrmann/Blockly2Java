@@ -46,10 +46,20 @@ if [ "$1" == "--build-from-submodule" ]; then
     cp dist/online-ide-embedded.css "$PUBLIC_DIR/"
     cp dist/online-ide-embedded.js.map "$PUBLIC_DIR/" 2>/dev/null || true
     
-    # Copy public directory contents
-    echo "Copying lib and assets..."
-    cp -r public/lib/* "$PUBLIC_DIR/lib/" 2>/dev/null || echo "Warning: No lib directory found"
-    cp -r public/assets/* "$PUBLIC_DIR/assets/" 2>/dev/null || echo "Warning: No assets directory found"
+    # Copy necessary directories from dist
+    echo "Copying lib and assets from dist..."
+    if [ -d "dist/lib" ]; then
+        cp -r dist/lib "$PUBLIC_DIR/"
+    else
+        echo "Warning: No lib directory found in dist"
+    fi
+    
+    if [ -d "dist/assets" ]; then
+        mkdir -p "$PUBLIC_DIR/assets"
+        cp -r dist/assets/* "$PUBLIC_DIR/assets/" 2>/dev/null || true
+    else
+        echo "Warning: No assets directory found in dist"
+    fi
     
     cd "$SCRIPT_DIR"
     
@@ -77,10 +87,20 @@ elif [ "$1" == "--build-from-source" ]; then
     cp dist/online-ide-embedded.css "$PUBLIC_DIR/"
     cp dist/online-ide-embedded.js.map "$PUBLIC_DIR/" 2>/dev/null || true
     
-    # Copy public directory contents
-    echo "Copying lib and assets..."
-    cp -r public/lib/* "$PUBLIC_DIR/lib/" 2>/dev/null || echo "Warning: No lib directory found"
-    cp -r public/assets/* "$PUBLIC_DIR/assets/" 2>/dev/null || echo "Warning: No assets directory found"
+    # Copy necessary directories from dist
+    echo "Copying lib and assets from dist..."
+    if [ -d "dist/lib" ]; then
+        cp -r dist/lib "$PUBLIC_DIR/"
+    else
+        echo "Warning: No lib directory found in dist"
+    fi
+    
+    if [ -d "dist/assets" ]; then
+        mkdir -p "$PUBLIC_DIR/assets"
+        cp -r dist/assets/* "$PUBLIC_DIR/assets/" 2>/dev/null || true
+    else
+        echo "Warning: No assets directory found in dist"
+    fi
     
     cd "$SCRIPT_DIR"
     

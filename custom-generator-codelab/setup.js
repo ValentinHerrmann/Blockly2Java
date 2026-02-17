@@ -101,21 +101,20 @@ if (mode === '--build-from-submodule' || !mode) {
     console.warn('Warning: No dist/assets directory found');
   }
   
-  // Copy public directory contents (fonts, graphics, etc.)
-  console.log('Copying lib and static assets...');
-  const publicLibDir = path.join(onlineIdeDir, 'public', 'lib');
-  const publicAssetsDir = path.join(onlineIdeDir, 'public', 'assets');
-  
-  if (fs.existsSync(publicLibDir)) {
-    copyRecursive(publicLibDir, libDir);
+  // Copy lib from dist
+  console.log('Copying lib directory from dist...');
+  const distLibDir = path.join(distDir, 'lib');
+  if (fs.existsSync(distLibDir)) {
+    copyRecursive(distLibDir, libDir);
   } else {
-    console.warn('Warning: No lib directory found');
+    console.warn('Warning: No dist/lib directory found');
   }
   
+  // Copy additional assets from public if they exist (fonts, graphics, etc.)
+  const publicAssetsDir = path.join(onlineIdeDir, 'public', 'assets');
   if (fs.existsSync(publicAssetsDir)) {
+    console.log('Copying additional assets from public...');
     copyRecursive(publicAssetsDir, assetsDir);
-  } else {
-    console.warn('Warning: No public/assets directory found');
   }
   
   process.chdir(__dirname);
@@ -165,21 +164,20 @@ if (mode === '--build-from-submodule' || !mode) {
     console.warn('Warning: No dist/assets directory found');
   }
   
-  // Copy public directory contents (fonts, graphics, etc.)
-  console.log('Copying lib and static assets...');
-  const publicLibDir = path.join(onlineIdeDir, 'public', 'lib');
-  const publicAssetsDir = path.join(onlineIdeDir, 'public', 'assets');
-  
-  if (fs.existsSync(publicLibDir)) {
-    copyRecursive(publicLibDir, libDir);
+  // Copy lib from dist
+  console.log('Copying lib directory from dist...');
+  const distLibDir = path.join(distDir, 'lib');
+  if (fs.existsSync(distLibDir)) {
+    copyRecursive(distLibDir, libDir);
   } else {
-    console.warn('Warning: No lib directory found');
+    console.warn('Warning: No dist/lib directory found');
   }
   
+  // Copy additional assets from public if they exist (fonts, graphics, etc.)
+  const publicAssetsDir = path.join(onlineIdeDir, 'public', 'assets');
   if (fs.existsSync(publicAssetsDir)) {
+    console.log('Copying additional assets from public...');
     copyRecursive(publicAssetsDir, assetsDir);
-  } else {
-    console.warn('Warning: No public/assets directory found');
   }
   
   process.chdir(__dirname);
