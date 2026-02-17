@@ -1,0 +1,34 @@
+{
+  "name": "blockly2java-root",
+  "version": "1.0.0",
+  "description": "Blockly2Java - Visual Programming to Java Code",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd custom-generator-codelab && npm install",
+    "setup": "cd custom-generator-codelab && npm run setup",
+    "setup:submodule": "cd custom-generator-codelab && npm run setup:submodule",
+    "setup:dummy": "cd custom-generator-codelab && npm run setup:dummy",
+    "setup:external": "cd custom-generator-codelab && npm run setup:external",
+    "dev": "cd custom-generator-codelab && npm run dev",
+    "start": "cd custom-generator-codelab && npm start",
+    "build": "cd custom-generator-codelab && npm run build",
+    "build:all": "cd custom-generator-codelab && npm run build:all",
+    "deploy": "cd custom-generator-codelab && npm run deploy",
+    "ide:dev": "cd custom-generator-codelab/online-ide-source && npm run dev",
+    "ide:build": "cd custom-generator-codelab/online-ide-source && npm run build",
+    "ide:preview": "cd custom-generator-codelab/online-ide-source && npm run preview"
+  },
+  "keywords": [
+    "blockly",
+    "java",
+    "code-generation",
+    "visual-programming",
+    "education"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ValentinHerrmann/Blockly2Java.git"
+  },
+  "author": "Valentin Herrmann",
+  "license": "Apache-2.0"
+}
