@@ -32,6 +32,65 @@ import {ctrCount, setClassName, getClassName} from "./generators/javascript/java
 const blocklyDiv = document.getElementById('blocklyDiv');
 export const ws = Blockly.inject(blocklyDiv, {toolbox});
 
+// Set up draggable divider
+const divider = document.getElementById('divider');
+const leftPane = document.getElementById('leftPane');
+const rightPane = document.getElementById('rightPane');
+const pageContainer = document.getElementById('pageContainer');
+
+let isDragging = false;
+
+divider.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const containerRect = pageContainer.getBoundingClientRect();
+    const newLeftWidth = e.clientX - containerRect.left;
+    const containerWidth = containerRect.width;
+    const dividerWidth = 5;
+    
+    // Get computed styles to account for margins
+    const leftPaneStyle = getComputedStyle(leftPane);
+    const rightPaneStyle = getComputedStyle(rightPane);
+    
+    // Calculate margins (left + right margins for each pane)
+    const leftPaneMargin = Number.parseInt(leftPaneStyle.marginLeft) + Number.parseInt(leftPaneStyle.marginRight);
+    const rightPaneMargin = Number.parseInt(rightPaneStyle.marginLeft) + Number.parseInt(rightPaneStyle.marginRight);
+    
+    // Get minimum widths from CSS classes
+    const minLeftWidth = Number.parseInt(leftPaneStyle.minWidth); // get minimum width from css-class of leftPane
+    const minRightWidth = Number.parseInt(rightPaneStyle.minWidth); // get minimum width from css-class of rightPane
+    
+    // Calculate maximum left width accounting for margins
+    const maxLeftWidth = containerWidth - minRightWidth - rightPaneMargin - dividerWidth;
+    const effectiveMinLeftWidth = minLeftWidth + leftPaneMargin;
+    
+    if (newLeftWidth >= effectiveMinLeftWidth && newLeftWidth <= maxLeftWidth) {
+        const leftPixels = newLeftWidth - leftPaneMargin;
+        const rightPixels = containerWidth - newLeftWidth - dividerWidth - rightPaneMargin;
+        
+        leftPane.style.flex = `0 0 ${leftPixels}px`;
+        rightPane.style.flex = `0 0 ${rightPixels}px`;
+        
+        // Trigger Blockly resize
+        Blockly.svgResize(ws);
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }
+});
+
 var codePrefix = '';
 var restCount = 0;
 var restInitSuccess = false;

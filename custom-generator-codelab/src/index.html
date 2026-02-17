@@ -27,9 +27,9 @@
 
 
    <body>
-    <div id="pageContainer">
-        <div id="outputPane">
-            <div id="ide" class="java-online" style="width: calc(100% - 20px); height: 100vh; margin-left: 0px"
+    <div id="pageContainer" class="split-layout">
+        <div id="leftPane" class="split-pane split-pane--left">
+            <div id="ide" class="java-online"
               data-java-online="{
               'id': 'Java', 
               'speed': 1000, 
@@ -40,13 +40,22 @@
               'withErrorList': true,
               'enableFileAccess': true
               }">
-              <script type="text/plain" title="Test2.java" data-type="java">
-                World w = new World();
-                new Circle(200, 200, 100);
+              <script type="text/plain" title="Main.java" data-type="java">
+  /* 
+  Erstelle dein Programm über Blockly und
+  klicke auf "Run", um es auszuführen!
+  */
+
+  public class Main {
+
+  }
               </script>
             </div>
         </div>
-      <div id="blocklyDiv"></div>
+        <div id="divider" class="split-divider"></div>
+        <div id="rightPane" class="split-pane split-pane--right">
+            <div id="blocklyDiv" class="content-container content-container--constrained"></div>
+        </div>
     </div>
    </body>
  </html>
