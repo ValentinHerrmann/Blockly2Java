@@ -298,7 +298,7 @@ function globalCodeModification(code) {
 
   let codeSplitByFirstWarning = code.split("!!!",2)
 
-  var modCode = codeSplitByFirstWarning[0];
+  let modCode = codeSplitByFirstWarning[0];
   
   modCode = indentation(modCode);
   
