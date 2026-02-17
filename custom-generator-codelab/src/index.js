@@ -165,6 +165,17 @@ ws.addChangeListener((e) => {
   save(ws);
 });
 
+// When globalThis.selected_file_name changes, call load(ws)
+Object.defineProperty(globalThis, 'selected_file_name', {
+  set: function(value) {
+    this._selected_file_name = value;
+    load(ws);
+  },
+  get: function() {
+    return this._selected_file_name;
+  }
+});
+
 
 // Whenever the workspace changes meaningfully, run the code again.
 ws.addChangeListener((e) => {
@@ -184,7 +195,7 @@ async function postCode(code,typ) {
 
   if(!restInitSuccess) 
   {
-    console.log("REST-Service not yet initialized. Code not posted.");
+    console.debug("REST-Service not yet initialized. Code not posted.");
     return;
   }
 
@@ -196,15 +207,15 @@ async function postCode(code,typ) {
   var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
          if (this.readyState == 4 && this.status == 200) {
-          console.log(`<<< POST-${typ}[${rc}]: ${this.status}`);
+          console.debug(`<<< POST-${typ}[${rc}]: ${this.status}`);
          }
          else if(this.readyState == 4) {
-          console.log(`<<< POST-${typ}[${rc}]: ${this.status}`);
+          console.debug(`<<< POST-${typ}[${rc}]: ${this.status}`);
           showCodeDiv(true);
          }
     };
 
-    console.log(`>>> POST-${typ}[${rc}]: ${url}`);
+    console.debug(`>>> POST-${typ}[${rc}]: ${url}`);
     xhttp.open("POST", url, true);
     if(typ=="xml")
     {
@@ -221,33 +232,29 @@ async function postCode(code,typ) {
 
 function getClassName_fromIDE() {
   let className = 'MeineKlasse';
-  if (('selected_file_name' in window)) 
+  if (('selected_file_name' in globalThis)) 
   {
-    console.log("selected_file_name: " + window.selected_file_name);
-    className = window.selected_file_name.replace('.java','');
+    console.debug("selected_file_name: " +globalThis.selected_file_name);
+    className =globalThis.selected_file_name.replace('.java','');
   }
   else
   {
-    console.log("selected_file_name not available, using default class name");
+    console.debug("selected_file_name not available, using default class name");
   }
-  console.log("Class Name: " + className);
+  console.debug("Class Name: " + className);
   setClassName(className);
 }
 
 
 function loadXmlToWorkspace(xhttp) {
-  console.log(">>> loadXmlToWorkspace");
-  //console.log(xhttp.response);
+  console.debug(">>> loadXmlToWorkspace");
   const array = xhttp.response.split("|||||",2);
-  console.log(array[0]);
-  console.log(array[1]);
 
   codePrefix = array[0];
-  //let className =  findClassName(codePrefix);
   
   getClassName_fromIDE();
 
-  var xml = Blockly.utils.xml.textToDom(array[1]);
+  let xml = Blockly.utils.xml.textToDom(array[1]);
   Blockly.getMainWorkspace().clear();
 
   Blockly.Xml.domToWorkspace(xml,Blockly.getMainWorkspace());
@@ -349,21 +356,21 @@ function globalCodeModification(code) {
   console.log("Here we go!");
 
   if (!('online_ide_access' in window)) {
-    console.warn('online_ide_access is not available on window.');
+    console.warn('online_ide_access is not available onglobalThis.');
     return modCode;
   }
   
   //@ts-ignore
-  let ideAccess = window.online_ide_access.getIDE('Java');
+  let ideAccess =globalThis.online_ide_access.getIDE('Java');
   //console.log("IDE: " + ideAccess);
   let files = ideAccess.getFiles();
 
   let selectedFileName = '';
   if ('selected_file_name' in window) {
-    selectedFileName = window.selected_file_name;
+    selectedFileName =globalThis.selected_file_name;
   }
   else {
-    console.warn('selected_file_name is not available on window.');
+    console.warn('selected_file_name is not available onglobalThis.');
   }
 
   //console.log("Files: " + files);

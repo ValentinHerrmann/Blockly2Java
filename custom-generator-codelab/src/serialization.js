@@ -6,7 +6,7 @@
 
 import * as Blockly from 'blockly/core';
 
-const storageKey = 'newJavaGeneratorWorkspace';
+const storageKey = 'b2j_workspace_';
 
 /**
  * Saves the state of the workspace to browser's local storage.
@@ -14,7 +14,9 @@ const storageKey = 'newJavaGeneratorWorkspace';
  */
 export const save = function(workspace) {
   const data = Blockly.serialization.workspaces.save(workspace);
-  window.localStorage?.setItem(storageKey, JSON.stringify(data));
+  const key = storageKey + globalThis.selected_file_name;
+  console.log("Saving workspace: " + key);
+  globalThis.localStorage?.setItem(key, JSON.stringify(data));
 };
 
 /**
@@ -22,7 +24,9 @@ export const save = function(workspace) {
  * @param {Blockly.Workspace} workspace Blockly workspace to load into.
  */
 export const load = function(workspace) {
-  const data = window.localStorage?.getItem(storageKey);
+  const key = storageKey + globalThis.selected_file_name;
+  console.log("Loading workspace: " + key);
+  const data =globalThis.localStorage?.getItem(key);
   if (!data) return;
 
   // Don't emit events during loading.
