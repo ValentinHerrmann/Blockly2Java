@@ -18,10 +18,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    outputs:
-      cache-hit: ${{ steps.cache-build.outputs.cache-hit }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,102 +39,18 @@ jobs:
             package-lock.json
             custom-generator-codelab/package-lock.json
             custom-generator-codelab/online-ide-source/package-lock.json
-      
-      - name: Cache build artifacts
-        id: cache-build
-        uses: actions/cache@v4
-        with:
-          path: custom-generator-codelab/dist
-          key: ${{ runner.os }}-build-${{ hashFiles('custom-generator-codelab/src/**', 'custom-generator-codelab/blocks/**', 'custom-generator-codelab/core/**', 'custom-generator-codelab/generators/**', 'custom-generator-codelab/public/**', 'custom-generator-codelab/package.json', 'custom-generator-codelab/webpack.config.js', 'custom-generator-codelab/online-ide-source/src/**', 'custom-generator-codelab/online-ide-source/package.json', 'custom-generator-codelab/online-ide-source/vite.config*.ts', 'CNAME') }}
-          restore-keys: |
-            ${{ runner.os }}-build-
-      
-      - name: Restore from long-term artifact cache (if cache miss)
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: build-cache-${{ hashFiles('custom-generator-codelab/src/**', 'custom-generator-codelab/blocks/**', 'custom-generator-codelab/core/**', 'custom-generator-codelab/generators/**', 'custom-generator-codelab/public/**', 'custom-generator-codelab/package.json', 'custom-generator-codelab/webpack.config.js', 'custom-generator-codelab/online-ide-source/src/**', 'custom-generator-codelab/online-ide-source/package.json', 'custom-generator-codelab/online-ide-source/vite.config*.ts', 'CNAME') }}
-          path: custom-generator-codelab/dist/
-      
-      - name: Cache debug info
-        run: |
-          echo "Cache key: ${{ runner.os }}-build-${{ hashFiles('custom-generator-codelab/src/**', 'custom-generator-codelab/blocks/**', 'custom-generator-codelab/core/**', 'custom-generator-codelab/generators/**', 'custom-generator-codelab/public/**', 'custom-generator-codelab/package.json', 'custom-generator-codelab/webpack.config.js', 'custom-generator-codelab/online-ide-source/src/**', 'custom-generator-codelab/online-ide-source/package.json', 'custom-generator-codelab/online-ide-source/vite.config*.ts', 'CNAME') }}"
-          echo "Cache hit: ${{ steps.cache-build.outputs.cache-hit }}"
-          if [ -d "custom-generator-codelab/dist" ] && [ "$(ls -A custom-generator-codelab/dist)" ]; then
-            echo "Build artifacts present: YES (from cache or artifact)"
-          else
-            echo "Build artifacts present: NO (will build)"
-          fi
-      
-      - name: Check if build needed
-        id: build-check
-        run: |
-          if [ -d "custom-generator-codelab/dist" ] && [ "$(ls -A custom-generator-codelab/dist)" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Build artifacts found - skipping build"
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-            echo "No build artifacts - will build"
-          fi
-      
-      - name: Install dependencies
-        if: steps.build-check.outputs.skip != 'true'
-        run: npm ci
           
       - name: Build project
-        if: steps.build-check.outputs.skip != 'true'
-        run: npm run build:all
-      
-      - name: Save to long-term artifact cache (30 days)
-        if: steps.cache-build.outputs.cache-hit != 'true' && steps.build-check.outputs.skip != 'true'
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-cache-${{ hashFiles('custom-generator-codelab/src/**', 'custom-generator-codelab/blocks/**', 'custom-generator-codelab/core/**', 'custom-generator-codelab/generators/**', 'custom-generator-codelab/public/**', 'custom-generator-codelab/package.json', 'custom-generator-codelab/webpack.config.js', 'custom-generator-codelab/online-ide-source/src/**', 'custom-generator-codelab/online-ide-source/package.json', 'custom-generator-codelab/online-ide-source/vite.config*.ts', 'CNAME') }}
-          path: custom-generator-codelab/dist/
-          retention-days: 30
-          overwrite: true
-      
-      - name: Display cache status
         run: |
-          if [ "${{ steps.cache-build.outputs.cache-hit }}" == "true" ]; then
-            echo "✓ Build artifacts restored from 7-day cache - build skipped"
-          elif [ "${{ steps.build-check.outputs.skip }}" == "true" ]; then
-            echo "✓ Build artifacts restored from 30-day artifact cache - build skipped"
-          else
-            echo "✓ Project built successfully - saved to cache"
-          fi
-          ls -lh custom-generator-codelab/dist/
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-files
-          path: custom-generator-codelab/dist/
-          retention-days: 1
-
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-files
-          path: ./dist
-          
+          npm ci
+          npm run build:all
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        
-      - name: Upload artifact to Pages
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist/'
-          
+          # Upload entire repository
+          path: './custom-generator-codelab/dist/'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
