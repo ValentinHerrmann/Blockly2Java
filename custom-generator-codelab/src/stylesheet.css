@@ -1,0 +1,28 @@
+/* ==========================================================================
+   CSS Variables - Dark Theme Color Palette
+   ========================================================================== */
+
+:root {
+    /* Primary Colors */
+    --primary-bg: #1e1e1e;           /* Main background */
+    --secondary-bg: #252526;          /* Panels, toolbox */
+    --tertiary-bg: #3c3c3c;           /* Scrollbars, tertiary elements */
+    
+    /* Text Colors */
+    --text-primary: #d4d4d4;          /* Primary text */
+    --text-secondary: #ffffff;        /* Secondary text, markers */
+    --text-tertiary: #d0d0d0;         /* Cursor, subtle elements */
+    
+    /* Interactive Elements */
+    --divider: #222222;               /* Default divider */
+    --divider-hover: #333333;         /* Divider hover state */
+    --divider-active: #444444;        /* Divider active state */
+    
+    /* Effects */
+    --shadow-strong: rgba(0, 0, 0, 0.8);
+    
+    /* Opacity Values */
+    --opacity-flyout: 0.9;
+    --opacity-scrollbar: 0.5;
+    --opacity-marker: 0.3;
+}

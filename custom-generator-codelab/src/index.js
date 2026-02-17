@@ -15,6 +15,7 @@ import * as CTR from './blocks/constructor.js';
 //import * as CTR2 from './blocks/constructor2.js';
 import {toolbox} from './toolboxGrade9';
 
+import './stylesheet.css';
 import './index.css';
 import {javascriptGenerator} from "blockly/javascript";
 import {ctrCount, setClassName, getClassName} from "./generators/javascript/javascript_generator";
@@ -30,7 +31,44 @@ import {ctrCount, setClassName, getClassName} from "./generators/javascript/java
 //const codeDiv = document.getElementById('generatedCode').firstChild;
 //const outputDiv = scriptscriptdocumentscript.getElementById('output');
 const blocklyDiv = document.getElementById('blocklyDiv');
-export const ws = Blockly.inject(blocklyDiv, {toolbox});
+
+// Get colors from CSS variables
+const rootStyles = getComputedStyle(document.documentElement);
+const colors = {
+    primaryBg: rootStyles.getPropertyValue('--primary-bg').trim(),
+    secondaryBg: rootStyles.getPropertyValue('--secondary-bg').trim(),
+    tertiaryBg: rootStyles.getPropertyValue('--tertiary-bg').trim(),
+    textPrimary: rootStyles.getPropertyValue('--text-primary').trim(),
+    textSecondary: rootStyles.getPropertyValue('--text-secondary').trim(),
+    textTertiary: rootStyles.getPropertyValue('--text-tertiary').trim(),
+    opacityFlyout: parseFloat(rootStyles.getPropertyValue('--opacity-flyout').trim()),
+    opacityScrollbar: parseFloat(rootStyles.getPropertyValue('--opacity-scrollbar').trim()),
+    opacityMarker: parseFloat(rootStyles.getPropertyValue('--opacity-marker').trim()),
+};
+
+// Create a dark theme for Blockly using CSS variables
+const darkTheme = Blockly.Theme.defineTheme('dark', {
+    'base': Blockly.Themes.Classic,
+    'componentStyles': {
+        'workspaceBackgroundColour': colors.primaryBg,
+        'toolboxBackgroundColour': colors.secondaryBg,
+        'toolboxForegroundColour': colors.textPrimary,
+        'flyoutBackgroundColour': colors.secondaryBg,
+        'flyoutForegroundColour': colors.textPrimary,
+        'flyoutOpacity': colors.opacityFlyout,
+        'scrollbarColour': colors.tertiaryBg,
+        'scrollbarOpacity': colors.opacityScrollbar,
+        'insertionMarkerColour': colors.textSecondary,
+        'insertionMarkerOpacity': colors.opacityMarker,
+        'markerColour': colors.textSecondary,
+        'cursorColour': colors.textTertiary,
+    }
+});
+
+export const ws = Blockly.inject(blocklyDiv, {
+    toolbox,
+    theme: darkTheme
+});
 
 // Set up draggable divider
 const divider = document.getElementById('divider');
