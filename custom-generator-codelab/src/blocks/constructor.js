@@ -24,11 +24,11 @@ Blockly.Blocks["defconstructor"] = {
   },
 
   mutationToDom: function () {
-    var container = document.createElement('mutation');
+    let container = document.createElement('mutation');
 
-    for (var i = 0; i < this.arguments_.length; i++) {
-      var name = this.arguments_[i];
-      var argument = document.createElement('arg');
+    for (let i = 0; i < this.arguments_.length; i++) {
+      let name = this.arguments_[i];
+      let argument = document.createElement('arg');
 
       if (!name.startsWith(prefix)) {
         name = prefix + name;
@@ -40,7 +40,7 @@ Blockly.Blocks["defconstructor"] = {
       if (!this.workspace.getVariable(name)) {
         this.workspace.createVariable(name);
       }
-      var id = this.workspace.getVariable(name).getId();
+      let id = this.workspace.getVariable(name).getId();
       argument.setAttribute('varid', id);
       container.appendChild(argument);
     }
@@ -51,9 +51,9 @@ Blockly.Blocks["defconstructor"] = {
   domToMutation: function (xmlElement) {
     this.arguments_ = [];
 
-    for (var i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
+    for (let i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
       if (childNode.nodeName.toLowerCase() == 'arg') {
-        var name = childNode.getAttribute('name');
+        let name = childNode.getAttribute('name');
         if (!name.startsWith(prefix)) {
           name = prefix + name;
         }
@@ -67,13 +67,13 @@ Blockly.Blocks["defconstructor"] = {
   },
 
   decompose: function (workspace) {
-    var containerBlock = workspace.newBlock('argument_container');
+    let containerBlock = workspace.newBlock('argument_container');
     containerBlock.initSvg();
-    var connection = containerBlock.getInput('STACK').connection;
-    for (var i = 0; i < this.arguments_.length; i++) {
-      var argumentBlock = workspace.newBlock('argument_input');
+    let connection = containerBlock.getInput('STACK').connection;
+    for (const element of this.arguments_) {
+      let argumentBlock = workspace.newBlock('argument_input');
       argumentBlock.initSvg();
-      argumentBlock.setFieldValue(this.arguments_[i], 'NAME');
+      argumentBlock.setFieldValue(element, 'NAME');
       connection.connect(argumentBlock.previousConnection);
       connection = argumentBlock.nextConnection;
     }
@@ -81,11 +81,11 @@ Blockly.Blocks["defconstructor"] = {
   },
 
   compose: function (containerBlock) {
-    var itemBlock = containerBlock.getInputTargetBlock('STACK');
+    let itemBlock = containerBlock.getInputTargetBlock('STACK');
     this.arguments_ = [];
-    var connections = [];
+    let connections = [];
     while (itemBlock) {
-      var name = itemBlock.getFieldValue('NAME');
+      let name = itemBlock.getFieldValue('NAME');
       if (!name.startsWith(prefix)) {
         name = prefix + name;
       }
@@ -103,7 +103,6 @@ Blockly.Blocks["defconstructor"] = {
       this.removeInput('ARGUMENTS');
     }
     if (this.arguments_.length) {
-      //console.log("Arguments: " + this.arguments_);
       let joinedArgs = this.arguments_.join(", ");
       let topLine = this.getInput('TOP_LINE');
       if (topLine) {
@@ -112,15 +111,14 @@ Blockly.Blocks["defconstructor"] = {
       }
     }
     else {
-      //console.log("No arguments");
       let topLine = this.getInput('TOP_LINE');
       topLine.fieldRow = topLine.fieldRow.slice(0, 1);
     }
   },
   getVarModels: function() {
-    var varModels = [];
-    for (var i = 0; i < this.arguments_.length; i++) {
-      var name = this.arguments_[i];
+    let varModels = [];
+    for (const element of this.arguments_) {
+      let name = element;
       varModels.push(this.workspace.getVariable(name));
     }
     return varModels;
