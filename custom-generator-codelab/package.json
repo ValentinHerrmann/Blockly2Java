@@ -6,8 +6,18 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "git submodule update --init --recursive 2>/dev/null || true",
+    "setup": "bash setup.sh --build-from-submodule || node setup.js --build-from-submodule",
+    "setup:submodule": "bash setup.sh --build-from-submodule || node setup.js --build-from-submodule",
+    "setup:dummy": "bash setup.sh --copy-from-dummy || node setup.js --copy-from-dummy",
+    "setup:external": "bash setup.sh --build-from-source || node setup.js --build-from-source",
+    "prestart": "test -d public/lib || npm run setup",
+    "prebuild": "test -d public/lib || npm run setup",
+    "dev": "npm run setup && webpack serve --mode development",
+    "start": "webpack serve --open --mode development",
     "build": "webpack --mode production",
-    "start": "webpack serve --open --mode development"
+    "build:all": "npm run setup && npm run build",
+    "deploy": "npm run build:all"
   },
   "keywords": [
     "blockly"
@@ -15,6 +25,7 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
+    "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.7.1",
     "html-webpack-plugin": "^5.5.0",
     "source-map-loader": "^4.0.1",

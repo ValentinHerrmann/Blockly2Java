@@ -27,11 +27,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            custom-generator-codelab/package-lock.json
+            custom-generator-codelab/online-ide-source/package-lock.json
+          
       - name: Build project
         run: |
           cd custom-generator-codelab
           npm ci
-          npm run build
+          npm run build:all
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

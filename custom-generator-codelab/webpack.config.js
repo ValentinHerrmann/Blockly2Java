@@ -1,5 +1,15 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+// Determine the publicPath for GitHub Pages
+// If GITHUB_PAGES env var is set and no custom domain (CNAME), use /Blockly2Java/
+const getPublicPath = () => {
+  if (process.env.GITHUB_PAGES === 'true' && !process.env.CUSTOM_DOMAIN) {
+    return '/Blockly2Java/';
+  }
+  return '/';
+};
 
 // Base config that applies to either development or production mode.
 const config = {
@@ -9,10 +19,21 @@ const config = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
     clean: true,
+    publicPath: getPublicPath(),
   },
   // Enable webpack-dev-server to get hot refresh of the app.
   devServer: {
-    static: './build',
+    static: [
+      {
+        directory: path.join(__dirname, 'build'),
+      },
+      {
+        directory: path.join(__dirname, 'public'),
+        publicPath: '/',
+      }
+    ],
+    compress: true,
+    port: 8080,
   },
   module: {
     rules: [
@@ -30,6 +51,24 @@ const config = {
     new HtmlWebpackPlugin({
       template: 'src/index.html',
     }),
+    // Copy static files (lib, assets, and Online-IDE embedded files) to output directory
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'public',
+          to: '.',
+          noErrorOnMissing: true,
+          globOptions: {
+            ignore: ['**/.gitkeep']
+          }
+        },
+        {
+          from: '../CNAME',
+          to: 'CNAME',
+          noErrorOnMissing: true,
+        }
+      ]
+    })
   ],
 };
 

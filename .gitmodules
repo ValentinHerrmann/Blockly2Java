@@ -1,0 +1,3 @@
+[submodule "custom-generator-codelab/online-ide-source"]
+	path = custom-generator-codelab/online-ide-source
+	url = git@github.com:ValentinHerrmann/Online-IDE_B2J.git

@@ -1,1 +1,33 @@
+# Build artifacts
 custom-generator-codelab/dist/
+custom-generator-codelab/public/
+custom-generator-codelab/build/
+
+# Dependencies
+node_modules/
+custom-generator-codelab/node_modules/
+custom-generator-codelab/online-ide-source/node_modules/
+custom-generator-codelab/online-ide-source/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local

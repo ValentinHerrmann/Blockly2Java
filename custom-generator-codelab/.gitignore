@@ -1,0 +1,21 @@
+# Build outputs
+build/
+dist/
+
+# Public directory (contains copied files)
+public/
+
+# Dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
