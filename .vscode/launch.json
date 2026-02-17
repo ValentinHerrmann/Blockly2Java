@@ -5,12 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-        "type": "chrome",
-        "request": "launch",
-        "name": "Build and Launch",
-        "url": "${workspaceFolder}/custom-generator-codelab/dist/index.html",
-        "preLaunchTask": "npmstart" 
+            "type": "chrome",
+            "request": "launch",
+            "name": "Debug B2J with Chrome",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}/custom-generator-codelab",
+            "preLaunchTask": "npmstart",
+            "sourceMapPathOverrides": {
+                "webpack:///*": "${webRoot}/*"
+            }
         }
-
     ]
 }

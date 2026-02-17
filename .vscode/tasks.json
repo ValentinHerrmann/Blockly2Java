@@ -4,36 +4,25 @@
         {
             "label": "npmstart",
             "type": "shell",
-            "command": "npm run build",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "npm-start-dev",
-            "type": "shell",
-            "command": "npm start",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "npm-dev",
-            "type": "shell",
             "command": "npm run dev",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "group": "build",
             "isBackground": true,
-            "problemMatcher": []
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": "(webpack.*compiled|Compiled successfully)"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
         }
     ]
 }
