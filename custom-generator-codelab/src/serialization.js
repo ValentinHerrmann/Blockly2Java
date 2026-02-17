@@ -15,7 +15,7 @@ const storageKey = 'b2j_workspace_';
 export const save = function(workspace) {
   const data = Blockly.serialization.workspaces.save(workspace);
   const key = storageKey + globalThis.selected_file_name;
-  console.log("Saving workspace: " + key);
+  console.debug("Saving workspace: " + key);
   globalThis.localStorage?.setItem(key, JSON.stringify(data));
 };
 
@@ -25,7 +25,7 @@ export const save = function(workspace) {
  */
 export const load = function(workspace) {
   const key = storageKey + globalThis.selected_file_name;
-  console.log("Loading workspace: " + key);
+  console.debug("Loading workspace: " + key);
   const data =globalThis.localStorage?.getItem(key);
   if (!data) return;
 

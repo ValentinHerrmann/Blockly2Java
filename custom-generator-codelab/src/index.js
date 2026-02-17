@@ -234,20 +234,13 @@ function getClassName_fromIDE() {
   let className = 'MeineKlasse';
   if (('selected_file_name' in globalThis)) 
   {
-    console.debug("selected_file_name: " +globalThis.selected_file_name);
     className =globalThis.selected_file_name.replace('.java','');
   }
-  else
-  {
-    console.debug("selected_file_name not available, using default class name");
-  }
-  console.debug("Class Name: " + className);
   setClassName(className);
 }
 
 
 function loadXmlToWorkspace(xhttp) {
-  console.debug(">>> loadXmlToWorkspace");
   const array = xhttp.response.split("|||||",2);
 
   codePrefix = array[0];
@@ -259,11 +252,9 @@ function loadXmlToWorkspace(xhttp) {
 
   Blockly.Xml.domToWorkspace(xml,Blockly.getMainWorkspace());
   runCode();
-  console.log("<<< loadXmlToWorkspace");
 }
 
 function showCodeDiv(show) {
-  console.log("showCodeDiv("+show+")");
   const pane = document.getElementById('outputPane'); 
   if(show) {
     pane.style.flex = '0 0 500px';
@@ -276,26 +267,20 @@ function showCodeDiv(show) {
 }
 
 function getSavedXml() {
-  console.log("getSavedXml");
-
   let url = 'http://localhost:8081/api';
-
   const rc = restCount++;
-  var xhttp = new XMLHttpRequest();
+  let xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
          if (this.readyState == 4 && this.status == 200) {
-          console.log(`<<< GET[${rc}]: ${this.status}`);
           restInitSuccess = true;
           showCodeDiv(false);
           loadXmlToWorkspace(this);
          }
          else if(this.readyState == 4) {
-          console.log(`<<< GET[${rc}]: ${this.status}`);
           showCodeDiv(true);
          }
     };
     xhttp.open("GET", url, true);
-    console.log(`>>> GET[${rc}]: ${url}`);
     xhttp.send();
 }
 
@@ -322,89 +307,39 @@ function globalCodeModification(code) {
     modCode += '\n\n\n// main()-Methode starten\n'+getClassName()+'.main();';
   }
   
-  // modCode = constructors(modCode);
-  // modCode = mainMethod(modCode);
   const ide = document.getElementById('ide');
   if (ide) {
 
-    /*
-    const script = document.createElement('script');
-    script.type = 'text/plain';
-    script.title = 'Test2.java'
-    script.text = '// Additional script for IDE';
-    ide.appendChild(script);
-
-    let test1 = document.createElement('script');
-    test1.type = 'text/plain';
-    test1.id = 'Test1';
-    test1.title = 'Test1'
-    test1.text = modCode;
-
-    let test1Old = document.getElementById('Test1');
-    console.log("test1Old: " + test1Old);
-    console.log(test1Old.text);
-
     
-    console.log("test1: " + test1);
-    console.log(test1.text);
 
-    ide.removeChild(test1Old);
-    ide.appendChild(test1);
 
-    console.log("Versuch 1 fertig");*/
-
-  console.log("Here we go!");
-
-  if (!('online_ide_access' in window)) {
-    console.warn('online_ide_access is not available onglobalThis.');
+  if (!('online_ide_access' in globalThis)) {
+    console.warn('online_ide_access is not available on globalThis.');
     return modCode;
   }
   
   //@ts-ignore
   let ideAccess =globalThis.online_ide_access.getIDE('Java');
-  //console.log("IDE: " + ideAccess);
   let files = ideAccess.getFiles();
 
   let selectedFileName = '';
-  if ('selected_file_name' in window) {
+  if ('selected_file_name' in globalThis) {
+    console.warn('selected_file_name is not available on globalThis.');
     selectedFileName =globalThis.selected_file_name;
   }
   else {
     console.warn('selected_file_name is not available onglobalThis.');
   }
 
-  //console.log("Files: " + files);
-  for(let i = 0; i < files.length; i++){
-    let file = files[i];
+  for(const element of files){
+    let file = element;
 
     if(file.getName() == selectedFileName || selectedFileName == '') {
       console.log('Name: ' + file.getName());
-      //console.log('Quelltext:' + file.getText());
       file.setText(modCode);
     }
     }
   }
-
-  /*
-  if(codeSplitByFirstWarning.length > 1)
-    {
-      codeDiv.innerText = modCode + "\n\n!!!"+codeSplitByFirstWarning[1] + "!!!";
-    }
-    else
-    {
-      codeDiv.innerText = modCode;
-    }
-
-  //console.log("Code: " + code);
-
-  if(ctrCount > 1)
-  {
-    codeDiv.innerText = codeDiv.innerText + "\n!!! Warnung, maximal ein Konstruktor erlaubt !!!";
-  }
-    */
-  
-
-  console.log("Global code modification successful");
   return modCode;
 }
 
@@ -413,19 +348,15 @@ function globalCodeModification(code) {
 function findClassName(codePrefix)  {
   let regex = 'public class [^\{]+';
   let classHeader = codePrefix.match(regex);
-  if(classHeader != null)
+  if(classHeader == null)
   {
-    classHeader = classHeader[0].replace('public class','').trim();
-    //console.log("Class Header: " + classHeader);
-    return classHeader;
+    console.warn("Class Header not found");
+    return "MeineKlasse";
   }
   else
   {
-
-
-
-    console.log("Class Header not found");
-    return "MeineKlasse";
+    classHeader = classHeader[0].replace('public class','').trim();
+    return classHeader;
   }
 }
 
@@ -433,18 +364,15 @@ function findClassName(codePrefix)  {
 function constructors(modCode){
   let regex = 'public class [^\{]+';
   let classHeader = modCode.match(regex);
-  if(classHeader != null)
+  if(classHeader == null)
+  {
+    console.warn("Class Header not found");
+  }
+  else
   {
     classHeader = classHeader[0].replace('public class','').trim();
     console.log("Class Header: " + classHeader);
   }
-  else
-  {
-    console.log("Class Header not found");
-  }
-  
-  // let ctrMethod = modCode.match("public void " + classHeader + "\\(");
-
   modCode = modCode.replace("public void " + classHeader + "(", "public " + classHeader + "(");
   return modCode;
 }
