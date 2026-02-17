@@ -12,12 +12,63 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOK }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            custom-generator-codelab/node_modules
+            custom-generator-codelab/online-ide-source/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Generate build cache key
+        id: build-cache-key
+        run: |
+          # Create hash of all files that affect the build
+          HASH=$(cat \
+            custom-generator-codelab/package.json \
+            custom-generator-codelab/webpack.config.js \
+            $(find custom-generator-codelab/src -type f 2>/dev/null || echo "") \
+            $(find custom-generator-codelab/blocks -type f 2>/dev/null || echo "") \
+            $(find custom-generator-codelab/core -type f 2>/dev/null || echo "") \
+            $(find custom-generator-codelab/generators -type f 2>/dev/null || echo "") \
+            $(find custom-generator-codelab/public -type f 2>/dev/null || echo "") \
+            CNAME 2>/dev/null \
+            | sha256sum | awk '{print $1}')
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "Build cache key: $HASH"
+      
+      - name: Cache build artifacts
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: custom-generator-codelab/dist
+          key: ${{ runner.os }}-build-${{ steps.build-cache-key.outputs.hash }}
+      
       - name: npm install, build
+        if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
           npm run build --if-present
           cd custom-generator-codelab/dist
           echo $(git rev-parse HEAD) > latest_commit.txt
           ls -l
+      
+      - name: Add commit info to cached build
+        if: steps.cache-build.outputs.cache-hit == 'true'
+        run: |
+          echo "Build artifacts restored from cache"
+          cd custom-generator-codelab/dist
+          echo $(git rev-parse HEAD) > latest_commit.txt
+          ls -l
+      
       - name: Commit files
         run: |
           ls -l
