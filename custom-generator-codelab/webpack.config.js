@@ -63,6 +63,14 @@ const config = {
           }
         },
         {
+          // Copy project-specific assets from src/assets into the output assets/ folder.
+          // This ensures files like logo_only.svg are included in the build without
+          // duplicating them in public/ and without requiring a git-untracked manual copy.
+          from: 'src/assets',
+          to: 'assets',
+          noErrorOnMissing: true,
+        },
+        {
           from: '../CNAME',
           to: 'CNAME',
           noErrorOnMissing: true,
