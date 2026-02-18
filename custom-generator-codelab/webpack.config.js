@@ -81,7 +81,8 @@ module.exports = (env, argv) => {
     // Generate source maps for our code for easier debugging.
     // Not suitable for production builds. If you want source maps in
     // production, choose a different one from https://webpack.js.org/configuration/devtool
-    config.devtool = 'eval-cheap-module-source-map';
+    // Note: eval-* devtools break VS Code breakpoints; use cheap-module-source-map instead.
+    config.devtool = 'cheap-module-source-map';
 
     // Include the source maps for Blockly for easier debugging Blockly code.
     config.module.rules.push({

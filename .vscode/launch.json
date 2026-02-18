@@ -12,6 +12,8 @@
             "webRoot": "${workspaceFolder}/custom-generator-codelab",
             "preLaunchTask": "npmstart",
             "sourceMapPathOverrides": {
+                "webpack://custom-generator-codelab/./src/*": "${webRoot}/src/*",
+                "webpack://custom-generator-codelab/*": "${webRoot}/*",
                 "webpack:///*": "${webRoot}/*"
             }
         }
