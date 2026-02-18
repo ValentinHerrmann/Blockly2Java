@@ -30,6 +30,12 @@ const config = {
       {
         directory: path.join(__dirname, 'public'),
         publicPath: '/',
+      },
+      {
+        // Serve src/assets at /assets/ so logo_only.svg etc. are found
+        // in dev mode without needing a full build first.
+        directory: path.join(__dirname, 'src', 'assets'),
+        publicPath: '/assets',
       }
     ],
     compress: true,

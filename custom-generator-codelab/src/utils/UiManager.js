@@ -273,6 +273,15 @@ export class UiManager {
 
     // ── Initial layout ───────────────────────────────────────────────────────
     updateLayout();
+    // Blockly captures container dimensions at inject time which can be 0 if
+    // the browser hasn't finished layout yet.  Fire svgResize at multiple
+    // points so we catch whichever moment the container first has real size:
+    //  • next animation frame  – covers the common fast-load case
+    //  • 300 ms delay          – covers slow/async resource loads
+    //  • window 'load' event   – covers cases where embedded scripts reflow
+    requestAnimationFrame(() => Blockly.svgResize(workspace));
+    setTimeout(() => Blockly.svgResize(workspace), 300);
+    window.addEventListener('load', () => Blockly.svgResize(workspace), { once: true });
   }
 
   /**
