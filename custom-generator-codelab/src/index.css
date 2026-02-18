@@ -1,6 +1,9 @@
 @import './stylesheet.css';
 
-/* Base Styles */
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
 body {
     margin: 0;
     max-width: 100vw;
@@ -8,16 +11,102 @@ body {
     color: var(--text-primary);
 }
 
-/* Layout Container */
-.split-layout {
+/* ==========================================================================
+   Top-level page container  (flex column: [tab-bar?] + panes-row)
+   ========================================================================== */
+
+#pageContainer {
     display: flex;
-    width: 100%;
-    max-width: 100vw;
+    flex-direction: column;
+    width: 100vw;
     height: 100vh;
-    overflow: hidden
+    overflow: hidden;
 }
 
-/* Common Pane Styles */
+/* ==========================================================================
+   Narrow-mode tab bar  (hidden by default, shown by JS via .narrow-mode)
+   ========================================================================== */
+
+.narrow-tab-bar {
+    display: none;          /* JS shows this */
+    height: 54px;
+    flex-shrink: 0;
+    align-items: stretch;
+    gap: 2px;
+    padding: 0 10px;
+    background-color: var(--secondary-bg);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    box-sizing: border-box;
+}
+
+.narrow-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    padding: 0 18px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    opacity: 0.55;
+    transition: opacity 0.15s;
+}
+
+.narrow-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 18px;
+    right: 18px;
+    height: 2px;
+    background: var(--text-secondary);
+    border-radius: 2px 2px 0 0;
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+}
+
+.narrow-tab:hover {
+    opacity: 0.8;
+}
+
+.narrow-tab--active {
+    opacity: 1;
+    color: var(--text-secondary);
+}
+
+.narrow-tab--active::after {
+    transform: scaleX(1);
+}
+
+.tab-icon {
+    flex-shrink: 0;
+}
+
+/* Show tab bar in narrow mode */
+#pageContainer.narrow-mode .narrow-tab-bar {
+    display: flex;
+}
+
+/* ==========================================================================
+   Panes container  (flex row: [left pane] [divider] [right pane])
+   ========================================================================== */
+
+.panes-container {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+    width: 100%;
+}
+
+/* ==========================================================================
+   Common pane styles
+   ========================================================================== */
+
 .split-pane {
     display: flex;
     flex-direction: column;
@@ -30,8 +119,14 @@ body {
     border-radius: 5px;
     border: none;
     outline: none;
-    height: calc(100% - 2 * margin);
     background-color: var(--secondary-bg);
+    /* transition only active when NOT dragging (for collapse/expand animation) */
+    transition: flex 0.25s ease;
+}
+
+/* Kill all transitions while the splitter is being dragged */
+.panes-container.is-dragging .split-pane {
+    transition: none;
 }
 
 .split-pane--left {
@@ -43,26 +138,208 @@ body {
     overflow: hidden;
 }
 
-/* Divider */
+/* ==========================================================================
+   Pane header  (title + collapse button)
+   ========================================================================== */
+
+.pane-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    flex-shrink: 0;
+    padding: 0 12px;
+    background-color: var(--secondary-bg);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-radius: 5px 5px 0 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+/* Icon + title group inside the pane header */
+.pane-header-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+}
+
+.pane-icon {
+    flex-shrink: 0;
+}
+
+.pane-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.7;
+}
+
+.pane-collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    opacity: 0.45;
+    transition: background-color 0.15s, opacity 0.15s;
+}
+
+.pane-collapse-btn:hover {
+    background-color: rgba(255,255,255,0.08);
+    opacity: 1;
+}
+
+/* Pane content fills remaining pane height */
+.pane-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ==========================================================================
+   Draggable divider
+   ========================================================================== */
+
 .split-divider {
     width: 5px;
     background-color: var(--divider);
     cursor: col-resize;
     flex-shrink: 0;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, width 0.1s;
 }
 
-.split-divider:hover {
-    width: 10px;
+.split-divider:hover,
+.split-divider:active {
+    width: 8px;
     background-color: var(--divider-hover);
 }
 
-.split-divider:active {
-    width: 10px;
-    background-color: var(--divider-active);
+/* ==========================================================================
+   Wide-mode: collapsed pane  (30 px vertical strip)
+   ========================================================================== */
+
+/* Left pane collapsed */
+#pageContainer.left-collapsed #leftPane {
+    flex: 0 0 44px !important;
+    min-width: 0 !important;
+    margin-right: 0;
 }
 
-/* Content Containers */
+#pageContainer.left-collapsed #leftPane .pane-header {
+    flex-direction: column-reverse;
+    height: 100%;
+    width: 44px;
+    padding: 10px 0;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+    border-bottom: none;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    border-radius: 5px 0 0 5px;
+    cursor: pointer;
+}
+
+#pageContainer.left-collapsed #leftPane .pane-header-identity {
+    flex-direction: column;
+    gap: 6px;
+}
+
+#pageContainer.left-collapsed #leftPane .pane-title {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    overflow: visible;
+}
+
+#pageContainer.left-collapsed #leftPane .pane-content {
+    display: none;
+}
+
+/* Right pane collapsed */
+#pageContainer.right-collapsed #rightPane {
+    flex: 0 0 44px !important;
+    min-width: 0 !important;
+    margin-left: 0;
+}
+
+#pageContainer.right-collapsed #rightPane .pane-header {
+    flex-direction: column;
+    height: 100%;
+    width: 44px;
+    padding: 10px 0;
+    justify-content: flex-start;
+    gap: 8px;
+    align-items: center;
+    border-bottom: none;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+}
+
+#pageContainer.right-collapsed #rightPane .pane-header-identity {
+    flex-direction: column-reverse;
+    gap: 6px;
+}
+
+#pageContainer.right-collapsed #rightPane .pane-title {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    overflow: visible;
+}
+
+#pageContainer.right-collapsed #rightPane .pane-content {
+    display: none;
+}
+
+/* Hide divider when either pane is collapsed */
+#pageContainer.left-collapsed .split-divider,
+#pageContainer.right-collapsed .split-divider {
+    display: none;
+}
+
+/* ==========================================================================
+   Narrow mode  (one pane at a time, switched via tab bar)
+   ========================================================================== */
+
+#pageContainer.narrow-mode .split-divider {
+    display: none;
+}
+
+#pageContainer.narrow-mode .pane-header {
+    display: none; /* navigation is done by the tab bar */
+}
+
+#pageContainer.narrow-mode .split-pane {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+/* Default: show left pane */
+#pageContainer.narrow-mode:not(.show-right) #rightPane {
+    display: none;
+}
+
+#pageContainer.narrow-mode.show-right #leftPane {
+    display: none;
+}
+
+/* ==========================================================================
+   Content containers (generic helpers)
+   ========================================================================== */
+
 .content-container {
     display: flex;
     flex-direction: column;
@@ -86,7 +363,10 @@ body {
     overflow: hidden;
 }
 
-/* Legacy/Specific Styles */
+/* ==========================================================================
+   Specific element overrides
+   ========================================================================== */
+
 #generatedCode {
     height: 100%;
     background-color: var(--primary-bg);
@@ -96,9 +376,9 @@ body {
     height: 0%;
 }
 
-
 #ide {
-    height: 100vh;
+    flex: 1;
+    height: 100%;
     margin: 0;
     padding: 0;
     border: none !important;
@@ -114,7 +394,10 @@ body {
     height: 100%;
 }
 
-/* Blockly Dark Mode Overrides */
+/* ==========================================================================
+   Blockly dark-mode overrides
+   ========================================================================== */
+
 .blocklyMainBackground {
     fill: var(--primary-bg) !important;
 }
@@ -127,7 +410,6 @@ body {
     fill: var(--secondary-bg) !important;
 }
 
-/* Remove borders from Blockly workspace */
 .blocklySvg,
 .blocklyWorkspace,
 .injectionDiv,
@@ -138,14 +420,16 @@ g.blocklyWorkspace {
     outline: none !important;
 }
 
-/* Remove stroke from Blockly SVG border rectangle */
 .blocklyWorkspace > rect:first-child,
 .blocklySvg > rect:first-child {
     stroke: none !important;
     stroke-width: 0 !important;
 }
 
-/* Remove any borders from all elements */
+/* ==========================================================================
+   Global border resets
+   ========================================================================== */
+
 .split-pane,
 .java-online,
 #ide,
@@ -154,7 +438,6 @@ g.blocklyWorkspace {
     outline: none !important;
 }
 
-/* Specifically override any Monaco or w2ui panel borders */
 .w2ui-panel {
     border: none !important;
     border-right: none !important;

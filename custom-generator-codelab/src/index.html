@@ -27,20 +27,66 @@
 
 
    <body>
-    <div id="pageContainer" class="split-layout">
-        <div id="leftPane" class="split-pane split-pane--left">
-            <div id="ide" class="java-online"
-              data-java-online="{
-              'id': 'Java', 
-              'speed': 1000, 
-              'withBottomPanel': true ,
-              'withPCode': false ,
-              'withConsole': true ,
-              'withFileList': true ,
-              'withErrorList': true,
-              'enableFileAccess': true
-              }">
-              <script type="text/plain" title="Main.java" data-type="java">
+    <!-- Reusable icon definitions (referenced via <use href="#..."> everywhere) -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+      <defs>
+        <!-- Java coffee-cup icon -->
+        <symbol id="icon-java" viewBox="0 0 18 18">
+          <!-- steam wisps -->
+          <path d="M6.5 5.5C5.6 4 6.2 2.6 7.5 2C8.8 1.4 8.2 0 8.2 0" stroke="#E76F00" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+          <path d="M10.5 5.5C9.6 4 10.2 2.6 11.5 2C12.8 1.4 12.2 0 12.2 0" stroke="#E76F00" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+          <!-- rim -->
+          <rect x="1" y="6" width="14" height="2" rx="1" fill="#F08030"/>
+          <!-- body -->
+          <path d="M2 8L3.2 14.8Q3.7 16.5 8 16.5Q12.3 16.5 12.8 14.8L14 8Z" fill="#E76F00"/>
+          <!-- handle -->
+          <path d="M14 10Q17.5 10 17.5 12Q17.5 14 14 14" stroke="#C55010" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </symbol>
+        <!-- Official Blockly logo loaded from file -->
+        <!-- chevron-left: used for "collapse left" and "expand right" -->
+        <path id="chev-left" d="M8 2L4 6L8 10" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- chevron-right: used for "collapse right" and "expand left" -->
+        <path id="chev-right" d="M4 2L8 6L4 10" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </defs>
+    </svg>
+
+    <div id="pageContainer">
+        <!-- Tab bar shown only in narrow mode -->
+        <div id="narrowTabBar" class="narrow-tab-bar">
+            <button class="narrow-tab" data-pane="left">
+                <svg class="tab-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
+                <span>Java IDE</span>
+            </button>
+            <button class="narrow-tab narrow-tab--active" data-pane="right">
+                <img class="tab-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
+                <span>Blockly</span>
+            </button>
+        </div>
+        <!-- Horizontal pane container -->
+        <div id="panesContainer" class="panes-container">
+            <div id="leftPane" class="split-pane split-pane--left">
+                <div class="pane-header">
+                    <div class="pane-header-identity">
+                        <svg class="pane-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
+                        <span class="pane-title">Java IDE</span>
+                    </div>
+                    <button class="pane-collapse-btn" data-pane="left" title="Leiste einklappen" aria-label="Leiste einklappen">
+                        <svg class="chev-svg" width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" aria-hidden="true"><use href="#chev-left"/></svg>
+                    </button>
+                </div>
+                <div class="pane-content">
+                    <div id="ide" class="java-online"
+                      data-java-online="{
+                      'id': 'Java',
+                      'speed': 1000,
+                      'withBottomPanel': true ,
+                      'withPCode': false ,
+                      'withConsole': true ,
+                      'withFileList': true ,
+                      'withErrorList': true,
+                      'enableFileAccess': true
+                      }">
+                      <script type="text/plain" title="Main.java" data-type="java">
   /* 
   Erstelle dein Programm über Blockly und
   klicke auf "Run", um es auszuführen!
@@ -49,12 +95,25 @@
   public class Main {
 
   }
-              </script>
+                      </script>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div id="divider" class="split-divider"></div>
-        <div id="rightPane" class="split-pane split-pane--right">
-            <div id="blocklyDiv" class="content-container content-container--constrained"></div>
+            <div id="divider" class="split-divider"></div>
+            <div id="rightPane" class="split-pane split-pane--right">
+                <div class="pane-header">
+                    <button class="pane-collapse-btn" data-pane="right" title="Leiste einklappen" aria-label="Leiste einklappen">
+                        <svg class="chev-svg" width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" aria-hidden="true"><use href="#chev-right"/></svg>
+                    </button>
+                    <div class="pane-header-identity">
+                        <span class="pane-title">Blockly</span>
+                        <img class="pane-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
+                    </div>
+                </div>
+                <div class="pane-content">
+                    <div id="blocklyDiv" class="content-container content-container--constrained"></div>
+                </div>
+            </div>
         </div>
     </div>
    </body>

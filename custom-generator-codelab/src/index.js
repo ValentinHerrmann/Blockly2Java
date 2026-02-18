@@ -35,13 +35,13 @@ const restManager = new RestManager(onXmlLoaded, UiManager.showCodeDiv);
 
 /**
  * Entry point — called once when the page opens.
- * Orchestrates theme creation, Blockly injection, divider setup,
+ * Orchestrates theme creation, Blockly injection, responsive layout setup,
  * initial load, first code generation, and listener registration.
  */
 function init() {
   const theme = UiManager.setupTheme();
   ws = setupBlockly(theme);
-  UiManager.setupDivider(ws);
+  UiManager.setupLayout(ws);
 
   // Load the initial state from storage and run the code.
   load(ws);
