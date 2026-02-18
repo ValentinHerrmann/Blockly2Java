@@ -13,9 +13,15 @@
 import { javascriptGenerator } from 'blockly/javascript.js';
 import {getType, getVariableType, Order, getClassName, TYPES} from './javascript_generator.js';
 import * as Blockly from "blockly";
+import LocalStorageManager from '../../utils/LocalStorageManager.js';
+
+
+
+
 
 export function defconstructor(block, generator) {
-  const funcName = getClassName(); //generator.getProcedureName(block.getFieldValue('NAME'));
+  const className = getClassName();
+  LocalStorageManager.storeCtrs_thisClass(className, block);
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
     xfix1 += generator.injectId(
@@ -35,7 +41,6 @@ export function defconstructor(block, generator) {
           generator.INFINITE_LOOP_TRAP, block),
         generator.INDENT);
   }
-  //console.log("Block: " + block);
   
 
   const branch = generator.statementToCode(block, 'STACK');
@@ -44,9 +49,7 @@ export function defconstructor(block, generator) {
   const ws = Blockly.getMainWorkspace();
 
   const args = [];
-  //const variables = block.getVars();
   const variables = block.arguments_;
-  //console.log("Variables: " + variables);
 
   if(variables !== null) {
     let vars = block.getVarModels();
@@ -64,13 +67,12 @@ export function defconstructor(block, generator) {
       args[i] = paramTypes[i] + ' ' + variables[i];
     }
   }
-  //console.log("Arguments: " + args);
 
-  let code = 'public ' + funcName + '(' + args.join(', ') + ') {\n' + xfix1 +
+  let code = 'public ' + className + '(' + args.join(', ') + ') {\n' + xfix1 +
       loopTrap + branch + xfix2 + '}';
   code = generator.scrub_(block, code);
   // Add % so as not to collide with helper functions in definitions list.
-  generator.definitions_['%' + funcName] = code;
+  generator.definitions_['%' + className] = code;
   return null;
 };
 
@@ -80,8 +82,7 @@ export function defconstructor(block, generator) {
 
 export function callconstructor(block, generator) {
   console.log("\n\nTRANSLATING CALL CONSTUCTUR");
-  const funcName = getClassName(); //generator.getProcedureName(block.getFieldValue('NAME'));
-  //console.log("Function Name: " + funcName);
+  const funcName = getClassName();
   const args = [];
   console.log(block);
   const variables = block.childBlocks_;

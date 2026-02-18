@@ -168,7 +168,7 @@ Blockly.Blocks['argument_input'] = {
   init: function () {
     this.appendDummyInput()
       .appendField('input name')
-      .appendField(new Blockly.FieldTextInput('_x'), 'NAME');
+      .appendField(new Blockly.FieldTextInput('x'), 'NAME');
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(230);
@@ -214,12 +214,12 @@ Blockly.Blocks['callconstructor'] = {
   },
 
   mutationToDom: function () {
-    var container = document.createElement('mutation');
+    let container = document.createElement('mutation');
     
 
-    for (var i = 0; i < this.arguments_.length; i++) {
-      var argument = document.createElement('arg');
-      argument.setAttribute('name', this.arguments_[i]);
+    for (const element of this.arguments_) {
+      let argument = document.createElement('arg');
+      argument.setAttribute('name', element);
       container.appendChild(argument);
     }
     return container;
@@ -227,7 +227,7 @@ Blockly.Blocks['callconstructor'] = {
 
   domToMutation: function (xmlElement) {
     this.arguments_ = [];
-    for (var i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
+    for (let i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
       if (childNode.nodeName.toLowerCase() == 'arg') {
         this.arguments_.push(childNode.getAttribute('name'));
       }
@@ -242,13 +242,10 @@ Blockly.Blocks['callconstructor'] = {
     if(ctrBlocks.length > 0) {
       let ctrBlock = ctrBlocks[0];
       this.arguments_ = ctrBlock.arguments_;
-      //console.log("ctrArgs: "+this.arguments_);
       // Fügen Sie neue Argumenteingaben hinzu
-      for (var i = 0; i < this.arguments_.length; i++) {
-        var name = this.arguments_[i];
-        var id = this.workspace.getVariable(name).getId();
-        //console.log("id: "+id);
-        //console.log("name: "+name);
+      for (const element of this.arguments_) {
+        let name = element;
+        let id = this.workspace.getVariable(name).getId();
 
         if(this.getInput(id)) {
           this.removeInput(id);
