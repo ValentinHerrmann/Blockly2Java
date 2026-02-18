@@ -100,7 +100,7 @@ export class IdeBridge {
 
     // Clear constructor data for that class.
     const className = fileName.replace('.java', '');
-    LocalStorageManager.clearStoredCtrs_thisClass(className);
+    LocalStorageManager.deleteClass(className);
 
     // If the deleted file was currently active, clear the Blockly workspace.
     if (this.getSelectedFileName() === fileName) {

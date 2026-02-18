@@ -36,6 +36,17 @@ class LocalStorageManager {
         ctrObjs[className].push(blockData);
         globalThis.localStorage?.setItem("constructors", JSON.stringify(ctrObjs));
     }
+
+    static deleteClass(className) {
+        let ctrs = globalThis.localStorage?.getItem("constructors");
+        let ctrObjs = JSON.parse(ctrs) || {};
+        console.log("Deleting class: "+className);
+        if(ctrObjs[className] != null) {
+            delete ctrObjs[className];
+            globalThis.localStorage?.setItem("constructors", JSON.stringify(ctrObjs));
+            console.log("Deleted class "+className+". Remaining constructors: "+JSON.stringify(ctrObjs));
+        }
+    }
 }
 
 export default LocalStorageManager;
