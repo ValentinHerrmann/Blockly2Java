@@ -3,8 +3,8 @@ const CACHE_NAME = 'b2j-sw-v1';
 const RESOURCES = [
   '/',
   '/index.html',
-  '/assets/B2J.png',
-  '/assets/B2J_flat.png',
+  '/assets/B2J.svg',
+  '/assets/B2J_flat.svg',
   '/bundle.js'
 ];
 
