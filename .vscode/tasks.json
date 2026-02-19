@@ -23,6 +23,29 @@
                 "reveal": "always",
                 "panel": "new"
             }
+        },
+        {
+            "label": "npmstart-no-rebuild",
+            "type": "shell",
+            "command": "npm start",
+            "options": {
+                "cwd": "${workspaceFolder}/custom-generator-codelab"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": "(webpack.*compiled|Compiled successfully)"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
         }
     ]
 }

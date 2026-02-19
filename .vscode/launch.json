@@ -16,6 +16,19 @@
                 "webpack://custom-generator-codelab/*": "${webRoot}/*",
                 "webpack:///*": "${webRoot}/*"
             }
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Debug B2J with Chrome (no IDE rebuild)",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}/custom-generator-codelab",
+            "preLaunchTask": "npmstart-no-rebuild",
+            "sourceMapPathOverrides": {
+                "webpack://custom-generator-codelab/./src/*": "${webRoot}/src/*",
+                "webpack://custom-generator-codelab/*": "${webRoot}/*",
+                "webpack:///*": "${webRoot}/*"
+            }
         }
     ]
 }
