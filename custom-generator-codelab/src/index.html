@@ -36,6 +36,11 @@
 
 
    <body>
+    <!-- Pre-loader splash screen -->
+    <div id="preloader" aria-hidden="true" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#fff;opacity:1;transition:opacity 0.4s ease;">
+      <img src="assets/B2J.png" alt="Blockly2Java" style="width:min(500px,50vmin);height:auto;" />
+    </div>
+
     <!-- Reusable icon definitions (referenced via <use href="#..."> everywhere) -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
       <defs>
@@ -74,7 +79,7 @@
         <!-- Horizontal pane container -->
         <div id="panesContainer" class="panes-container">
             <div id="leftPane" class="split-pane split-pane--left">
-                <div class="pane-header">
+                <div class="pane-header" data-pane="left">
                     <div class="pane-header-identity">
                         <img class="pane-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
                         <span class="pane-title">Blockly</span>
@@ -89,7 +94,7 @@
             </div>
             <div id="divider" class="split-divider"></div>
             <div id="rightPane" class="split-pane split-pane--right">
-                <div class="pane-header">
+                <div class="pane-header" data-pane="right">
                     <button class="pane-collapse-btn" data-pane="right" title="Leiste einklappen" aria-label="Leiste einklappen">
                         <svg class="chev-svg" width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" aria-hidden="true"><use href="#chev-right"/></svg>
                     </button>
@@ -131,4 +136,25 @@
         </footer>
     </div>
    </body>
- </html>
+    <script>
+      (function () {
+        function hidePreloader() {
+          var pre = document.getElementById('preloader');
+          if (!pre) return;
+          pre.classList.add('preloader--hidden');
+          // remove element after fade; also guard with a timeout in case transitionend never fires
+          var removed = false;
+          function remove() { if (!removed && pre.parentNode) { removed = true; pre.remove(); } }
+          pre.addEventListener('transitionend', remove, { once: true });
+          setTimeout(remove, 600);
+        }
+        // Fire as soon as the DOM is interactive; fall back to a hard 5 s timeout.
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', hidePreloader);
+        } else {
+          hidePreloader();
+        }
+        setTimeout(hidePreloader, 5000);
+      })();
+    </script>
+</html>

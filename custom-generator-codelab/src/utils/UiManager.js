@@ -247,10 +247,10 @@ export class UiManager {
 
     // ── Button event listeners ───────────────────────────────────────────────
 
-    document.querySelectorAll('.pane-collapse-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.pane-header').forEach(header => {
+      header.addEventListener('click', (e) => {
         e.stopPropagation(); // prevent triggering the pane-level click listener
-        toggleCollapse(btn.dataset.pane);
+        toggleCollapse(header.dataset.pane);
       });
     });
 
