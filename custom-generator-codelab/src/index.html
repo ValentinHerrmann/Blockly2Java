@@ -62,13 +62,13 @@
     <div id="pageContainer">
         <!-- Tab bar shown only in narrow mode -->
         <div id="narrowTabBar" class="narrow-tab-bar">
-            <button class="narrow-tab" data-pane="left">
-                <svg class="tab-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
-                <span>Java IDE</span>
-            </button>
-            <button class="narrow-tab narrow-tab--active" data-pane="right">
+            <button class="narrow-tab narrow-tab--active" data-pane="left">
                 <img class="tab-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
                 <span>Blockly</span>
+            </button>
+            <button class="narrow-tab" data-pane="right">
+                <svg class="tab-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
+                <span>Java IDE</span>
             </button>
         </div>
         <!-- Horizontal pane container -->
@@ -76,12 +76,27 @@
             <div id="leftPane" class="split-pane split-pane--left">
                 <div class="pane-header">
                     <div class="pane-header-identity">
-                        <svg class="pane-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
-                        <span class="pane-title">Java IDE</span>
+                        <img class="pane-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
+                        <span class="pane-title">Blockly</span>
                     </div>
                     <button class="pane-collapse-btn" data-pane="left" title="Leiste einklappen" aria-label="Leiste einklappen">
                         <svg class="chev-svg" width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" aria-hidden="true"><use href="#chev-left"/></svg>
                     </button>
+                </div>
+                <div class="pane-content">
+                    <div id="blocklyDiv" class="content-container content-container--constrained"></div>
+                </div>
+            </div>
+            <div id="divider" class="split-divider"></div>
+            <div id="rightPane" class="split-pane split-pane--right">
+                <div class="pane-header">
+                    <button class="pane-collapse-btn" data-pane="right" title="Leiste einklappen" aria-label="Leiste einklappen">
+                        <svg class="chev-svg" width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" aria-hidden="true"><use href="#chev-right"/></svg>
+                    </button>
+                    <div class="pane-header-identity">
+                        <svg class="pane-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
+                        <span class="pane-title">Java IDE</span>
+                    </div>
                 </div>
                 <div class="pane-content">
                     <div id="ide" class="java-online"
@@ -106,21 +121,6 @@
   }
                       </script>
                     </div>
-                </div>
-            </div>
-            <div id="divider" class="split-divider"></div>
-            <div id="rightPane" class="split-pane split-pane--right">
-                <div class="pane-header">
-                    <button class="pane-collapse-btn" data-pane="right" title="Leiste einklappen" aria-label="Leiste einklappen">
-                        <svg class="chev-svg" width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" aria-hidden="true"><use href="#chev-right"/></svg>
-                    </button>
-                    <div class="pane-header-identity">
-                        <span class="pane-title">Blockly</span>
-                        <img class="pane-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
-                    </div>
-                </div>
-                <div class="pane-content">
-                    <div id="blocklyDiv" class="content-container content-container--constrained"></div>
                 </div>
             </div>
         </div>

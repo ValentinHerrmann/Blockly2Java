@@ -57,8 +57,8 @@ export class UiManager {
 
     // ── Constants ────────────────────────────────────────────────────────────
     // Minimum total width (px) at which both panes fit side-by-side:
-    //   left min-width(680) + left margins(2×12) + divider(5)
-    //   + right min-width(300) + right margins(2×12) = 1033
+    //   left min-width(300) + left margins(2×12) + divider(5)
+    //   + right min-width(680) + right margins(2×12) = 1033
     const WIDE_THRESHOLD = 1033;
     const COLLAPSED_PX   = 30;        // collapsed pane strip width
 
