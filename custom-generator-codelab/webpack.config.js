@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
@@ -40,6 +41,89 @@ const config = {
     ],
     compress: true,
     port: 8080,
+    // Local CORS proxy so browser-based git requests (isomorphic-git)
+    // can reach servers that don't set Access-Control-Allow-Origin.
+    // Requests to /cors-proxy/{host}/{path} are forwarded to https://{host}/{path}.
+    setupMiddlewares: (middlewares, _devServer) => {
+      const https = require('https');
+      const nodeHttp = require('http');
+
+      // Insert at the very front so it runs before any built-in middleware.
+      middlewares.unshift({
+        name: 'cors-proxy',
+        middleware: (req, res, next) => {
+          // Only handle requests that start with /cors-proxy/
+          if (!req.url.startsWith('/cors-proxy/')) return next();
+
+          // Strip the /cors-proxy/ prefix
+          const remainder = req.url.slice('/cors-proxy/'.length);
+
+          // Handle CORS preflight
+          if (req.method === 'OPTIONS') {
+            res.writeHead(204, {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+              'Access-Control-Allow-Headers': '*',
+              'Access-Control-Max-Age': '86400',
+            });
+            return res.end();
+          }
+
+          // isomorphic-git strips the scheme when corsProxy is used,
+          // so remainder is "host/path?query". Prepend https:// if needed.
+          let targetUrl = remainder;
+          if (!/^https?:\/\//i.test(targetUrl)) targetUrl = 'https://' + targetUrl;
+
+          let parsed;
+          try {
+            parsed = new URL(targetUrl);
+          } catch {
+            console.error('[cors-proxy] Bad URL:', targetUrl);
+            res.writeHead(400);
+            return res.end('Bad proxy URL');
+          }
+
+          const hasAuth = !!(req.headers['authorization']);
+          console.log(`[cors-proxy] ${req.method} ${parsed.href}  auth=${hasAuth}`);
+
+          const transport = parsed.protocol === 'http:' ? nodeHttp : https;
+
+          // Forward headers, replacing host and removing browser-specific ones
+          const fwdHeaders = { ...req.headers, host: parsed.host };
+          delete fwdHeaders['origin'];
+          delete fwdHeaders['referer'];
+          delete fwdHeaders['connection'];
+          delete fwdHeaders['accept-encoding'];
+
+          const proxyReq = transport.request(
+            {
+              hostname: parsed.hostname,
+              port: parsed.port || (parsed.protocol === 'http:' ? 80 : 443),
+              path: parsed.pathname + parsed.search,
+              method: req.method,
+              headers: fwdHeaders,
+            },
+            (proxyRes) => {
+              console.log(`[cors-proxy]   ← ${proxyRes.statusCode} ${parsed.href}`);
+              const resHeaders = { ...proxyRes.headers };
+              resHeaders['access-control-allow-origin'] = '*';
+              resHeaders['access-control-allow-headers'] = '*';
+              resHeaders['access-control-expose-headers'] = '*';
+              res.writeHead(proxyRes.statusCode, resHeaders);
+              proxyRes.pipe(res);
+            },
+          );
+          proxyReq.on('error', (err) => {
+            console.error('[cors-proxy] Error:', err.message);
+            res.writeHead(502);
+            res.end('CORS proxy error: ' + err.message);
+          });
+          req.pipe(proxyReq);
+        },
+      });
+
+      return middlewares;
+    },
   },
   module: {
     rules: [
@@ -50,7 +134,16 @@ const config = {
       },
     ],
   },
+  resolve: {
+    fallback: {
+      buffer: require.resolve('buffer/'),
+    },
+  },
   plugins: [
+    // Provide Buffer globally so isomorphic-git works in the browser.
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    }),
     // Generate the HTML index page based on our template.
     // This will output the same index page with the bundle we
     // created above added in a script tag.
