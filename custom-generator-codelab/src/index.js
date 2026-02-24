@@ -14,7 +14,6 @@ import LocalStorageManager from "./utils/LocalStorageManager.js";
 
 import './stylesheet.css';
 import './index.css';
-import './sw-basic.js';
 
 // Utility classes
 import { CodeTransformer } from './utils/CodeTransformer';
@@ -170,7 +169,8 @@ function generateCode() {
 init();
 
 // Register service worker for installability (best-effort; silent on failure).
-if ('serviceWorker' in navigator) {
+// Skip on localhost to avoid Chrome debug reload loops caused by skipWaiting()+clients.claim().
+if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw-basic.js').catch(() => {});
   });
