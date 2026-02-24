@@ -30,12 +30,12 @@
 
     <script type="module" crossorigin src="online-ide-embedded.js"></script>
     <link rel="stylesheet" href="online-ide-embedded.css">
-   </head>
+  </head>
 
 
 
 
-   <body>
+  <body>
     <!-- Pre-loader splash screen -->
     <div id="preloader" aria-hidden="true" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#fff;opacity:1;transition:opacity 0.4s ease;">
       <img src="assets/B2J.svg" alt="Blockly2Java" style="width:min(500px,50vmin);height:auto;" />
@@ -67,14 +67,14 @@
     <div id="pageContainer">
         <!-- Tab bar shown only in narrow mode -->
         <div id="narrowTabBar" class="narrow-tab-bar">
-            <button class="narrow-tab narrow-tab--active" data-pane="left">
-                <img class="tab-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
-                <span>Blockly</span>
-            </button>
-            <button class="narrow-tab" data-pane="right">
-                <svg class="tab-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
-                <span>Java IDE</span>
-            </button>
+          <button class="narrow-tab narrow-tab--active" data-pane="left">
+              <img class="tab-icon" src="assets/logo_only.svg" width="24" height="24" aria-hidden="true" alt="">
+              <span>Blockly</span>
+          </button>
+          <button class="narrow-tab" data-pane="right">
+              <svg class="tab-icon" width="24" height="24" viewBox="0 0 18 18" aria-hidden="true"><use href="#icon-java"/></svg>
+              <span>Java IDE</span>
+          </button>
         </div>
         <!-- Horizontal pane container -->
         <div id="panesContainer" class="panes-container">
@@ -107,23 +107,30 @@
                     <div id="ide" class="java-online"
                       data-java-online="{
                       'id': 'Java',
-                      'speed': 1000,
+                      'speed': 10,
                       'withBottomPanel': true ,
                       'withPCode': false ,
                       'withConsole': true ,
                       'withFileList': true ,
                       'withErrorList': true,
-                      'enableFileAccess': true
+                      'enableFileAccess': true,
+                      'withClassDiagram': false,
+                      'hideUnitTests': true,
+                      'hideWorkspaceFilesMng': true,
+                      'simplifyDebugger': true,
+                      'hideResetButton': true,
+                      'settings': {
+                        'editor.hoverVerbosity.showHelpOnKeywordsAndOperators': true,
+                        'editor.hoverVerbosity.showMethodDeclaration': 'declarationsAndComments',   
+                        'editor.hoverVerbosity.showClassDeclaration':  'declarationsAndComments',
+                        'editor.contextSensitiveHelp.StructureStatements' :'true',
+                        'editor.contextSensitiveHelp.ParameterHints' :'true',
+                        'editor.autoClosingBrackets': 'always',
+                        'editor.autoClosingQuotes': 'always',
+                        'editor.autoSemicolons': true
+                      }
                       }">
                       <script type="text/plain" title="Main.java" data-type="java">
-  /* 
-  Erstelle dein Programm über Blockly und
-  klicke auf "Run", um es auszuführen!
-  */
-
-  public class Main {
-
-  }
                       </script>
                     </div>
                 </div>
@@ -135,7 +142,7 @@
             <div class="app-footer__right">Powered by Martin Pabst's <a style="color: var(--text-primary);" href="https://github.com/martin-pabst/Online-IDE-new-compiler" target="_blank" rel="noopener">OnlineIDE</a> & Google's <a style="color: var(--text-primary);" href="https://developers.google.com/blockly" target="_blank" rel="noopener">Blockly Framework</a></div>
         </footer>
     </div>
-   </body>
+  </body>
     <script>
       (function () {
         function hidePreloader() {

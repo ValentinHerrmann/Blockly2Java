@@ -2,21 +2,15 @@ import * as Blockly from 'blockly';
 import { setClassName } from "../generators/javascript/javascript_generator";
 import LocalStorageManager from "./LocalStorageManager.js";
 import { load } from "../serialization.js";
+import { onBlocksChange } from '../index.js';
 
 
 export class IdeBridge {
-
-  static getSelectedFileName() {
-    if ('selected_file_name' in globalThis) {
-      return globalThis.selected_file_name;
-    }
-    console.warn('selected_file_name is not available on globalThis.');
-    return '';
-  }
+  static selected_file_name = '';
 
   static syncClassNameFromIDE() {
     let className = '';
-    const fileName = this.getSelectedFileName();
+    const fileName = this.selected_file_name;
     if (fileName) {
       className = fileName.replace('.java', '');
     }
@@ -38,7 +32,7 @@ export class IdeBridge {
     //@ts-ignore
     const ideAccess = globalThis.online_ide_access.getIDE('Java');
     const files = ideAccess.getFiles();
-    const selectedFileName = this.getSelectedFileName();
+    const selectedFileName = this.selected_file_name;
 
     for (const element of files) {
       const file = element;
@@ -65,8 +59,8 @@ export class IdeBridge {
 
     // If the renamed file is currently active, update the backing field directly
     // (bypassing the setter so we don't trigger a reload) and sync the class name.
-    if (this.getSelectedFileName() === previousName) {
-      globalThis.selected_file_name = newName;
+    if (this.selected_file_name === previousName) {
+      this.selected_file_name = newName;
       this.syncClassNameFromIDE();
     }
   }
@@ -85,9 +79,9 @@ export class IdeBridge {
     LocalStorageManager.deleteClass(className);
 
     // If the deleted file was currently active, clear the Blockly workspace.
-    if (this.getSelectedFileName() === fileName) {
+    if (this.selected_file_name === fileName) {
       Blockly.getMainWorkspace()?.clear();
-      globalThis.selected_file_name = '';
+      this.selected_file_name = '';
       this.syncClassNameFromIDE();
     }
   }
@@ -105,6 +99,8 @@ export class IdeBridge {
     LocalStorageManager.deleteClass(className);
     LocalStorageManager.clearConstructors(className);
 
+    onBlocksChange();
+
     console.log(`IdeBridge: file created ${fileName}`);
   }
 
@@ -117,7 +113,7 @@ export class IdeBridge {
   static fileSelected(fileName) {
     console.log(`IdeBridge: file selected ${fileName}`);
     // Update the plain global property so save/load use the correct storage key.
-    globalThis.selected_file_name = fileName;
+    this.selected_file_name = fileName;
 
     // Load the saved Blockly workspace for this file.
     console.log('starting to load workspace for ' + fileName);
@@ -125,5 +121,6 @@ export class IdeBridge {
 
     // Sync the class name used by the code generator.
     this.syncClassNameFromIDE();
+    onBlocksChange();
   }
 }

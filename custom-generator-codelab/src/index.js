@@ -45,7 +45,7 @@ function init() {
 
   // Load the initial state from storage and run the code.
   load(ws);
-  onBlocksChange();
+  //onBlocksChange();
 
   setupListeners(ws);
 }
@@ -93,6 +93,7 @@ function setupListeners(workspace) {
     get: function() {
       return this._online_ide_access;
     }
+    
   });
 
   // Re-generate code after every meaningful workspace change.
@@ -115,7 +116,7 @@ function setupListeners(workspace) {
  * Clears stale constructor data, regenerates Java code, transforms it,
  * and pushes the result to the online IDE.
  */
-function onBlocksChange() {
+export function onBlocksChange() {
   IdeBridge.syncClassNameFromIDE();
   LocalStorageManager.clearConstructors(getClassName());
 

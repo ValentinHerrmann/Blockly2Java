@@ -15,7 +15,7 @@ import { IdeBridge } from './utils/IdeBridge';
  */
 export const save = function(workspace) {
   const data = Blockly.serialization.workspaces.save(workspace);
-  const selectedFileName = IdeBridge.getSelectedFileName() || '';
+  const selectedFileName = IdeBridge.selected_file_name || '';
   const className = selectedFileName.replaceAll('.java', '');
   if(selectedFileName === '') {
     console.warn('No file selected, skipping workspace save.');
@@ -29,7 +29,7 @@ export const save = function(workspace) {
  * @param {Blockly.Workspace} workspace Blockly workspace to load into.
  */
 export const load = function(workspace) {
-  const selectedFileName = IdeBridge.getSelectedFileName() || '';
+  const selectedFileName = IdeBridge.selected_file_name || '';
   const className = selectedFileName.replaceAll('.java', '');
   if(selectedFileName === '') {
     console.warn('No file selected, skipping workspace save.');
