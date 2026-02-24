@@ -20,7 +20,7 @@ import * as Blockly from 'blockly/core';
 // import {inputTypes} from 'blockly/core/inputs/input_types.js';
 
 
-let className = "MeineKlasse";
+let className = "";
 
 export function setClassName(name) {
   className = name;

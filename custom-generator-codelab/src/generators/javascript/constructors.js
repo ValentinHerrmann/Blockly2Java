@@ -81,30 +81,25 @@ export function defconstructor(block, generator) {
 //export const procedures_defnoreturn = procedures_defreturn;
 
 export function callconstructor(block, generator) {
-  console.log("\n\nTRANSLATING CALL CONSTUCTUR");
-  const funcName = getClassName();
-  const args = [];
-  console.log(block);
-  const variables = block.childBlocks_;
-  console.log("Variables: "+variables);
+  // Read the selected constructor from the dropdown field.
+  // Value format: "ClassName:::arg1,arg2" or "NONE".
+  const dropdownValue = block.getFieldValue('CONSTRUCTOR_CLASS') || 'NONE';
+  const sepIdx = dropdownValue.indexOf(':::');
+  const funcName = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : getClassName();
 
+  const args = [];
+  // inputList[0] is the TOP_LINE dummy input; argument inputs start at index 1.
   for (let inputNr = 1; inputNr < block.inputList.length; inputNr++) {
-      if(block.inputList[inputNr].connection != null) {
-        let inputBlock = block.inputList[inputNr].connection.targetBlock();
-        console.log("Input block: "+inputBlock);
-        let paramId = block.inputList[inputNr].name
-        console.log("ParamId: "+paramId);
-        if(inputBlock != null) {
-          let val = generator.valueToCode(block, paramId, Order.NONE);
-          console.log("Value: "+val);
-          args[inputNr-1] = val;
-        }
-        else {
-          args[inputNr-1] = 'null';
-        }
+    if (block.inputList[inputNr].connection != null) {
+      const paramId = block.inputList[inputNr].name;
+      const inputBlock = block.inputList[inputNr].connection.targetBlock();
+      if (inputBlock != null) {
+        args[inputNr - 1] = generator.valueToCode(block, paramId, Order.NONE);
+      } else {
+        args[inputNr - 1] = 'null';
       }
     }
-    console.log("Args: "+args);
+  }
 
   const code = 'new ' + funcName + '(' + args.join(', ') + ')';
   return [code, Order.FUNCTION_CALL];

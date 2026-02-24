@@ -15,10 +15,13 @@ export class IdeBridge {
   }
 
   static syncClassNameFromIDE() {
-    let className = 'MeineKlasse';
+    let className = '';
     const fileName = this.getSelectedFileName();
     if (fileName) {
       className = fileName.replace('.java', '');
+    }
+    if(className === null || className === undefined || className === '') {
+      return;
     }
     setClassName(className);
   }

@@ -3,6 +3,7 @@ import { prototype } from 'blockly/core';
 
 import * as Blockly from 'blockly/core';
 import {getClassName} from '../generators/javascript/javascript_generator';
+import LocalStorageManager from '../utils/LocalStorageManager';
 
 let prefix = "_";
 
@@ -193,16 +194,27 @@ Blockly.Blocks['argument_input'] = {
 
 
 
-
-
-
-
-
 /// Neuer Block für den Aufruf des benutzerdefinierten Blocks
 Blockly.Blocks['callconstructor'] = {
   init: function () {
-    this.appendDummyInput()
-      .appendField("new "+getClassName());
+    const block = this;
+    this.appendDummyInput('TOP_LINE')
+      .appendField("new ")
+      .appendField(
+        new Blockly.FieldDropdown(
+          () => block.getConstructorOptions_(),
+          function (newValue) {
+            // Validator fires synchronously when the field value is set,
+            // including during JSON deserialization — before connections are
+            // restored. Create the ARG_ inputs here so they exist in time.
+            if (block.updateShape_) {
+              block.updateShape_(newValue);
+            }
+            return newValue;
+          }
+        ),
+        'CONSTRUCTOR_CLASS'
+      );
     this.setPreviousStatement(false, null);
     this.setNextStatement(false, null);
     this.setOutput(true, 'CLASS');
@@ -213,47 +225,89 @@ Blockly.Blocks['callconstructor'] = {
     this.updateShape_();
   },
 
-  mutationToDom: function () {
-    let container = document.createElement('mutation');
-    
-
-    for (const element of this.arguments_) {
-      let argument = document.createElement('arg');
-      argument.setAttribute('name', element);
-      container.appendChild(argument);
-    }
-    return container;
-  },
-
-  domToMutation: function (xmlElement) {
-    this.arguments_ = [];
-    for (let i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
-      if (childNode.nodeName.toLowerCase() == 'arg') {
-        this.arguments_.push(childNode.getAttribute('name'));
+  /** Build dropdown options from all constructors stored in LocalStorage. */
+  getConstructorOptions_: function () {
+    const allCtrs = LocalStorageManager.getAllConstructors();
+    const options = [];
+    const seen = new Set();
+    for (const [className, ctrs] of Object.entries(allCtrs)) {
+      for (const ctr of ctrs) {
+        const args = (ctr.arguments || []);
+        const display = `${className}(${args.join(', ')})`;
+        const value = `${className}:::${args.join(',')}`;
+        if (!seen.has(value)) {
+          seen.add(value);
+          options.push([display, value]);
+        }
+      }
+      if(ctrs.length === 0) {
+        const display = `${className}()`;
+        const value = `${className}:::`;
+        if (!seen.has(value)) {
+          seen.add(value);
+          options.push([display, value]);
+        }
       }
     }
-    this.updateShape_();
+    
+    if (options.length === 0) {
+      options.push(['(keine)', 'NONE']);
+    }
+    return options;
   },
 
-  updateShape_: function() {
-    // Entfernen Sie alle vorhandenen Argumenteingaben
+  saveExtraState: function () {
+    return { constructorValue: this.getFieldValue('CONSTRUCTOR_CLASS') };
+  },
 
-    let ctrBlocks = this.workspace.getBlocksByType('defconstructor');
-    if(ctrBlocks.length > 0) {
-      let ctrBlock = ctrBlocks[0];
-      this.arguments_ = ctrBlock.arguments_;
-      // Fügen Sie neue Argumenteingaben hinzu
-      for (const element of this.arguments_) {
-        let name = element;
-        let id = this.workspace.getVariable(name).getId();
+  loadExtraState: function (state) {
+    const value = state && state.constructorValue;
+    if (value && value !== 'NONE') {
+      this.updateShape_(value);
+    }
+  },
 
-        if(this.getInput(id)) {
-          this.removeInput(id);
-        }
+  onchange: function (event) {
+    if (
+      event.type === Blockly.Events.BLOCK_CHANGE &&
+      event.blockId === this.id &&
+      event.name === 'CONSTRUCTOR_CLASS'
+    ) {
+      this.updateShape_();
+    }
+  },
 
-        this.appendValueInput(id)
+  updateShape_: function (value) {
+    // Accept value as argument (called from validator before field is committed)
+    // or fall back to reading the field (called from onchange / loadExtraState).
+    if (value === undefined) {
+      value = this.getFieldValue('CONSTRUCTOR_CLASS');
+    }
+
+    // Remove inputs created for previous argument list.
+    for (const arg of this.arguments_) {
+      const inputId = 'ARG_' + arg;
+      if (this.getInput(inputId)) {
+        this.removeInput(inputId);
+      }
+    }
+
+    if (!value || value === 'NONE') {
+      this.arguments_ = [];
+      return;
+    }
+
+    // Value format: "ClassName:::arg1,arg2"
+    const sepIdx = value.indexOf(':::');
+    const argsStr = sepIdx >= 0 ? value.slice(sepIdx + 3) : '';
+    this.arguments_ = argsStr ? argsStr.split(',').filter(a => a) : [];
+
+    for (const arg of this.arguments_) {
+      const inputId = 'ARG_' + arg;
+      if (!this.getInput(inputId)) {
+        this.appendValueInput(inputId)
           .setCheck(null)
-          .appendField(name);
+          .appendField(arg);
       }
     }
   }

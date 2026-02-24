@@ -4,15 +4,17 @@ class LocalStorageManager {
     static CTR_STORAGE_KEY = 'constructors';
     
     static clearConstructors(className) {
+        if(className == null || className === '') {
+            console.warn("No class name provided for clearing constructors.");
+            return;
+        }
         let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
         console.log("Clearing constructors for class: "+className);
-        if(ctrs != null) {
-            console.log("Stored constructors for class "+className+": "+ctrObjs[className]);
-            ctrObjs[className] = [];
-            globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
-            console.log("Remaining constructors: "+JSON.stringify(ctrObjs));
-        }   
+        console.log("Stored constructors for class "+className+": "+ctrObjs[className]);
+        ctrObjs[className] = [];
+        globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
+        console.log("Remaining constructors: "+JSON.stringify(ctrObjs));
     }
 
     static clearAllConstructors() {
@@ -38,6 +40,12 @@ class LocalStorageManager {
         };
         ctrObjs[className].push(blockData);
         globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
+    }
+
+    static getAllConstructors() {
+        let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        const ret = JSON.parse(ctrs) || {};
+        return ret;
     }
 
     static deleteClass(className) {
