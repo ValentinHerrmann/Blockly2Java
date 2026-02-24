@@ -3,10 +3,9 @@ import { setClassName } from "../generators/javascript/javascript_generator";
 import LocalStorageManager from "./LocalStorageManager.js";
 import { load } from "../serialization.js";
 
-const WORKSPACE_STORAGE_KEY = '';
-const CONSTRUCTORS_STORAGE_KEY = 'constructors';
 
 export class IdeBridge {
+
   static getSelectedFileName() {
     if ('selected_file_name' in globalThis) {
       return globalThis.selected_file_name;
@@ -56,27 +55,10 @@ export class IdeBridge {
    */
   static filenameChanged(previousName, newName) {
     console.log(`IdeBridge: file renamed ${previousName} → ${newName}`);
-    // Migrate the saved Blockly workspace to the new storage key.
-    const oldKey = WORKSPACE_STORAGE_KEY + previousName.replaceAll('.java','.xml');
-    const newKey = WORKSPACE_STORAGE_KEY + newName.replaceAll('.java','.xml');
-    const savedData = globalThis.localStorage?.getItem(oldKey);
-    if (savedData) {
-      globalThis.localStorage.setItem(newKey, savedData);
-      globalThis.localStorage.removeItem(oldKey);
-    }
 
-    // Migrate constructor data from old class name to new class name.
     const oldClassName = previousName.replace('.java', '');
     const newClassName = newName.replace('.java', '');
-    const ctrsJSON = globalThis.localStorage?.getItem(CONSTRUCTORS_STORAGE_KEY);
-    if (ctrsJSON) {
-      const ctrs = JSON.parse(ctrsJSON);
-      if (ctrs[oldClassName] !== undefined) {
-        ctrs[newClassName] = ctrs[oldClassName];
-        delete ctrs[oldClassName];
-        globalThis.localStorage.setItem(CONSTRUCTORS_STORAGE_KEY, JSON.stringify(ctrs));
-      }
-    }
+    LocalStorageManager.renameClass(oldClassName, newClassName);
 
     // If the renamed file is currently active, update the backing field directly
     // (bypassing the setter so we don't trigger a reload) and sync the class name.
@@ -94,9 +76,6 @@ export class IdeBridge {
    */
   static fileDeleted(fileName) {
     console.log(`IdeBridge: file deleted ${fileName}`);
-    // Remove the saved Blockly workspace.
-    const key = WORKSPACE_STORAGE_KEY + fileName.replaceAll('.java','.xml');
-    globalThis.localStorage?.removeItem(key);
 
     // Clear constructor data for that class.
     const className = fileName.replace('.java', '');
@@ -117,12 +96,11 @@ export class IdeBridge {
    */
   static fileCreated(fileName) {
     console.debug(`IdeBridge: file created ${fileName}`);
-    // Clear stale workspace data that might exist under this name.
-    globalThis.localStorage?.removeItem(WORKSPACE_STORAGE_KEY + fileName.replaceAll('.java','.xml'));
 
-    // Clear stale constructor data for that class.
+    // Clear stale data for that class.
     const className = fileName.replace('.java', '');
-    LocalStorageManager.clearStoredCtrs_thisClass(className);
+    LocalStorageManager.deleteClass(className);
+    LocalStorageManager.clearConstructors(className);
 
     console.log(`IdeBridge: file created ${fileName}`);
   }

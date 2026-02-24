@@ -21,7 +21,7 @@ import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
 export function defconstructor(block, generator) {
   const className = getClassName();
-  LocalStorageManager.storeCtrs_thisClass(className, block);
+  LocalStorageManager.storeConstructors(className, block);
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
     xfix1 += generator.injectId(

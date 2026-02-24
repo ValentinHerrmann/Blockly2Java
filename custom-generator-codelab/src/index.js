@@ -117,7 +117,7 @@ function setupListeners(workspace) {
  */
 function onBlocksChange() {
   IdeBridge.syncClassNameFromIDE();
-  LocalStorageManager.clearStoredCtrs_thisClass(getClassName());
+  LocalStorageManager.clearConstructors(getClassName());
 
   const rawCode = generateCode();
   const modCode = CodeTransformer.transformCode(rawCode);
