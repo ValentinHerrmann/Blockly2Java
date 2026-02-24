@@ -188,16 +188,22 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   for (let i = 0; i < blocks.length; i++) {
     if(blocks[i].getFieldValue('VAR') === varId) {
       if (blocks[i].getInputTargetBlock('VALUE') != null) {
+        const valueBlock = blocks[i].getInputTargetBlock('VALUE');
         //control if it's set to another variable- if yes, use its type.
-        if(blocks[i].getInputTargetBlock('VALUE').type === 'variables_get') {
-
-          if(blocks[i].getInputTargetBlock('VALUE').getFieldValue('VAR') !== varId) {
-            varsAssignedToThis[c] = blocks[i].getInputTargetBlock('VALUE').getFieldValue('VAR');
+        if(valueBlock.type === 'variables_get') {
+          if(valueBlock.getFieldValue('VAR') !== varId) {
+            varsAssignedToThis[c] = valueBlock.getFieldValue('VAR');
             c++;
           }
         }
-        const blockType = blocks[i].getInputTargetBlock('VALUE').type;
-        varType = getType(blockType);
+        // For callconstructor, extract the actual class name from the dropdown.
+        if (valueBlock.type === 'callconstructor') {
+          const dropdownValue = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
+          const sepIdx = dropdownValue.indexOf(':::');
+          varType = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : TYPES.CLASS;
+        } else {
+          varType = getType(valueBlock.type);
+        }
       }
       if(varType !== 'var') {
         return varType;
@@ -558,7 +564,12 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         let orgType = getVariableType(workspace, variables[i].getId(), true);
         let type = orgType;
         let definition = def_map.get(orgType);
-        
+        // Dynamic class names (from callconstructor dropdown) won't have a bucket yet.
+        if (!definition) {
+          definition = [];
+          def_map.set(orgType, definition);
+        }
+
         if(orgType === 'var')
         {
           // TODO: investigate why this was here

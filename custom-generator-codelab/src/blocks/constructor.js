@@ -10,7 +10,7 @@ let prefix = "_";
 Blockly.Blocks["defconstructor"] = {
   init: function () {
     this.appendDummyInput('TOP_LINE')
-      .appendField("Konstruktor "+getClassName());
+      .appendField("Konstruktor");
     this.appendStatementInput("STACK")
       .setCheck(null)
       .appendField("do");
@@ -294,13 +294,17 @@ Blockly.Blocks['callconstructor'] = {
 
     if (!value || value === 'NONE') {
       this.arguments_ = [];
+      this.setOutput(true, 'CLASS');
       return;
     }
 
     // Value format: "ClassName:::arg1,arg2"
     const sepIdx = value.indexOf(':::');
+    const className = sepIdx >= 0 ? value.slice(0, sepIdx) : value;
     const argsStr = sepIdx >= 0 ? value.slice(sepIdx + 3) : '';
     this.arguments_ = argsStr ? argsStr.split(',').filter(a => a) : [];
+
+    this.setOutput(true, className);
 
     for (const arg of this.arguments_) {
       const inputId = 'ARG_' + arg;
