@@ -23,19 +23,36 @@ A visual programming environment that converts Blockly blocks into Java code. Bl
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Development](#development)
-  - [Project Structure](#project-structure)
-  - [Available Scripts](#available-scripts)
-  - [Development Workflow](#development-workflow)
-  - [Working with the OnlineIDE Submodule](#working-with-the-onlineide-submodule)
-- [Building for Production](#building-for-production)
-- [Deployment](#deployment)
-  - [Manual Deployment](#manual-deployment)
-  - [Automated Deployment](#automated-deployment)
-- [Troubleshooting](#troubleshooting)
-- [Related Documentation](#related-documentation)
+- [Blockly2Java](#blockly2java)
+  - [Features](#features)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Quick Start](#quick-start)
+  - [Development](#development)
+    - [Project Structure](#project-structure)
+    - [Available Scripts](#available-scripts)
+    - [Development Workflow](#development-workflow)
+      - [1. Basic Development (Blockly Logic Only)](#1-basic-development-blockly-logic-only)
+      - [2. Developing with OnlineIDE Changes](#2-developing-with-onlineide-changes)
+      - [3. Adding New Blocks](#3-adding-new-blocks)
+    - [Working with the OnlineIDE Submodule](#working-with-the-onlineide-submodule)
+  - [Building for Production](#building-for-production)
+    - [Local Production Build](#local-production-build)
+    - [Testing Production Build Locally](#testing-production-build-locally)
+  - [Deployment](#deployment)
+    - [Manual Deployment](#manual-deployment)
+    - [Automated Deployment](#automated-deployment)
+      - [CI/CD Workflows](#cicd-workflows)
+      - [Deployment Checklist](#deployment-checklist)
+  - [Troubleshooting](#troubleshooting)
+    - [OnlineIDE Panel Not Displaying](#onlineide-panel-not-displaying)
+    - [Code Not Updating in OnlineIDE](#code-not-updating-in-onlineide)
+    - [Submodule Issues](#submodule-issues)
+    - [Build Failures](#build-failures)
+    - [Cookie/Persistence Issues](#cookiepersistence-issues)
+  - [Related Documentation](#related-documentation)
+  - [Author](#author)
+  - [Contributing](#contributing)
 
 ---
 
@@ -397,10 +414,6 @@ The standalone version saves to cookies. If translation bugs occur (no Java code
 - **BlueJ Extension:** [BlueJBlocklyExtension](https://github.com/ValentinHerrmann/BlueJBlocklyExtension)
 
 ---
-
-## License
-
-Apache-2.0 License. See [LICENSE](LICENSE) for details.
 
 ## Author
 
