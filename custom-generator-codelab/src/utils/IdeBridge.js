@@ -37,7 +37,7 @@ export class IdeBridge {
     for (const element of files) {
       const file = element;
       if (file.getName() === selectedFileName || selectedFileName === '') {
-        console.log('Name: ' + file.getName());
+        //console.log('Name: ' + file.getName());
         file.setText(modCode);
       }
     }
@@ -51,7 +51,7 @@ export class IdeBridge {
    * @param {string} newName      - new filename (e.g. 'Bar.java')
    */
   static filenameChanged(previousName, newName) {
-    console.log(`IdeBridge: file renamed ${previousName} → ${newName}`);
+    //console.log(`IdeBridge: file renamed ${previousName} → ${newName}`);
 
     const oldClassName = previousName.replace('.java', '');
     const newClassName = newName.replace('.java', '');
@@ -72,7 +72,7 @@ export class IdeBridge {
    * @param {string} fileName - the deleted filename (e.g. 'Foo.java')
    */
   static fileDeleted(fileName) {
-    console.log(`IdeBridge: file deleted ${fileName}`);
+    //console.log(`IdeBridge: file deleted ${fileName}`);
 
     // Clear constructor data for that class.
     const className = fileName.replace('.java', '');
@@ -101,7 +101,7 @@ export class IdeBridge {
 
     onBlocksChange();
 
-    console.log(`IdeBridge: file created ${fileName}`);
+    //console.log(`IdeBridge: file created ${fileName}`);
   }
 
   /**
@@ -111,12 +111,12 @@ export class IdeBridge {
    * @param {string} fileName - the selected filename (e.g. 'Foo.java')
    */
   static fileSelected(fileName) {
-    console.log(`IdeBridge: file selected ${fileName}`);
+    //console.log(`IdeBridge: file selected ${fileName}`);
     // Update the plain global property so save/load use the correct storage key.
     this.selected_file_name = fileName;
 
     // Load the saved Blockly workspace for this file.
-    console.log('starting to load workspace for ' + fileName);
+    //console.log('starting to load workspace for ' + fileName);
     load(Blockly.getMainWorkspace());
 
     // Sync the class name used by the code generator.

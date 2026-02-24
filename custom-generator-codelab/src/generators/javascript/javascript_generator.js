@@ -215,8 +215,8 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   //search if the variable is ever set
   blocks = workSpace.getBlocksByType('math_change',true);
   for (let i = 0; i < blocks.length; i++) {
-    console.log(blocks[i]);
-    console.log(blocks[i].getFieldValue('VAR'));
+    //console.log(blocks[i]);
+    //console.log(blocks[i].getFieldValue('VAR'));
 
     if(blocks[i].getFieldValue('VAR') === varId) {
         const inputList = blocks[i].inputList;
@@ -224,7 +224,7 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
         if(inputList.length > 0) {
           let blockType = inputList[0].connection.targetBlock().type;
         }
-        console.log(blockType);
+        //console.log(blockType);
         varType = getType(blockType);
       if(varType !== 'var') {
         return varType;
@@ -643,7 +643,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     this.isInitialized = false;
 
     this.nameDB_.reset();
-    console.log(definitions);
+    //console.log(definitions);
     return definitions.join('\n\n') + '\n\n\n' + code;
   }
 

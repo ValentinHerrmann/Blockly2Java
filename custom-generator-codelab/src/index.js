@@ -20,6 +20,8 @@ import { CodeTransformer } from './utils/CodeTransformer';
 import { IdeBridge } from './utils/IdeBridge';
 import { RestManager } from './utils/RestManager';
 import { UiManager } from './utils/UiManager';
+import { GitService } from './utils/GitService';
+import { GitDialog } from './utils/GitDialog';
 
 // Module-level state
 export let ws;
@@ -168,6 +170,7 @@ function generateCode() {
 // ---------------------------------------------------------------------------
 
 init();
+setupGitActions();
 
 // Register service worker for installability (best-effort; silent on failure).
 // Skip on localhost to avoid Chrome debug reload loops caused by skipWaiting()+clients.claim().
@@ -175,4 +178,250 @@ if ('serviceWorker' in navigator && location.hostname !== 'localhost' && locatio
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw-basic.js').catch(() => {});
   });
+}
+
+
+// ---------------------------------------------------------------------------
+// Step 4 – Git integration
+// ---------------------------------------------------------------------------
+
+/**
+ * Wires up the three git action buttons (clone, pull, commit & push)
+ * and restores UI state if a session config already exists.
+ */
+function setupGitActions() {
+  const cloneBtn = document.getElementById('gitCloneBtn');
+  const pullBtn  = document.getElementById('gitPullBtn');
+  const pushBtn  = document.getElementById('gitPushBtn');
+
+  if (!cloneBtn || !pullBtn || !pushBtn) return;
+
+  updateGitButtonStates();
+
+  cloneBtn.addEventListener('click', handleClone);
+  pullBtn.addEventListener('click',  handlePull);
+  pushBtn.addEventListener('click',  handleCommitAndPush);
+
+  const infoBtn = document.getElementById('gitInfoBtn');
+  if (infoBtn) {
+    infoBtn.addEventListener('click', async () => {
+      const cfg = GitService.getStoredConfig();
+      const info = await GitService.getLatestCommitInfo().catch(() => null);
+      await GitDialog.showInfoDialog(cfg?.url ?? null, info?.message ?? null, info?.timestamp ?? null);
+    });
+  }
+}
+
+/** Enables / disables pull & push buttons based on connection state.
+ *  Also refreshes the repo URL and latest commit message in the sidebar. */
+function updateGitButtonStates() {
+  const cloneBtn = document.getElementById('gitCloneBtn');
+  const pullBtn  = document.getElementById('gitPullBtn');
+  const pushBtn  = document.getElementById('gitPushBtn');
+  if (!cloneBtn || !pullBtn || !pushBtn) return;
+
+  const connected = GitService.isConnected();
+  pullBtn.disabled = !connected;
+  pushBtn.disabled = !connected;
+
+  const infoBtn = document.getElementById('gitInfoBtn');
+  if (infoBtn) infoBtn.disabled = !connected;
+
+  cloneBtn.classList.toggle('git-sidebar-btn--connected', connected);
+  cloneBtn.title = connected ? 'Verbunden – erneut klonen' : 'Repository klonen';
+
+  // Clear badges immediately; async check will re-apply them if needed.
+  if (pullBtn) pullBtn.classList.remove('git-sidebar-btn--has-updates');
+  if (pushBtn) pushBtn.classList.remove('git-sidebar-btn--has-changes');
+  if (connected) refreshGitBadges();
+}
+
+/**
+ * Asynchronously checks for local and remote changes and highlights the
+ * push / pull buttons accordingly.  Runs in parallel to avoid blocking.
+ */
+async function refreshGitBadges() {
+  const pullBtn = document.getElementById('gitPullBtn');
+  const pushBtn = document.getElementById('gitPushBtn');
+  if (!pullBtn || !pushBtn) return;
+
+  const [hasLocal, hasRemote] = await Promise.all([
+    GitService.hasLocalChanges().catch(() => false),
+    GitService.hasRemoteChanges().catch(() => false),
+  ]);
+
+  pushBtn.classList.toggle('git-sidebar-btn--has-changes', hasLocal);
+  pullBtn.classList.toggle('git-sidebar-btn--has-updates', hasRemote);
+}
+
+/**
+ * Handles the "Clone" flow:
+ *  1. Prompt for repository URL.
+ *  2. If the URL contains no password, prompt separately.
+ *  3. Clone and import files.
+ */
+async function handleClone() {
+  const urlResult = await GitDialog.showCloneDialog();
+  if (!urlResult) return;              // user cancelled
+
+  const { url: rawUrl } = urlResult;
+  if (!rawUrl.trim()) return;
+
+  // Parse URL to check for embedded credentials.
+  const { username, password } = GitService.parseGitUrl(rawUrl);
+
+  let finalPassword = password;
+  if (username && !password) {
+    const pwResult = await GitDialog.showPasswordDialog(username);
+    if (!pwResult) return;             // user cancelled
+    finalPassword = pwResult.password;
+  }
+
+  const dismiss = GitDialog.showLoading('Klone Repository…');
+  try {
+    const files = await GitService.clone(rawUrl, finalPassword);
+    dismiss();
+
+    // Import Java files into the Online-IDE.
+    importJavaFilesToIDE(files.java);
+
+    // Reload the current workspace from localStorage.
+    if (IdeBridge.selected_file_name) {
+      load(ws);
+      onBlocksChange();
+    }
+
+    updateGitButtonStates();
+
+    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length;
+    await GitDialog.showMessage(
+      'Erfolgreich geklont',
+      `${fileCount} Datei(en) importiert.`,
+    );
+  } catch (err) {
+    dismiss();
+    console.error('Git clone failed:', err);
+    await GitDialog.showMessage('Fehler beim Klonen', err.message);
+  }
+}
+
+/**
+ * Handles the "Pull" flow.
+ */
+async function handlePull() {
+  const dismiss = GitDialog.showLoading('Lade Änderungen…');
+  try {
+    const files = await GitService.pull();
+    dismiss();
+
+    importJavaFilesToIDE(files.java);
+
+    if (IdeBridge.selected_file_name) {
+      load(ws);
+      onBlocksChange();
+    }
+
+    updateGitButtonStates();
+
+    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length;
+    await GitDialog.showMessage(
+      'Pull erfolgreich',
+      `${fileCount} Datei(en) aktualisiert.`,
+    );
+  } catch (err) {
+    dismiss();
+    console.error('Git pull failed:', err);
+    await GitDialog.showMessage('Fehler beim Pull', err.message);
+  }
+}
+
+/**
+ * Handles the "Commit & Push" flow.
+ */
+async function handleCommitAndPush() {
+  const commitResult = await GitDialog.showCommitDialog();
+  if (!commitResult) return;
+
+  const dismiss = GitDialog.showLoading('Committe und pushe…');
+  try {
+    await GitService.commitAndPush(commitResult.message);
+    dismiss();
+    updateGitButtonStates();
+    await GitDialog.showMessage('Push erfolgreich', 'Änderungen wurden gepusht.');
+  } catch (err) {
+    dismiss();
+    console.error('Git commit & push failed:', err);
+    await GitDialog.showMessage('Fehler beim Push', err.message);
+  }
+}
+
+/**
+ * Pushes Java file contents from a git clone/pull into the Online-IDE.
+ * Updates existing files via setText() and creates new files that don't
+ * exist yet using the IDE's internal addFile / fileExplorer API.
+ * @param {Object<string,string>} javaFiles – { 'Main.java': 'code…', … }
+ */
+function importJavaFilesToIDE(javaFiles) {
+  const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+  if (!ideAccess) return;
+
+  const ideFiles = ideAccess.getFiles();
+  const pulledNames = new Set(Object.keys(javaFiles));
+  let structureChanged = false;
+
+  // ── Remove IDE files that no longer exist in the repo ─────────────────
+  for (const ideFile of ideFiles) {
+    const name = ideFile.getName();
+    if (name.endsWith('.java') && !pulledNames.has(name)) {
+      const ide = ideAccess.ide;
+      // ideFile wraps the internal file object; access it via .file
+      const internalFile = ideFile.file ?? ideFile;
+      if (ide?.removeFile) {
+        ide.removeFile(internalFile);
+      }
+      if (ide?.fileExplorer?.removeFile) {
+        ide.fileExplorer.removeFile(internalFile);
+      }
+      // Also clean up the corresponding Blockly workspace from localStorage.
+      IdeBridge.fileDeleted(name);
+      structureChanged = true;
+      console.log(`Git: Java-Datei „${name}" aus IDE entfernt.`);
+    }
+  }
+
+  // ── Create / update files from the repo ───────────────────────────────
+  // Re-fetch the file list after possible deletions.
+  const currentIdeFiles = ideAccess.getFiles();
+
+  for (const [fileName, content] of Object.entries(javaFiles)) {
+    const match = currentIdeFiles.find(f => f.getName() === fileName);
+    if (match) {
+      match.setText(content);
+    } else {
+      // The external API doesn't expose createFile, but the internal
+      // embedded IDE object provides addFile({title, text}) and its
+      // fileExplorer can register the new node in the treeview.
+      const ide = ideAccess.ide;
+      if (ide?.addFile) {
+        const file = ide.addFile({ title: fileName, text: content });
+        if (ide.fileExplorer?.addFile) {
+          ide.fileExplorer.addFile(file);
+        }
+        structureChanged = true;
+        console.log(`Git: Java-Datei „${fileName}" in IDE angelegt.`);
+      } else {
+        console.warn(
+          `Git: Java-Datei „${fileName}" existiert nicht in der IDE – ` +
+          'bitte manuell anlegen und erneut pullen.',
+        );
+      }
+    }
+  }
+
+  // If we created or removed files, tell the compiler so it picks up
+  // the changes immediately.
+  if (structureChanged) {
+    const ide = ideAccess.ide;
+    ide?.getCompiler?.()?.triggerCompile?.();
+  }
 }
