@@ -4,10 +4,11 @@
 name: Build and Deploy to Pages
 
 on:
-  # Auto-deploy when main is updated.
+  # Auto-deploy on every push: main → production, any other branch → preview.
   push:
     branches:
-      - main
+      - '**'
+    # onlineide is treated as a second production branch (see conditionals below)
   # Manual trigger from any branch (Actions tab → Run workflow).
   workflow_dispatch:
 
@@ -27,7 +28,7 @@ jobs:
     # Production deploys use the configured github-pages environment (custom domain).
     # All other branches deploy to the "preview" environment (github.io URL).
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'github-pages' || 'preview' }}
+      name: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/onlineide') && 'github-pages' || 'preview' }}
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
@@ -53,7 +54,7 @@ jobs:
           # Set CUSTOM_DOMAIN on main so webpack uses publicPath '/' (custom domain).
           # Left empty on other branches so webpack uses publicPath '/Blockly2Java/'
           # (the repo's default github.io URL – no custom domain applied there).
-          CUSTOM_DOMAIN: ${{ github.ref == 'refs/heads/main' && 'true' || '' }}
+          CUSTOM_DOMAIN: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/onlineide') && 'true' || '' }}
         run: |
           npm ci
           npm run build:all
