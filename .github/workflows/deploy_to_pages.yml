@@ -1,8 +1,13 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: (manual) Build and Deploy to Pages
+# Deploys to GitHub Pages (production only).
+# Triggered by pushes to main or onlineide, or manually from those branches.
+name: Build and Deploy to Pages
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
+  push:
+    branches:
+      - main
+      - onlineide
+  # Manual trigger (Actions tab → Run workflow).
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -11,14 +16,12 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# One concurrent deployment; never cancel in-progress.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
     environment:
       name: github-pages
@@ -29,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,20 +42,42 @@ jobs:
             package-lock.json
             custom-generator-codelab/package-lock.json
             custom-generator-codelab/online-ide-source/package-lock.json
-          
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Online-IDE submodule commit hash
+        id: ide-hash
+        run: echo "hash=$(git rev-parse HEAD:custom-generator-codelab/online-ide-source)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached Online-IDE build
+        id: ide-cache
+        uses: actions/cache@v4
+        with:
+          path: custom-generator-codelab/public
+          key: online-ide-build-${{ steps.ide-hash.outputs.hash }}
+
+      - name: Build Online-IDE submodule (only when changed)
+        if: steps.ide-cache.outputs.cache-hit != 'true'
+        working-directory: custom-generator-codelab
+        run: npm run setup
+
       - name: Build project
         env:
           CORS_PROXY_URL: ${{ secrets.CORS_PROXY_URL }}
-        run: |
-          npm ci
-          npm run build:all
+          GITHUB_PAGES: 'true'
+          CUSTOM_DOMAIN: 'true'
+        working-directory: custom-generator-codelab
+        run: npm run build
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: './custom-generator-codelab/dist/'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
