@@ -1,8 +1,14 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: (manual) Build and Deploy to Pages
+# Deploys to GitHub Pages.
+# - main branch  → production environment (github-pages)  → b2j.valentin-herrmann.com
+# - other branches → preview environment (preview)          → valentin-herrmann.github.io/Blockly2Java/
+name: Build and Deploy to Pages
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
+  # Auto-deploy when main is updated.
+  push:
+    branches:
+      - main
+  # Manual trigger from any branch (Actions tab → Run workflow).
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -11,17 +17,17 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# One concurrent deployment per target environment; never cancel in-progress.
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.ref }}"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
+    # Production deploys use the configured github-pages environment (custom domain).
+    # All other branches deploy to the "preview" environment (github.io URL).
     environment:
-      name: github-pages
+      name: ${{ github.ref == 'refs/heads/main' && 'github-pages' || 'preview' }}
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
@@ -29,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,20 +45,27 @@ jobs:
             package-lock.json
             custom-generator-codelab/package-lock.json
             custom-generator-codelab/online-ide-source/package-lock.json
-          
+
       - name: Build project
         env:
           CORS_PROXY_URL: ${{ secrets.CORS_PROXY_URL }}
+          GITHUB_PAGES: 'true'
+          # Set CUSTOM_DOMAIN on main so webpack uses publicPath '/' (custom domain).
+          # Left empty on other branches so webpack uses publicPath '/Blockly2Java/'
+          # (the repo's default github.io URL – no custom domain applied there).
+          CUSTOM_DOMAIN: ${{ github.ref == 'refs/heads/main' && 'true' || '' }}
         run: |
           npm ci
           npm run build:all
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: './custom-generator-codelab/dist/'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
