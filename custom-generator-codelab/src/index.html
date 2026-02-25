@@ -5,14 +5,23 @@
      <title>Blockly</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
 
+    <!-- favicon.ico — broadest fallback (IE, older Android WebView, bots) -->
+    <link rel="shortcut icon" href="favicon.ico">
+    <!-- PNG icons — used by Chrome, Edge, Firefox and most Chromium browsers -->
+    <link rel="icon" href="assets/icon-16x16.png" sizes="16x16" type="image/png">
+    <link rel="icon" href="assets/icon-32x32.png" sizes="32x32" type="image/png">
+    <link rel="icon" href="assets/icon-96x96.png" sizes="96x96" type="image/png">
+    <link rel="icon" href="assets/icon-192x192.png" sizes="192x192" type="image/png">
+    <!-- SVG icon — modern desktop browsers (Chrome 80+, Firefox 41+, Edge 79+) -->
     <link rel="icon" href="assets/B2J.svg" type="image/svg+xml">
-    <link rel="icon" href="assets/B2J.svg" sizes="32x32" type="image/svg+xml">
-    <link rel="icon" href="assets/B2J.svg" sizes="16x16" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="assets/B2J.svg" sizes="180x180" type="image/svg+xml">
-    <link rel="manifest" href="/manifest.json">
+    <!-- Apple touch icon — iOS/iPadOS Safari home screen shortcut (must be PNG) -->
+    <link rel="apple-touch-icon" href="assets/icon-180x180.png" sizes="180x180">
+    <!-- Web App Manifest — drives Chrome/Android "Add to Home Screen" & PWA install -->
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1f2937">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Blockly2Java">
 
     <!-- online-ide-embedded.js is a Vite bundle that includes all dependencies
