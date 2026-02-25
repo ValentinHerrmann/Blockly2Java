@@ -1,8 +1,8 @@
 name: (on PR sync) Set PR Description
 
 on: 
-  #pull_request:
-  #  types: [synchronize]
+  pull_request:
+    types: [synchronize]
   # Manual trigger (Actions tab → Run workflow).
   workflow_dispatch:
 
@@ -15,6 +15,38 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GH_TOK }}
       run: |
-        changelog=$(cat B2J_CHANGELOG.MD)
-        echo $changelog
-        gh pr edit ${{ github.event.pull_request.number }} --body "$changelog"
+        set -euo pipefail
+        # Determine PR number (workflow_dispatch may not populate github.event.pull_request)
+        PR_NUMBER="${{ github.event.pull_request.number || '' }}"
+        if [ -z "$PR_NUMBER" ]; then
+          # Try to infer PR from the current branch name
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          PR_NUMBER=$(gh pr list --state open --json number,headRefName --jq ".[] | select(.headRefName==\"${BRANCH_NAME}\") | .number" || true)
+        fi
+        if [ -z "$PR_NUMBER" ]; then
+          echo "Could not determine PR number. Exiting."
+          exit 0
+        fi
+
+        # Gather commit subjects and changed files
+        commits=$(gh pr view "$PR_NUMBER" --json commits --jq '.commits[].commit.message' || true)
+        first_commit=$(printf "%s" "$commits" | sed -n '1p' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^\s*//;s/\s*$//')
+        files=$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path' || true)
+        num_files=$(printf "%s" "$files" | sed '/^$/d' | wc -l | tr -d ' ')
+        top_files=$(printf "%s" "$files" | sed -n '1,5p' | tr '\n' ', ' | sed 's/, $//')
+
+        # Detect topical keywords (manifest, favicon, icon, pwa, service worker)
+        topics=$(printf "%s" "$commits" "$files" | grep -Eio 'manifest|favicon|icon|apple-touch|service worker|sw-|pwa' || true | tr '\n' ', ' | sed 's/, $//')
+        if [ -z "$topics" ]; then topics="general updates"; fi
+
+        # Build a concise 4-line description
+        line1=$(printf "%s" "${first_commit:-Update project files}" )
+        line2=$(printf "Modifies %s file(s); top files: %s" "$num_files" "${top_files:-none}" )
+        line3=$(printf "Primary changes: %s" "$topics")
+        line4="See full changelog below."
+
+        changelog=$(cat B2J_CHANGELOG.MD || true)
+
+        # Assemble and set the PR body
+        printf "%s\n\n%s\n%s\n\n%s\n\n%s\n" "$line1" "$line2" "$line3" "$line4" "$changelog" > pr_description.txt
+        gh pr edit "$PR_NUMBER" --body-file pr_description.txt
