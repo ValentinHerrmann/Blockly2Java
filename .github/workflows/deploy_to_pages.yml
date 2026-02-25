@@ -41,6 +41,8 @@ jobs:
             custom-generator-codelab/online-ide-source/package-lock.json
           
       - name: Build project
+        env:
+          CORS_PROXY_URL: ${{ secrets.CORS_PROXY_URL }}
         run: |
           npm ci
           npm run build:all

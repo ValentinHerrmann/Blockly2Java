@@ -20,12 +20,19 @@ export class GitService {
   // ── Configuration ────────────────────────────────────────────────────────
 
   /**
-   * Local CORS proxy path.
-   * In development the webpack-dev-server provides `/cors-proxy/` which
-   * forwards requests to the real git host, avoiding browser CORS blocks.
-   * Set to `null` to disable (e.g. when the git host sends proper CORS headers).
+   * CORS proxy URL.
+   * Injected at build time via webpack DefinePlugin from the CORS_PROXY_URL
+   * environment variable.  Defaults to '/cors-proxy' (the local webpack-dev-server
+   * middleware) so development works without any extra configuration.
+   *
+   * For production (e.g. GitHub Pages), set CORS_PROXY_URL to your deployed
+   * Cloudflare Worker URL before running `npm run build`:
+   *   CORS_PROXY_URL=https://b2j-cors-proxy.<sub>.workers.dev npm run build
    */
-  static CORS_PROXY = '/cors-proxy';
+  /* global __CORS_PROXY_URL__ */
+  static CORS_PROXY = (typeof __CORS_PROXY_URL__ !== 'undefined')
+    ? __CORS_PROXY_URL__
+    : '/cors-proxy';
 
   /** sessionStorage key that holds URL + credentials for the active repo. */
   static SESSION_KEY = 'b2j_git_config';
