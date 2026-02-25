@@ -9,6 +9,8 @@ import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
+import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory } from './blocks/java_variable_blocks.js';
+import * as JAVA_METHODS from './blocks/java_method_blocks.js';
 import {getClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
@@ -60,10 +62,28 @@ function init() {
 function setupBlockly(theme) {
   const blocklyDiv = document.getElementById('blocklyDiv');
 
-  return Blockly.inject(blocklyDiv, {
+  const workspace = Blockly.inject(blocklyDiv, {
     toolbox,
     theme,
   });
+
+  // Dynamic flyout categories.
+  workspace.registerToolboxCategoryCallback('JAVA_METHOD', methodFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_NORMAL_ATTR', normalAttrFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_LOCAL_VAR', localVarFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_STATIC_ATTR', staticAttrFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_PARAM', paramFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_VARIABLES_ALL', allVariablesFlyoutCategory);
+
+  // Button callbacks: open the built-in dialog but create a typed variable.
+  workspace.registerButtonCallback('CREATE_JAVA_NORMAL_ATTR',
+    (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, ''));
+  workspace.registerButtonCallback('CREATE_JAVA_LOCAL_VAR',
+    (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'local'));
+  workspace.registerButtonCallback('CREATE_JAVA_STATIC_ATTR',
+    (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'static'));
+
+  return workspace;
 }
 
 /**
@@ -105,6 +125,35 @@ function setupListeners(workspace) {
       return;
     }
     onBlocksChange();
+  });
+
+  // Clean up orphaned 'param' variables whenever any block is deleted.
+  // compose() handles param cleanup when individual params are removed via the
+  // mutator dialog, but deleting an entire method/constructor block bypasses it.
+  const METHOD_BLOCK_TYPES = [
+    'java_static_method_noreturn', 'java_static_method_return',
+    'java_method_noreturn', 'java_method_return',
+    'defconstructor',
+  ];
+  workspace.addChangeListener((e) => {
+    if (e.type !== Blockly.Events.BLOCK_DELETE) return;
+
+    // Collect all param names still claimed by surviving method blocks.
+    const claimedNames = new Set();
+    for (const type of METHOD_BLOCK_TYPES) {
+      for (const block of workspace.getBlocksByType(type, true)) {
+        for (const name of (block.arguments_ ?? [])) {
+          claimedNames.add(name);
+        }
+      }
+    }
+
+    // Delete any 'param' workspace variable not claimed by a surviving block.
+    for (const variable of workspace.getVariablesOfType('param')) {
+      if (!claimedNames.has(variable.name)) {
+        workspace.deleteVariableById(variable.getId());
+      }
+    }
   });
 }
 

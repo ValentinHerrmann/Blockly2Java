@@ -10,7 +10,7 @@
 
 // Former goog.module ID: Blockly.JavaScript.texts
 
-import {Order,adjustStaticName} from './javascript_generator.js';
+import {Order, adjustStaticName, getType, TYPES} from './javascript_generator.js';
 
 
 /**
@@ -30,6 +30,23 @@ const forceString = function(value) {
     return [value, Order.ATOMIC];
   }
   return ['String.valueOf(' + value + ')', Order.FUNCTION_CALL];
+};
+
+/**
+ * Returns the code as-is for types that Java auto-converts in string
+ * concatenation (String, primitives). Wraps Object/class/unknown types
+ * in String.valueOf() to ensure correct Java output.
+ * @param {string} code The generated code for the element.
+ * @param {string|null} blockType The Blockly block type of the element.
+ * @return {string} The coerced code.
+ */
+const smartForceString = function(code, blockType) {
+  if (!blockType) return 'String.valueOf(' + code + ')';
+  const t = getType(blockType);
+  if (t === TYPES.STRING || t === TYPES.INTEGER || t === TYPES.DOUBLE || t === TYPES.BOOLEAN) {
+    return code;
+  }
+  return 'String.valueOf(' + code + ')';
 };
 
 /**
@@ -72,18 +89,20 @@ export function text_join(block, generator) {
     case 0:
       return ["\"\"", Order.ATOMIC];
     case 1: {
+      const inputBlock0 = block.getInputTargetBlock('ADD0');
       const element = generator.valueToCode(block, 'ADD0',
           Order.NONE) || "\"\"";
-      const codeAndOrder = forceString(element);
-      return codeAndOrder;
+      return [smartForceString(element, inputBlock0 && inputBlock0.type), Order.ATOMIC];
     }
     case 2: {
+      const inputBlock0 = block.getInputTargetBlock('ADD0');
+      const inputBlock1 = block.getInputTargetBlock('ADD1');
       const element0 = generator.valueToCode(block, 'ADD0',
           Order.NONE) || "\"\"";
       const element1 = generator.valueToCode(block, 'ADD1',
           Order.NONE) || "\"\"";
-      const code = forceString(element0)[0] +
-          " + " + forceString(element1)[0];
+      const code = smartForceString(element0, inputBlock0 && inputBlock0.type)
+          + ' + ' + smartForceString(element1, inputBlock1 && inputBlock1.type);
       return [code, Order.ADDITION];
     }
     default: {

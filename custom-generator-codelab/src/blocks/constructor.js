@@ -5,22 +5,19 @@ import * as Blockly from 'blockly/core';
 import {getClassName} from '../generators/javascript/javascript_generator';
 import LocalStorageManager from '../utils/LocalStorageManager';
 
-let prefix = "_";
-
 Blockly.Blocks["defconstructor"] = {
   init: function () {
     this.appendDummyInput('TOP_LINE')
-      .appendField("Konstruktor");
-    this.appendStatementInput("STACK")
-      .setCheck(null)
-      .appendField("do");
+      .appendField('Konstruktor')
+      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
+    this.appendStatementInput('STACK')
+      .setCheck(null);
     this.setPreviousStatement(false, null);
     this.setNextStatement(false, null);
     this.setColour(230);
-    this.setTooltip("");
-    this.setHelpUrl("");
+    this.setTooltip('');
+    this.setHelpUrl('');
     this.arguments_ = [];
-    this.updateShape_();
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
   },
 
@@ -28,20 +25,14 @@ Blockly.Blocks["defconstructor"] = {
     let container = document.createElement('mutation');
 
     for (let i = 0; i < this.arguments_.length; i++) {
-      let name = this.arguments_[i];
-      let argument = document.createElement('arg');
-
-      if (!name.startsWith(prefix)) {
-        name = prefix + name;
-      }
-
-      this.arguments_[i] = name;
+      const name = this.arguments_[i];
+      const argument = document.createElement('arg');
       argument.setAttribute('name', name);
 
-      if (!this.workspace.getVariable(name)) {
-        this.workspace.createVariable(name);
+      if (!this.workspace.getVariable(name, 'param')) {
+        this.workspace.createVariable(name, 'param');
       }
-      let id = this.workspace.getVariable(name).getId();
+      const id = this.workspace.getVariable(name, 'param').getId();
       argument.setAttribute('varid', id);
       container.appendChild(argument);
     }
@@ -54,14 +45,8 @@ Blockly.Blocks["defconstructor"] = {
 
     for (let i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
       if (childNode.nodeName.toLowerCase() == 'arg') {
-        let name = childNode.getAttribute('name');
-        if (!name.startsWith(prefix)) {
-          name = prefix + name;
-        }
+        const name = childNode.getAttribute('name');
         this.arguments_.push(name);
-        if(childNode) {
-          childNode.setAttribute('name', name);
-        }
       }
     }
     this.updateShape_();
@@ -82,47 +67,40 @@ Blockly.Blocks["defconstructor"] = {
   },
 
   compose: function (containerBlock) {
+    const oldArguments = this.arguments_.slice();
     let itemBlock = containerBlock.getInputTargetBlock('STACK');
     this.arguments_ = [];
-    let connections = [];
     while (itemBlock) {
-      let name = itemBlock.getFieldValue('NAME');
-      if (!name.startsWith(prefix)) {
-        name = prefix + name;
-      }
-      itemBlock.setFieldValue(name, 'NAME');
+      const name = itemBlock.getFieldValue('NAME');
       this.arguments_.push(name);
-      connections.push(itemBlock.valueConnection_);
-      itemBlock = itemBlock.nextConnection &&
-        itemBlock.nextConnection.targetBlock();
+      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+    }
+    // Delete workspace variables for params that no longer exist.
+    for (const oldName of oldArguments) {
+      if (!this.arguments_.includes(oldName)) {
+        const oldVar = this.workspace.getVariable(oldName, 'param');
+        if (oldVar) this.workspace.deleteVariableById(oldVar.getId());
+      }
+    }
+    // Ensure workspace variables exist for every current param.
+    for (const name of this.arguments_) {
+      if (!this.workspace.getVariable(name, 'param')) {
+        this.workspace.createVariable(name, 'param');
+      }
     }
     this.updateShape_();
   },
 
   updateShape_: function () {
-    if (this.getInput('ARGUMENTS')) {
-      this.removeInput('ARGUMENTS');
-    }
-    if (this.arguments_.length) {
-      let joinedArgs = this.arguments_.join(", ");
-      let topLine = this.getInput('TOP_LINE');
-      if (topLine) {
-        topLine.fieldRow = topLine.fieldRow.slice(0, 1);
-        topLine.appendField("with: " + joinedArgs);
-      }
-    }
-    else {
-      let topLine = this.getInput('TOP_LINE');
-      topLine.fieldRow = topLine.fieldRow.slice(0, 1);
-    }
+    const display = this.arguments_.length
+      ? '(' + this.arguments_.join(', ') + ')'
+      : '()';
+    this.setFieldValue(display, 'PARAMS');
   },
   getVarModels: function() {
-    let varModels = [];
-    for (const element of this.arguments_) {
-      let name = element;
-      varModels.push(this.workspace.getVariable(name));
-    }
-    return varModels;
+    return this.arguments_
+      .map(name => this.workspace.getVariable(name, 'param'))
+      .filter(Boolean);
   }
 };
 
