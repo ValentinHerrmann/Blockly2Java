@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "name": "Blockly2Java",
+  "short_name": "B2J",
+  "description": "Blockly2Java — Visual programming that generates Java code.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "background_color": "#121212",
+  "theme_color": "#1f2937",
+  "categories": ["education", "developer_tools"],
+  "icons": [
+    { "src": "assets/icon-48x48.png",            "sizes": "48x48",   "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-96x96.png",            "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-192x192.png",          "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512x512.png",          "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512x512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" },
+    { "src": "assets/B2J.svg",                   "sizes": "any",     "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Project",
+      "short_name": "New",
+      "description": "Create a new Blockly project",
+      "url": "./?new=true",
+      "icons": [{ "src": "assets/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}
