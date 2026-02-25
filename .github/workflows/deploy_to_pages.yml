@@ -1,15 +1,13 @@
-# Deploys to GitHub Pages.
-# - main branch  → production environment (github-pages)  → b2j.valentin-herrmann.com
-# - other branches → preview environment (preview)          → valentin-herrmann.github.io/Blockly2Java/
+# Deploys to GitHub Pages (production only).
+# Triggered by pushes to main or onlineide, or manually from those branches.
 name: Build and Deploy to Pages
 
 on:
-  # Auto-deploy on every push: main → production, any other branch → preview.
   push:
     branches:
-      - '**'
-    # onlineide is treated as a second production branch (see conditionals below)
-  # Manual trigger from any branch (Actions tab → Run workflow).
+      - main
+      - onlineide
+  # Manual trigger (Actions tab → Run workflow).
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -18,17 +16,15 @@ permissions:
   pages: write
   id-token: write
 
-# One concurrent deployment per target environment; never cancel in-progress.
+# One concurrent deployment; never cancel in-progress.
 concurrency:
-  group: "pages-${{ github.ref }}"
+  group: "pages"
   cancel-in-progress: false
 
 jobs:
   deploy:
-    # Production deploys use the configured github-pages environment (custom domain).
-    # All other branches deploy to the "preview" environment (github.io URL).
     environment:
-      name: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/onlineide') && 'github-pages' || 'preview' }}
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
@@ -47,17 +43,32 @@ jobs:
             custom-generator-codelab/package-lock.json
             custom-generator-codelab/online-ide-source/package-lock.json
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Online-IDE submodule commit hash
+        id: ide-hash
+        run: echo "hash=$(git rev-parse HEAD:custom-generator-codelab/online-ide-source)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached Online-IDE build
+        id: ide-cache
+        uses: actions/cache@v4
+        with:
+          path: custom-generator-codelab/public
+          key: online-ide-build-${{ steps.ide-hash.outputs.hash }}
+
+      - name: Build Online-IDE submodule (only when changed)
+        if: steps.ide-cache.outputs.cache-hit != 'true'
+        working-directory: custom-generator-codelab
+        run: npm run setup
+
       - name: Build project
         env:
           CORS_PROXY_URL: ${{ secrets.CORS_PROXY_URL }}
           GITHUB_PAGES: 'true'
-          # Set CUSTOM_DOMAIN on main so webpack uses publicPath '/' (custom domain).
-          # Left empty on other branches so webpack uses publicPath '/Blockly2Java/'
-          # (the repo's default github.io URL – no custom domain applied there).
-          CUSTOM_DOMAIN: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/onlineide') && 'true' || '' }}
-        run: |
-          npm ci
-          npm run build:all
+          CUSTOM_DOMAIN: 'true'
+        working-directory: custom-generator-codelab
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

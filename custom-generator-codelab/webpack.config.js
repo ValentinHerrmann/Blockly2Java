@@ -177,11 +177,14 @@ const config = {
           to: 'assets',
           noErrorOnMissing: true,
         },
-        {
+        // Only copy the CNAME file for production builds (custom domain).
+        // Preview builds must NOT include CNAME – otherwise GitHub Pages
+        // redirects the github.io URL to the custom domain.
+        ...(process.env.CUSTOM_DOMAIN ? [{
           from: '../CNAME',
           to: 'CNAME',
           noErrorOnMissing: true,
-        }
+        }] : []),
       ]
     })
   ],
