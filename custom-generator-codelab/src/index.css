@@ -1,4 +1,13 @@
 @import './stylesheet.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ==========================================================================
+   Global typography
+   ========================================================================== */
+
+body, button, input, select, textarea {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
 
 /* ==========================================================================
    Pre-loader splash screen
@@ -198,12 +207,21 @@ body {
    Panes container  (flex row: [left pane] [divider] [right pane])
    ========================================================================== */
 
+/* Wraps the git sidebar and the panes side-by-side */
+.content-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .panes-container {
     display: flex;
     flex-direction: row;
     flex: 1;
+    min-width: 0;
     overflow: hidden;
-    width: 100%;
 }
 
 /* ==========================================================================
@@ -371,6 +389,8 @@ body {
 #pageContainer.left-collapsed #leftPane .pane-content {
     display: none;
 }
+
+/* git sidebar is always visible regardless of pane collapse state */
 
 /* Right pane collapsed */
 #pageContainer.right-collapsed #rightPane {
@@ -548,4 +568,355 @@ g.blocklyWorkspace {
     border-left: none !important;
     border-top: none !important;
     border-bottom: none !important;
+}
+
+/* ==========================================================================
+   Pane header actions container (collapse button etc.)
+   ========================================================================== */
+
+.pane-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   Git sidebar  (vertical panel on the left edge of the content area)
+   ========================================================================== */
+
+.git-sidebar {
+    flex-shrink: 0;
+    width: 50px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--secondary-bg);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    user-select: none;
+    overflow: hidden;
+}
+
+/* ── Header ("Git" label) ── */
+
+.git-sidebar__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 44px;                          /* matches pane-header height */
+    flex-shrink: 0;
+    padding: 6px 4px 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    opacity: 0.60;
+}
+
+.git-sidebar__logo {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+/* ── Action buttons ── */
+
+.git-sidebar__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 6px 6px;
+}
+
+.git-sidebar-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    height: auto;
+    padding: 9px 6px 8px;
+    background: none;
+    border: none;
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    opacity: 0.60;
+    text-align: center;
+    box-sizing: border-box;
+    transition: background-color 0.13s, opacity 0.13s;
+}
+
+.git-sidebar-btn svg {
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.git-sidebar-btn:hover:not(:disabled) {
+    background-color: rgba(255,255,255,0.07);
+    opacity: 1;
+}
+
+.git-sidebar-btn:active:not(:disabled) {
+    background-color: rgba(255,255,255,0.12);
+}
+
+.git-sidebar-btn:disabled {
+    opacity: 0.22;
+    cursor: default;
+}
+
+/* Clone button turns green when a repo is connected */
+.git-sidebar-btn--connected {
+    opacity: 0.90;
+    color: #73c991;
+}
+
+.git-sidebar-btn--connected svg {
+    opacity: 1;
+}
+
+.git-sidebar-btn--connected:hover:not(:disabled) {
+    color: #73c991;
+}
+
+/* Push button: amber badge when uncommitted local changes exist */
+.git-sidebar-btn--has-changes {
+    position: relative;
+    opacity: 0.90;
+    color: #e5c07b;
+}
+
+.git-sidebar-btn--has-changes::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #e5c07b;
+    box-shadow: 0 0 5px rgba(229,192,123,0.75);
+}
+
+.git-sidebar-btn--has-changes:hover:not(:disabled) {
+    color: #e5c07b;
+}
+
+/* Pull button: blue badge when remote commits are available */
+.git-sidebar-btn--has-updates {
+    position: relative;
+    opacity: 0.90;
+    color: #61afef;
+}
+
+.git-sidebar-btn--has-updates::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #61afef;
+    box-shadow: 0 0 5px rgba(97,175,239,0.75);
+}
+
+.git-sidebar-btn--has-updates:hover:not(:disabled) {
+    color: #61afef;
+}
+
+/* ── Info button at the bottom of the sidebar ── */
+
+.git-sidebar__info {
+    margin-top: auto;
+    padding: 0 8px 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 8px;
+}
+
+/* ── Narrow mode: hide sidebar (tab bar takes over) ── */
+#pageContainer.narrow-mode .git-sidebar {
+    display: none;
+}
+
+/* ==========================================================================
+   Git info dialog  (rows: label + value)
+   ========================================================================== */
+
+.git-info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.git-info-row:last-child {
+    margin-bottom: 0;
+}
+
+.git-info-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    opacity: 0.45;
+}
+
+.git-info-value {
+    font-size: 12.5px;
+    color: var(--text-primary);
+    opacity: 0.85;
+    word-break: break-all;
+    line-height: 1.45;
+}
+
+.git-info-value--muted {
+    opacity: 0.40;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   Git modal dialog overlay
+   ========================================================================== */
+
+.git-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+}
+
+.git-modal-card {
+    background-color: var(--secondary-bg, #252526);
+    color: var(--text-primary, #d4d4d4);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    padding: 28px 32px;
+    min-width: 360px;
+    max-width: 480px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.git-modal-card--loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    min-width: 200px;
+}
+
+.git-modal-title {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.git-modal-body {
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
+.git-modal-field {
+    margin-bottom: 14px;
+}
+
+.git-modal-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.7;
+    letter-spacing: 0.03em;
+}
+
+.git-modal-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-primary, #d4d4d4);
+    background-color: var(--primary-bg, #1e1e1e);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.git-modal-input:focus {
+    border-color: rgba(255,255,255,0.3);
+}
+
+.git-modal-input::placeholder {
+    color: var(--text-primary, #d4d4d4);
+    opacity: 0.35;
+}
+
+.git-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.git-modal-btn {
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s, opacity 0.15s;
+}
+
+.git-modal-btn--cancel {
+    background-color: rgba(255,255,255,0.08);
+    color: var(--text-primary, #d4d4d4);
+}
+
+.git-modal-btn--cancel:hover {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.git-modal-btn--submit {
+    background-color: #0e639c;
+    color: #ffffff;
+}
+
+.git-modal-btn--submit:hover {
+    background-color: #1177bb;
+}
+
+/* ==========================================================================
+   Git spinner
+   ========================================================================== */
+
+.git-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: var(--text-primary, #d4d4d4);
+    border-radius: 50%;
+    animation: git-spin 0.7s linear infinite;
+}
+
+@keyframes git-spin {
+    to { transform: rotate(360deg); }
 }

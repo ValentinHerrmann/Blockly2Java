@@ -1,0 +1,10 @@
+name = "b2j-cors-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Free plan workers run on Cloudflare's global network.
+# After deploying, your worker URL will be:
+#   https://b2j-cors-proxy.<your-account-subdomain>.workers.dev
+#
+# Use that URL as the CORS_PROXY_URL environment variable when building:
+#   CORS_PROXY_URL=https://b2j-cors-proxy.<sub>.workers.dev npm run build
