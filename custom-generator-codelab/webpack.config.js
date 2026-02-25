@@ -144,6 +144,14 @@ const config = {
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
     }),
+    // Inject the CORS proxy URL so GitService can use the right proxy in
+    // development (local webpack-dev-server) vs production (Cloudflare Worker).
+    // Override at build time: CORS_PROXY_URL=https://... npm run build
+    new webpack.DefinePlugin({
+      __CORS_PROXY_URL__: JSON.stringify(
+        process.env.CORS_PROXY_URL || '/cors-proxy'
+      ),
+    }),
     // Generate the HTML index page based on our template.
     // This will output the same index page with the bundle we
     // created above added in a script tag.

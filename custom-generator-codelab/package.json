@@ -17,7 +17,8 @@
     "start": "webpack serve --open --mode development",
     "build": "webpack --mode production",
     "build:all": "npm run setup && npm run build",
-    "deploy": "npm run build:all"
+    "deploy": "npm run build:all",
+    "deploy:prod": "CORS_PROXY_URL=https://b2j-cors-proxy.YOUR_SUBDOMAIN.workers.dev npm run build:all"
   },
   "keywords": [
     "blockly"
