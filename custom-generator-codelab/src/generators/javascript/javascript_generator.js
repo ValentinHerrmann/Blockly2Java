@@ -88,7 +88,15 @@ export const TYPES = {
 };
 
 
-export const validRoots = ['procedures_defnoreturn', 'procedures_defreturn', 'defconstructor'];
+export const validRoots = [
+  'procedures_defnoreturn',
+  'procedures_defreturn',
+  'defconstructor',
+  'java_static_method_noreturn',
+  'java_static_method_return',
+  'java_method_noreturn',
+  'java_method_return',
+];
 
 //converts a block type into a variable type
 export function getType(var_type) {
@@ -183,8 +191,14 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   let varType = 'var'
   const varsAssignedToThis = [];
   let c = 0;
-  //search if the variable is ever set
-  blocks = workSpace.getBlocksByType('variables_set',true);
+  //search if the variable is ever set (covers all setter block kinds)
+  const setterBlocks = [
+    ...workSpace.getBlocksByType('variables_set', true),
+    ...workSpace.getBlocksByType('java_normal_attr_set', true),
+    ...workSpace.getBlocksByType('java_static_attr_set', true),
+    ...workSpace.getBlocksByType('java_local_var_set', true),
+  ];
+  blocks = setterBlocks;
   for (let i = 0; i < blocks.length; i++) {
     if(blocks[i].getFieldValue('VAR') === varId) {
       if (blocks[i].getInputTargetBlock('VALUE') != null) {
@@ -201,6 +215,21 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
           const dropdownValue = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
           const sepIdx = dropdownValue.indexOf(':::');
           varType = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : TYPES.CLASS;
+        } else if (valueBlock.type === 'java_static_method_call_return'
+                || valueBlock.type === 'java_method_call_return') {
+          // Look up the matching method definition to determine its return type.
+          const methodName = valueBlock.getFieldValue('NAME');
+          const defType = valueBlock.type === 'java_static_method_call_return'
+            ? 'java_static_method_return' : 'java_method_return';
+          for (const defBlock of workSpace.getBlocksByType(defType, true)) {
+            if (defBlock.getFieldValue('NAME') === methodName) {
+              const returnBlock = defBlock.getInputTargetBlock('RETURN');
+              if (returnBlock) {
+                const t = getType(returnBlock.type);
+                if (t !== TYPES.UNKNOWN) { varType = t; break; }
+              }
+            }
+          }
         } else {
           varType = getType(valueBlock.type);
         }
@@ -236,26 +265,35 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   const varsAssignedFromThis = [];
   c = 0;
 
-  //search if the variable is ever used
-  blocks = workSpace.getBlocksByType('variables_get',true);
-  for (let i = 0; i < blocks.length; i++) {
-    if(blocks[i].getFieldValue('VAR') === varId) {
-      if (blocks[i].getParent() != null) {
+  //search if the variable is ever used (covers all getter block kinds)
+  const getterBlocks = [
+    ...workSpace.getBlocksByType('variables_get', true),
+    ...workSpace.getBlocksByType('java_static_attr_get', true),
+    ...workSpace.getBlocksByType('java_local_var_get', true),
+    ...workSpace.getBlocksByType('java_normal_attr_get', true),
+    ...workSpace.getBlocksByType('java_param_get', true),
+  ];
+  for (let i = 0; i < getterBlocks.length; i++) {
+    const gb = getterBlocks[i];
+    if(gb.getFieldValue('VAR') === varId) {
+      if (gb.getParent() != null) {
         //logic compares need to be handled differently if they are a parent Block
-        if (blocks[i].getParent().type === 'logic_compare') {
+        if (gb.getParent().type === 'logic_compare') {
           if(useCompares)
           {
-            return compareControl(workSpace, blocks[i].getParent(), varId)
+            return compareControl(workSpace, gb.getParent(), varId)
           }
         }
         //control if it is used to set a variable. if yes, use that type
-        if (blocks[i].getParent().type === 'variables_set') {
-          if(blocks[i].getParent().getFieldValue('VAR') !== varId) {
-            varsAssignedFromThis[c] = blocks[i].getParent().getFieldValue('VAR');
+        if (gb.getParent().type === 'variables_set'
+          || gb.getParent().type === 'java_static_attr_set'
+          || gb.getParent().type === 'java_local_var_set') {
+          if(gb.getParent().getFieldValue('VAR') !== varId) {
+            varsAssignedFromThis[c] = gb.getParent().getFieldValue('VAR');
             c++;
           }
         }
-        varType = getType(blocks[i].getParent().type);
+        varType = getType(gb.getParent().type);
       }
       if(varType !== 'var') {
         return varType;
@@ -463,6 +501,9 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
   init(workspace) {
     super.init(workspace);
 
+    // Reset per-generation tracking for local variable first-declaration.
+    this.declaredLocalVarIds_ = new Set();
+
     if (!this.nameDB_) {
       this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
     } else {
@@ -482,20 +523,20 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     }
 
 
-    let def_map = new Map();
-    def_map.set(TYPES.BOOLEAN, []);
-    def_map.set(TYPES.INTEGER, []);
-    def_map.set(TYPES.STRING, []);
-    def_map.set(TYPES.DOUBLE, []);
-    def_map.set(TYPES.LIST, []);
-    def_map.set(TYPES.OBJECT, []);
-    def_map.set(TYPES.FORINT, []);
-    def_map.set(TYPES.UNKNOWN, []);
-    def_map.set(TYPES.CLASS, []);
-
-
-    // Add user variables, but excludes untranslated, unused and parameters.
+    // ── Classify variables by their Blockly type tag ────────────────────────
+    // Now that all three kinds use typed workspace variables, we can simply
+    // ask the workspace instead of scanning block types.
     const blocks = workspace.getAllBlocks(false);
+    const staticAttrVarIds = new Set(
+      workspace.getVariablesOfType('static').map(v => v.getId())
+    );
+    // 'param' vars (method parameters) also must not get class-level declarations.
+    const localVarIds = new Set([
+      ...workspace.getVariablesOfType('local').map(v => v.getId()),
+      ...workspace.getVariablesOfType('param').map(v => v.getId()),
+    ]);
+
+    let def_map = new Map();
     const variables = [];
     let c = 0;
     ctrCount = 0;
@@ -549,6 +590,11 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
     //Add definitions for not parameter variables
     for (let i = 0; i < variables.length; i++) {
+      const varId = variables[i].getId();
+
+      // Local variables: skip class-level declaration (declared inline by java_local_var_set)
+      if (localVarIds.has(varId)) continue;
+
       let par = false;
 
       for(let j = 0; j < params.length; j++) {
@@ -560,8 +606,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
       }
 
       if(!par) {
-        let name = this.nameDB_.getName(variables[i].getId(), Blockly.Names.NameType.VARIABLE);
-        let orgType = getVariableType(workspace, variables[i].getId(), true);
+        let name = this.nameDB_.getName(varId, Blockly.Names.NameType.VARIABLE);
+        let orgType = getVariableType(workspace, varId, true);
         let type = orgType;
         let definition = def_map.get(orgType);
         // Dynamic class names (from callconstructor dropdown) won't have a bucket yet.
@@ -572,18 +618,22 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
         if(orgType === 'var')
         {
-          // TODO: investigate why this was here
-          //definition.push('double ' + name);
+          // Type could not be inferred — fall back to Object so the
+          // attribute is still declared in the class body.
+          const fallbackType = staticAttrVarIds.has(varId) ? 'static Object' : 'Object';
+          if (name.startsWith('static_')) name = name.replace('static_', '');
+          definition.push(fallbackType + ' ' + name);
         }
-        if(orgType === 'forint')
+        else if(orgType === 'forint')
         {
           definition.push('int ' + name);
         }
         else
         {
-          if(name.startsWith('static_'))
+          // Static attribute: detected either by new block type or old static_ prefix
+          if (staticAttrVarIds.has(varId) || name.startsWith('static_'))
           {
-            name = name.replace('static_', '');
+            if (name.startsWith('static_')) name = name.replace('static_', '');
             type = 'static ' + orgType;
           }
           definition.push(type + ' ' + name);
@@ -697,7 +747,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
    * @protected
    */
   scrub_(block, code, opt_thisOnly) {
-    if (!(block.getRootBlock().type === 'procedures_defnoreturn' || block.getRootBlock().type ==='procedures_defreturn' || block.getRootBlock().type === 'defconstructor')) {
+    if (!validRoots.includes(block.getRootBlock().type)) {
       return '!!! Warnung, ein Block wurde nicht übersetzt !!!';
     }
       let commentCode = '';

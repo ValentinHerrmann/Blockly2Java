@@ -524,16 +524,19 @@ export const toolbox = {
         },
         {
             'kind': 'category',
-            'name': 'Variablen/Attribute',
+            'name': 'Variablen',
             'categorystyle': 'variable_category',
-            'custom': 'VARIABLE',
+            'custom': 'JAVA_VARIABLES_ALL',
+        },
+        {
+            'kind': 'sep',
         },
         {
             'kind': 'category',
             'name': 'Methoden',
-            'categorystyle': 'procedure_category',
-            'custom': 'PROCEDURE',
-        },             
+            'colour': '#995599',
+            'custom': 'JAVA_METHOD',
+        },
         {
             kind: "category",
             name: "Klassen",
@@ -544,8 +547,8 @@ export const toolbox = {
                     type: "defconstructor"
                 },
                 {
-                   kind: "block",
-                   type: "callconstructor"
+                    kind: "block",
+                    type: "callconstructor"
                 }
             ]
         }

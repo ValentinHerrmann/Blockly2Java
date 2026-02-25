@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "lang": "en-US",
+  "lang": "de-DE",
   "dir": "ltr",
-  "name": "Blockly2Java",
+  "name": "B2J - Blockly2Java",
   "short_name": "B2J",
   "description": "Blockly2Java — Visual programming that generates Java code.",
   "start_url": "./",
