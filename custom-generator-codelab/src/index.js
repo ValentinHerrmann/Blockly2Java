@@ -285,8 +285,15 @@ async function handleClone() {
     // Import Java files into the Online-IDE.
     importJavaFilesToIDE(files.java);
 
-    // Reload the current workspace from localStorage.
-    if (IdeBridge.selected_file_name) {
+    // Auto-select the first file if none is currently selected.
+    if (!IdeBridge.selected_file_name) {
+      const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+      const ideFiles = ideAccess?.getFiles?.() ?? [];
+      if (ideFiles.length > 0) {
+        const firstName = ideFiles[0].getName();
+        IdeBridge.fileSelected(firstName);
+      }
+    } else {
       load(ws);
       onBlocksChange();
     }

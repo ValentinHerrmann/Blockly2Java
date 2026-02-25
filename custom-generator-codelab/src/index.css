@@ -741,10 +741,7 @@ g.blocklyWorkspace {
     padding-top: 8px;
 }
 
-/* ── Narrow mode: hide sidebar (tab bar takes over) ── */
-#pageContainer.narrow-mode .git-sidebar {
-    display: none;
-}
+/* ── Narrow mode: sidebar stays visible alongside the tab bar ── */
 
 /* ==========================================================================
    Git info dialog  (rows: label + value)
