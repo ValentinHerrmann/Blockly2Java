@@ -175,7 +175,7 @@ export function adjustStaticName(name) {
 //returns variable type by searching for usage context.
 export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
   if(recursionDeepness==10){
-    console.log("Get Variable (try: " + (11-recursionDeepness) + "): " + varId);
+    //console.log("Get Variable (try: " + (11-recursionDeepness) + "): " + varId);
   }
 
   //let varName = CodeGenerator.getVariableName(varId);
@@ -405,18 +405,33 @@ export function compareControl(workSpace, block, varId) {
   if(left === null || right === null){
     return 'var';
   }
-  else if(left.type === 'variables_get' && left.getFieldValue('VAR') === varId) {
-    if(right.type === 'variables_get'){
+
+  // All block types that represent a variable read (any kind)
+  const GETTER_TYPES = new Set([
+    'variables_get',
+    'java_local_var_get',
+    'java_static_attr_get',
+    'java_normal_attr_get',
+    'java_param_get',
+  ]);
+
+  const leftIsVar  = GETTER_TYPES.has(left.type);
+  const rightIsVar = GETTER_TYPES.has(right.type);
+
+  if(leftIsVar && left.getFieldValue('VAR') === varId) {
+    if(rightIsVar) {
       return getVariableType(workSpace, right.getFieldValue('VAR'), false);
     }
     return getType(right.type);
   }
-  else if(right.type === 'variables_get' && right.getFieldValue('VAR') === varId){
-    if(left.type === 'variables_get'){
+  else if(rightIsVar && right.getFieldValue('VAR') === varId) {
+    if(leftIsVar) {
       return getVariableType(workSpace, left.getFieldValue('VAR'), false);
     }
     return getType(left.type);
   }
+
+  return 'var';
 }
 
 /**
