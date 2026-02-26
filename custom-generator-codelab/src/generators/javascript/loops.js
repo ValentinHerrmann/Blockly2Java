@@ -29,7 +29,7 @@ export function controls_repeat_ext(block, generator) {
   let branch = generator.statementToCode(block, 'DO');
   branch = generator.addLoopTrap(branch, block);
   let code = '';
-  const loopVar = generator.nameDB_.getDistinctName('count', Blockly.Names.NameType.VARIABLE);
+  const loopVar = generator.nameDB_.getDistinctName('i', Blockly.Names.NameType.VARIABLE);
   let endVar = repeats;
   if (!repeats.match(/^\w+$/) && !Blockly.utils.string.isNumber(repeats)) {
     endVar = generator.nameDB_.getDistinctName('repeat_end', Blockly.Names.NameType.VARIABLE);
