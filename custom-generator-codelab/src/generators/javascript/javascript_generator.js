@@ -641,7 +641,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         }
         else if(orgType === 'forint')
         {
-          definition.push('int ' + name);
+          // Loop variable – declared locally in the for-loop header; skip class attribute.
+          continue;
         }
         else
         {
