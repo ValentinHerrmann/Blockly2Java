@@ -224,15 +224,104 @@ export class GitService {
     return this._readRepoFiles();
   }
 
+  // ── Top-level code detection ────────────────────────────────────────────
+
+  /**
+   * Detects top-level Java code (code outside class/interface/enum definitions).
+   * Uses brace-depth tracking; works reliably on machine-generated code.
+   *
+   * @param {string} javaContent
+   * @returns {string|null} trimmed top-level code, or null if none found
+   */
+  static detectTopLevelCode(javaContent) {
+    const lines = javaContent.split('\n');
+    let depth = 0;
+    let hasEnteredClass = false;
+    let lastTopLevelCloseLineIdx = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      for (const char of lines[i]) {
+        if (char === '{') {
+          depth++;
+          hasEnteredClass = true;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0 && hasEnteredClass) {
+            lastTopLevelCloseLineIdx = i;
+          }
+        }
+      }
+    }
+
+    if (lastTopLevelCloseLineIdx === -1) return null;
+    const trimmed = lines.slice(lastTopLevelCloseLineIdx + 1).join('\n').trim();
+    return trimmed || null;
+  }
+
+  /**
+   * Returns a copy of the Java content with all top-level code removed
+   * (i.e. everything after the closing brace of the outermost class).
+   *
+   * @param {string} javaContent
+   * @returns {string}
+   */
+  static stripTopLevelCode(javaContent) {
+    const lines = javaContent.split('\n');
+    let depth = 0;
+    let hasEnteredClass = false;
+    let lastTopLevelCloseLineIdx = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      for (const char of lines[i]) {
+        if (char === '{') {
+          depth++;
+          hasEnteredClass = true;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0 && hasEnteredClass) {
+            lastTopLevelCloseLineIdx = i;
+          }
+        }
+      }
+    }
+
+    if (lastTopLevelCloseLineIdx === -1) return javaContent;
+    return lines.slice(0, lastTopLevelCloseLineIdx + 1).join('\n');
+  }
+
+  /**
+   * Inspects all Java files currently loaded in the Online-IDE and collects
+   * any top-level code found in them.
+   *
+   * @returns {Array<{file: string, code: string}>}
+   */
+  static getTopLevelCodeInfo() {
+    const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+    if (!ideAccess) return [];
+
+    const results = [];
+    for (const file of ideAccess.getFiles()) {
+      const name = file.getName();
+      if (!name.endsWith('.java')) continue;
+      const content = file.getText();
+      if (!content) continue;
+      const topLevel = this.detectTopLevelCode(content);
+      if (topLevel) results.push({ file: name, code: topLevel });
+    }
+    return results;
+  }
+
   // ── Commit & Push ────────────────────────────────────────────────────────
 
   /**
    * Writes the current workspace state (XML + Java) into the repository,
    * commits everything, and pushes to the remote.
    *
-   * @param {string} message – commit message
+   * @param {string}  message           – commit message
+   * @param {Object}  [opts]
+   * @param {boolean} [opts.stripTopLevelCode=false] – strip top-level Java code before committing
    */
-  static async commitAndPush(message) {
+  static async commitAndPush(message, { stripTopLevelCode = false } = {}) {
     const config = this.getStoredConfig();
     if (!config) throw new Error('Kein Git-Repository verbunden.');
 
@@ -240,7 +329,7 @@ export class GitService {
 
     // ── Export current workspace into the virtual filesystem ──────────────
     await this._exportXmlFiles(fs);
-    await this._exportJavaFiles(fs);
+    await this._exportJavaFiles(fs, { stripTopLevelCode });
 
     // ── Stage all changed / new / deleted files ──────────────────────────
     const matrix = await git.statusMatrix({ fs, dir: this.REPO_DIR });
@@ -378,8 +467,10 @@ export class GitService {
    * Exports all Java files from the Online-IDE to the virtual filesystem,
    * and removes `.java` files that no longer exist in the IDE.
    * @param {LightningFS} fs
+   * @param {Object}  [opts]
+   * @param {boolean} [opts.stripTopLevelCode=false] – strip top-level code before writing
    */
-  static async _exportJavaFiles(fs) {
+  static async _exportJavaFiles(fs, { stripTopLevelCode = false } = {}) {
     const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
     if (!ideAccess) return;
 
@@ -407,8 +498,11 @@ export class GitService {
       const name = file.getName();
       if (!name.endsWith('.java')) continue;
 
-      const content = file.getText();
+      let content = file.getText();
       if (content) {
+        if (stripTopLevelCode) {
+          content = this.stripTopLevelCode(content);
+        }
         await fs.promises.writeFile(`${srcPath}/${name}`, content);
       }
     }

@@ -267,6 +267,98 @@ export class GitDialog {
   }
 
   /**
+   * Shows a warning dialog when top-level Java code (code outside any class)
+   * is detected before a commit & push. Lets the user choose to strip it for
+   * compatibility or keep it as-is.
+   *
+   * @param {Array<{file: string, code: string}>} codeInfos
+   * @returns {Promise<'strip'|'keep'|null>}
+   *   'strip' – remove top-level code and push
+   *   'keep'  – push with top-level code unchanged
+   *   null    – user cancelled
+   */
+  static showTopLevelCodeWarningDialog(codeInfos) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'git-modal-overlay';
+
+      const card = document.createElement('div');
+      card.className = 'git-modal-card git-modal-card--toplevel';
+
+      const title = document.createElement('h3');
+      title.className = 'git-modal-title';
+      title.textContent = 'Top-Level-Code erkannt';
+      card.appendChild(title);
+
+      const body = document.createElement('p');
+      body.className = 'git-modal-body';
+      body.textContent =
+        'Die folgenden Java-Dateien enthalten Code außerhalb einer Klasse (Top-Level-Code). ' +
+        'Dieser Code wird in dieser Umgebung unterstützt, ist jedoch kein gültiges Standard-Java ' +
+        'und kann in anderen Umgebungen (wie z.B. Artemis) zu Fehlern führen. ' +
+        'Wenn du nicht sicher bist, dass der Top-Level-Code beibehalten werden soll, wähle „Entfernen & Pushen“.';
+      card.appendChild(body);
+
+      for (const { file, code } of codeInfos) {
+        const fileLabel = document.createElement('div');
+        fileLabel.className = 'git-modal-label';
+        fileLabel.textContent = file;
+        card.appendChild(fileLabel);
+
+        const pre = document.createElement('pre');
+        pre.className = 'git-toplevel-code';
+        pre.textContent = code;
+        card.appendChild(pre);
+      }
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'git-modal-buttons';
+
+      const close = (val) => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+        resolve(val);
+      };
+
+      // Cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'git-modal-btn git-modal-btn--cancel';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.addEventListener('click', () => close(null));
+      btnRow.appendChild(cancelBtn);
+
+      // "Keep" button – barely visible, to discourage but allow keeping the code
+      const keepBtn = document.createElement('button');
+      keepBtn.className = 'git-modal-btn git-modal-btn--keep';
+      keepBtn.textContent = 'Behalten & Pushen';
+      keepBtn.title = 'Top-Level-Code behalten und unverändert pushen';
+      keepBtn.addEventListener('click', () => close('keep'));
+      btnRow.appendChild(keepBtn);
+
+      // Primary action: strip and push
+      const stripBtn = document.createElement('button');
+      stripBtn.className = 'git-modal-btn git-modal-btn--submit';
+      stripBtn.textContent = 'Entfernen & Pushen';
+      stripBtn.addEventListener('click', () => close('strip'));
+      btnRow.appendChild(stripBtn);
+
+      card.appendChild(btnRow);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      const onKey = (e) => {
+        if (e.key === 'Escape') close(null);
+      };
+      document.addEventListener('keydown', onKey);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close(null);
+      });
+
+      requestAnimationFrame(() => stripBtn.focus());
+    });
+  }
+
+  /**
    * Shows a simple informational / error / success message dialog.
    *
    * @param {string} title
