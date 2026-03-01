@@ -251,11 +251,11 @@ body {
 }
 
 .split-pane--left {
-    min-width: 300px;
+    min-width: 400px;
 }
 
 .split-pane--right {
-    min-width: 680px;
+    min-width: 400px;
     overflow: hidden;
 }
 
