@@ -7,6 +7,7 @@
 import * as Blockly from 'blockly/core';
 import LocalStorageManager from './utils/LocalStorageManager';
 import { IdeBridge } from './utils/IdeBridge';
+import emptyTemplate from './emptyTemplate.json';
 
 
 /**
@@ -35,7 +36,7 @@ export const load = function(workspace) {
     console.warn('No file selected, skipping workspace save.');
     return;
   }
-  const data = LocalStorageManager.loadWorkspace(className) || JSON.stringify([]);
+  const data = LocalStorageManager.loadWorkspace(className) || JSON.stringify(emptyTemplate);
 
   // Don't emit events during loading.
   Blockly.Events.disable();

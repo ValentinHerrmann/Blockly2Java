@@ -124,6 +124,7 @@ Blockly.Blocks['java_static_method_noreturn'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
+    this.setCommentText('');
   },
   ...paramMixin,
 };
@@ -148,6 +149,7 @@ Blockly.Blocks['java_static_method_return'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
+    this.setCommentText('');
   },
   ...paramMixin,
 };
@@ -169,6 +171,7 @@ Blockly.Blocks['java_method_noreturn'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
+    this.setCommentText('');
   },
   ...paramMixin,
 };
@@ -193,6 +196,7 @@ Blockly.Blocks['java_method_return'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
+    this.setCommentText('');
   },
   ...paramMixin,
 };
