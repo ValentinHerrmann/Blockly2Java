@@ -224,15 +224,139 @@ export class GitService {
     return this._readRepoFiles();
   }
 
+  // ── Top-level code detection ────────────────────────────────────────────
+
+  /**
+   * Returns true when a line is a Java preamble line (import, package,
+   * blank, comment, or annotation) rather than executable top-level code.
+   * @param {string} line
+   * @returns {boolean}
+   */
+  static _isHeaderLine(line) {
+    return /^\s*(import|package|\/\/|\/\*|\*|@|\s*$)/.test(line);
+  }
+
+  /**
+   * Scans `lines` with brace-depth tracking and returns the index of the
+   * first line that opens the outermost class/interface/enum body and the
+   * index of the last line that closes it.
+   *
+   * @param {string[]} lines
+   * @returns {{ firstOpenLineIdx: number, lastCloseLineIdx: number }}
+   *   Both indices are -1 when no class body is found.
+   */
+  static _findClassBoundaries(lines) {
+    let depth = 0;
+    let firstOpenLineIdx = -1;
+    let lastCloseLineIdx = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      for (const char of lines[i]) {
+        if (char === '{') {
+          if (depth === 0 && firstOpenLineIdx === -1) firstOpenLineIdx = i;
+          depth++;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0) lastCloseLineIdx = i;
+        }
+      }
+    }
+
+    return { firstOpenLineIdx, lastCloseLineIdx };
+  }
+
+  /**
+   * Detects top-level Java code: executable statements that appear either
+   * before or after the outermost class/interface/enum body.
+   *
+   * @param {string} javaContent
+   * @returns {string|null} trimmed top-level code, or null if none found
+   */
+  static detectTopLevelCode(javaContent) {
+    const lines = javaContent.split('\n');
+    const { firstOpenLineIdx, lastCloseLineIdx } = this._findClassBoundaries(lines);
+
+    const parts = [];
+
+    // Code before the first class/interface/enum definition
+    if (firstOpenLineIdx > 0) {
+      const preCode = lines
+        .slice(0, firstOpenLineIdx)
+        .filter(l => !this._isHeaderLine(l))
+        .join('\n')
+        .trim();
+      if (preCode) parts.push(preCode);
+    }
+
+    // Code after the last class closing brace
+    if (lastCloseLineIdx !== -1) {
+      const postCode = lines.slice(lastCloseLineIdx + 1).join('\n').trim();
+      if (postCode) parts.push(postCode);
+    }
+
+    return parts.length ? parts.join('\n\n') : null;
+  }
+
+  /**
+   * Returns a copy of the Java content with all top-level executable code
+   * removed (both before and after the outermost class body).
+   * Preamble lines (import, package, blank, comments) are preserved.
+   *
+   * @param {string} javaContent
+   * @returns {string}
+   */
+  static stripTopLevelCode(javaContent) {
+    const lines = javaContent.split('\n');
+    const { firstOpenLineIdx, lastCloseLineIdx } = this._findClassBoundaries(lines);
+
+    if (firstOpenLineIdx === -1 && lastCloseLineIdx === -1) return javaContent;
+
+    const closeLine = lastCloseLineIdx !== -1 ? lastCloseLineIdx : lines.length - 1;
+
+    if (firstOpenLineIdx <= 0) {
+      // No pre-class lines at all; just drop everything after the closing brace.
+      return lines.slice(0, closeLine + 1).join('\n');
+    }
+
+    // Keep only header lines (import/package/blank/comments) from before the class.
+    const preamble = lines.slice(0, firstOpenLineIdx).filter(l => this._isHeaderLine(l));
+    const classBody = lines.slice(firstOpenLineIdx, closeLine + 1);
+    return [...preamble, ...classBody].join('\n');
+  }
+
+  /**
+   * Inspects all Java files currently loaded in the Online-IDE and collects
+   * any top-level code found in them.
+   *
+   * @returns {Array<{file: string, code: string}>}
+   */
+  static getTopLevelCodeInfo() {
+    const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+    if (!ideAccess) return [];
+
+    const results = [];
+    for (const file of ideAccess.getFiles()) {
+      const name = file.getName();
+      if (!name.endsWith('.java')) continue;
+      const content = file.getText();
+      if (!content) continue;
+      const topLevel = this.detectTopLevelCode(content);
+      if (topLevel) results.push({ file: name, code: topLevel });
+    }
+    return results;
+  }
+
   // ── Commit & Push ────────────────────────────────────────────────────────
 
   /**
    * Writes the current workspace state (XML + Java) into the repository,
    * commits everything, and pushes to the remote.
    *
-   * @param {string} message – commit message
+   * @param {string}  message           – commit message
+   * @param {Object}  [opts]
+   * @param {boolean} [opts.stripTopLevelCode=false] – strip top-level Java code before committing
    */
-  static async commitAndPush(message) {
+  static async commitAndPush(message, { stripTopLevelCode = false } = {}) {
     const config = this.getStoredConfig();
     if (!config) throw new Error('Kein Git-Repository verbunden.');
 
@@ -240,7 +364,7 @@ export class GitService {
 
     // ── Export current workspace into the virtual filesystem ──────────────
     await this._exportXmlFiles(fs);
-    await this._exportJavaFiles(fs);
+    await this._exportJavaFiles(fs, { stripTopLevelCode });
 
     // ── Stage all changed / new / deleted files ──────────────────────────
     const matrix = await git.statusMatrix({ fs, dir: this.REPO_DIR });
@@ -378,8 +502,10 @@ export class GitService {
    * Exports all Java files from the Online-IDE to the virtual filesystem,
    * and removes `.java` files that no longer exist in the IDE.
    * @param {LightningFS} fs
+   * @param {Object}  [opts]
+   * @param {boolean} [opts.stripTopLevelCode=false] – strip top-level code before writing
    */
-  static async _exportJavaFiles(fs) {
+  static async _exportJavaFiles(fs, { stripTopLevelCode = false } = {}) {
     const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
     if (!ideAccess) return;
 
@@ -407,8 +533,11 @@ export class GitService {
       const name = file.getName();
       if (!name.endsWith('.java')) continue;
 
-      const content = file.getText();
+      let content = file.getText();
       if (content) {
+        if (stripTopLevelCode) {
+          content = this.stripTopLevelCode(content);
+        }
         await fs.promises.writeFile(`${srcPath}/${name}`, content);
       }
     }

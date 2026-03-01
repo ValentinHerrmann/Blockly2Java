@@ -686,52 +686,6 @@ g.blocklyWorkspace {
     color: #73c991;
 }
 
-/* Push button: amber badge when uncommitted local changes exist */
-.git-sidebar-btn--has-changes {
-    position: relative;
-    opacity: 0.90;
-    color: #e5c07b;
-}
-
-.git-sidebar-btn--has-changes::after {
-    content: '';
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #e5c07b;
-    box-shadow: 0 0 5px rgba(229,192,123,0.75);
-}
-
-.git-sidebar-btn--has-changes:hover:not(:disabled) {
-    color: #e5c07b;
-}
-
-/* Pull button: blue badge when remote commits are available */
-.git-sidebar-btn--has-updates {
-    position: relative;
-    opacity: 0.90;
-    color: #61afef;
-}
-
-.git-sidebar-btn--has-updates::after {
-    content: '';
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #61afef;
-    box-shadow: 0 0 5px rgba(97,175,239,0.75);
-}
-
-.git-sidebar-btn--has-updates:hover:not(:disabled) {
-    color: #61afef;
-}
-
 /* ── Info button at the bottom of the sidebar ── */
 
 .git-sidebar__info {
@@ -899,6 +853,49 @@ g.blocklyWorkspace {
 
 .git-modal-btn--submit:hover {
     background-color: #1177bb;
+}
+
+/* Discouraged "keep" button used in the top-level-code warning dialog.
+   Uses a muted colour at full opacity so contrast and focus indicators
+   remain accessible (WCAG 2.1 AA). */
+.git-modal-btn--keep {
+    background-color: transparent;
+    color: rgba(255,255,255,0.35);
+    font-weight: 400;
+    border: 1px solid rgba(255,255,255,0.10);
+}
+
+.git-modal-btn--keep:hover {
+    color: rgba(255,255,255,0.60);
+    background-color: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.20);
+}
+
+.git-modal-btn--keep:focus-visible {
+    color: var(--text-primary, #d4d4d4);
+    outline: 2px solid #0e639c;
+    outline-offset: 2px;
+}
+
+/* Wider card variant used by the top-level-code warning dialog */
+.git-modal-card--toplevel {
+    max-width: 580px;
+}
+
+/* Pre-formatted display of top-level Java code in the warning dialog */
+.git-toplevel-code {
+    background-color: var(--primary-bg, #1e1e1e);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    color: #e5c07b;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
+    max-height: 140px;
 }
 
 /* ==========================================================================

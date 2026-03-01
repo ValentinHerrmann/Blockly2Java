@@ -279,29 +279,8 @@ function updateGitButtonStates() {
   cloneBtn.classList.toggle('git-sidebar-btn--connected', connected);
   cloneBtn.title = connected ? 'Verbunden – erneut klonen' : 'Repository klonen';
 
-  // Clear badges immediately; async check will re-apply them if needed.
-  if (pullBtn) pullBtn.classList.remove('git-sidebar-btn--has-updates');
-  if (pushBtn) pushBtn.classList.remove('git-sidebar-btn--has-changes');
-  if (connected) refreshGitBadges();
 }
 
-/**
- * Asynchronously checks for local and remote changes and highlights the
- * push / pull buttons accordingly.  Runs in parallel to avoid blocking.
- */
-async function refreshGitBadges() {
-  const pullBtn = document.getElementById('gitPullBtn');
-  const pushBtn = document.getElementById('gitPushBtn');
-  if (!pullBtn || !pushBtn) return;
-
-  const [hasLocal, hasRemote] = await Promise.all([
-    GitService.hasLocalChanges().catch(() => false),
-    GitService.hasRemoteChanges().catch(() => false),
-  ]);
-
-  pushBtn.classList.toggle('git-sidebar-btn--has-changes', hasLocal);
-  pullBtn.classList.toggle('git-sidebar-btn--has-updates', hasRemote);
-}
 
 /**
  * Handles the "Clone" flow:
@@ -398,9 +377,18 @@ async function handleCommitAndPush() {
   const commitResult = await GitDialog.showCommitDialog();
   if (!commitResult) return;
 
+  // Detect top-level Java code (code outside any class definition)
+  const topLevelCodeInfos = GitService.getTopLevelCodeInfo();
+  let stripTopLevelCode = false;
+  if (topLevelCodeInfos.length > 0) {
+    const choice = await GitDialog.showTopLevelCodeWarningDialog(topLevelCodeInfos);
+    if (choice === null) return;          // user cancelled
+    stripTopLevelCode = (choice === 'strip');
+  }
+
   const dismiss = GitDialog.showLoading('Committe und pushe…');
   try {
-    await GitService.commitAndPush(commitResult.message);
+    await GitService.commitAndPush(commitResult.message, { stripTopLevelCode });
     dismiss();
     updateGitButtonStates();
     await GitDialog.showMessage('Push erfolgreich', 'Änderungen wurden gepusht.');
