@@ -772,8 +772,18 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         // Collect comment for this block.
         let comment = block.getCommentText();
         if (comment) {
-          comment = Blockly.utils.string.wrap(comment, this.COMMENT_WRAP - 3);
-          commentCode += this.prefixLines(comment + '\n', '// ');
+          const javadocBlockTypes = [
+            'java_static_method_noreturn', 'java_static_method_return',
+            'java_method_noreturn', 'java_method_return', 'defconstructor',
+          ];
+          if (javadocBlockTypes.includes(block.type)) {
+            // Render as Javadoc comment for method/constructor definition blocks.
+            const lines = comment.split('\n');
+            commentCode += '/**\n' + lines.map(l => ' * ' + l).join('\n') + '\n */\n';
+          } else {
+            comment = Blockly.utils.string.wrap(comment, this.COMMENT_WRAP - 3);
+            commentCode += this.prefixLines(comment + '\n', '// ');
+          }
         }
         // Collect comments for all value arguments.
         // Don't collect comments for nested statements.
