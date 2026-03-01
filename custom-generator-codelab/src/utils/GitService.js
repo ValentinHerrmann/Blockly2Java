@@ -227,66 +227,101 @@ export class GitService {
   // ── Top-level code detection ────────────────────────────────────────────
 
   /**
-   * Detects top-level Java code (code outside class/interface/enum definitions).
-   * Uses brace-depth tracking; works reliably on machine-generated code.
+   * Returns true when a line is a Java preamble line (import, package,
+   * blank, comment, or annotation) rather than executable top-level code.
+   * @param {string} line
+   * @returns {boolean}
+   */
+  static _isHeaderLine(line) {
+    return /^\s*(import|package|\/\/|\/\*|\*|@|\s*$)/.test(line);
+  }
+
+  /**
+   * Scans `lines` with brace-depth tracking and returns the index of the
+   * first line that opens the outermost class/interface/enum body and the
+   * index of the last line that closes it.
+   *
+   * @param {string[]} lines
+   * @returns {{ firstOpenLineIdx: number, lastCloseLineIdx: number }}
+   *   Both indices are -1 when no class body is found.
+   */
+  static _findClassBoundaries(lines) {
+    let depth = 0;
+    let firstOpenLineIdx = -1;
+    let lastCloseLineIdx = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      for (const char of lines[i]) {
+        if (char === '{') {
+          if (depth === 0 && firstOpenLineIdx === -1) firstOpenLineIdx = i;
+          depth++;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0) lastCloseLineIdx = i;
+        }
+      }
+    }
+
+    return { firstOpenLineIdx, lastCloseLineIdx };
+  }
+
+  /**
+   * Detects top-level Java code: executable statements that appear either
+   * before or after the outermost class/interface/enum body.
    *
    * @param {string} javaContent
    * @returns {string|null} trimmed top-level code, or null if none found
    */
   static detectTopLevelCode(javaContent) {
     const lines = javaContent.split('\n');
-    let depth = 0;
-    let hasEnteredClass = false;
-    let lastTopLevelCloseLineIdx = -1;
+    const { firstOpenLineIdx, lastCloseLineIdx } = this._findClassBoundaries(lines);
 
-    for (let i = 0; i < lines.length; i++) {
-      for (const char of lines[i]) {
-        if (char === '{') {
-          depth++;
-          hasEnteredClass = true;
-        } else if (char === '}') {
-          depth--;
-          if (depth === 0 && hasEnteredClass) {
-            lastTopLevelCloseLineIdx = i;
-          }
-        }
-      }
+    const parts = [];
+
+    // Code before the first class/interface/enum definition
+    if (firstOpenLineIdx > 0) {
+      const preCode = lines
+        .slice(0, firstOpenLineIdx)
+        .filter(l => !this._isHeaderLine(l))
+        .join('\n')
+        .trim();
+      if (preCode) parts.push(preCode);
     }
 
-    if (lastTopLevelCloseLineIdx === -1) return null;
-    const trimmed = lines.slice(lastTopLevelCloseLineIdx + 1).join('\n').trim();
-    return trimmed || null;
+    // Code after the last class closing brace
+    if (lastCloseLineIdx !== -1) {
+      const postCode = lines.slice(lastCloseLineIdx + 1).join('\n').trim();
+      if (postCode) parts.push(postCode);
+    }
+
+    return parts.length ? parts.join('\n\n') : null;
   }
 
   /**
-   * Returns a copy of the Java content with all top-level code removed
-   * (i.e. everything after the closing brace of the outermost class).
+   * Returns a copy of the Java content with all top-level executable code
+   * removed (both before and after the outermost class body).
+   * Preamble lines (import, package, blank, comments) are preserved.
    *
    * @param {string} javaContent
    * @returns {string}
    */
   static stripTopLevelCode(javaContent) {
     const lines = javaContent.split('\n');
-    let depth = 0;
-    let hasEnteredClass = false;
-    let lastTopLevelCloseLineIdx = -1;
+    const { firstOpenLineIdx, lastCloseLineIdx } = this._findClassBoundaries(lines);
 
-    for (let i = 0; i < lines.length; i++) {
-      for (const char of lines[i]) {
-        if (char === '{') {
-          depth++;
-          hasEnteredClass = true;
-        } else if (char === '}') {
-          depth--;
-          if (depth === 0 && hasEnteredClass) {
-            lastTopLevelCloseLineIdx = i;
-          }
-        }
-      }
+    if (firstOpenLineIdx === -1 && lastCloseLineIdx === -1) return javaContent;
+
+    const closeLine = lastCloseLineIdx !== -1 ? lastCloseLineIdx : lines.length - 1;
+
+    if (firstOpenLineIdx <= 0) {
+      // No pre-class lines at all; just drop everything after the closing brace.
+      return lines.slice(0, closeLine + 1).join('\n');
     }
 
-    if (lastTopLevelCloseLineIdx === -1) return javaContent;
-    return lines.slice(0, lastTopLevelCloseLineIdx + 1).join('\n');
+    // Keep only header lines (import/package/blank/comments) from before the class.
+    const preamble = lines.slice(0, firstOpenLineIdx).filter(l => this._isHeaderLine(l));
+    const classBody = lines.slice(firstOpenLineIdx, closeLine + 1);
+    return [...preamble, ...classBody].join('\n');
   }
 
   /**

@@ -855,17 +855,26 @@ g.blocklyWorkspace {
     background-color: #1177bb;
 }
 
-/* Barely-visible "keep" button used in the top-level-code warning dialog */
+/* Discouraged "keep" button used in the top-level-code warning dialog.
+   Uses a muted colour at full opacity so contrast and focus indicators
+   remain accessible (WCAG 2.1 AA). */
 .git-modal-btn--keep {
     background-color: transparent;
-    color: var(--text-primary, #d4d4d4);
-    opacity: 0.25;
+    color: rgba(255,255,255,0.35);
+    font-weight: 400;
     border: 1px solid rgba(255,255,255,0.10);
 }
 
 .git-modal-btn--keep:hover {
-    opacity: 0.55;
+    color: rgba(255,255,255,0.60);
     background-color: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.20);
+}
+
+.git-modal-btn--keep:focus-visible {
+    color: var(--text-primary, #d4d4d4);
+    outline: 2px solid #0e639c;
+    outline-offset: 2px;
 }
 
 /* Wider card variant used by the top-level-code warning dialog */
