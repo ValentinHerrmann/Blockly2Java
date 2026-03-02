@@ -299,23 +299,18 @@ const callArgMixin = {
 
     const header      = this.headerText_ || '';
     const name        = this.methodName_ || '';
-    /*const paramsDisplay = this.argCount_ > 0
-      ? '(' + (this.argNames_ || []).join(', ') + ')'
-      : '()';*/
 
     if (this.argCount_ === 0) {
       // No args: plain dummy so the block still shows nicely.
       this.appendDummyInput('TOP_LINE')
         .appendField(header)
-        .appendField(new Blockly.FieldLabel(name),        'NAME')
-        /*.appendField(new Blockly.FieldLabel(paramsDisplay), 'PARAMS')*/;
+        .appendField(new Blockly.FieldLabel(name),        'NAME');
     } else {
       // Attach ALL header labels to ARG0 so its connector sits at the top row.
       const label0 = (this.argNames_ && this.argNames_[0]) || 'arg 1';
       this.appendValueInput('ARG0')
         .appendField(header)
         .appendField(new Blockly.FieldLabel(name),        'NAME')
-        //.appendField(new Blockly.FieldLabel(paramsDisplay), 'PARAMS')
         .appendField('( ' + label0 + (this.argCount_ > 1 ? ' ,' : ' ) '));
       // Remaining args stack below, right-aligned.
       for (let j = 1; j < this.argCount_; j++) {
