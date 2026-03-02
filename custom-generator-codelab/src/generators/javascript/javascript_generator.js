@@ -192,6 +192,11 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   const varsAssignedToThis = [];
   let c = 0;
   //search if the variable is ever set (covers all setter block kinds)
+  // All block types that represent a variable read (any kind)
+  const GETTER_BLOCK_TYPES = new Set([
+    'variables_get', 'java_local_var_get', 'java_static_attr_get',
+    'java_normal_attr_get', 'java_param_get',
+  ]);
   const setterBlocks = [
     ...workSpace.getBlocksByType('variables_set', true),
     ...workSpace.getBlocksByType('java_normal_attr_set', true),
