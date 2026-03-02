@@ -8,6 +8,12 @@ import { onBlocksChange } from '../index.js';
 export class IdeBridge {
   static selected_file_name = '';
 
+  /**
+   * The last Java file the user had active, so we can switch back to it
+   * when Blockly changes while a Markdown file is shown.
+   */
+  static last_java_file_name = '';
+
   static syncClassNameFromIDE() {
     let className = '';
     const fileName = this.selected_file_name;
@@ -112,8 +118,18 @@ export class IdeBridge {
    */
   static fileSelected(fileName) {
     //console.log(`IdeBridge: file selected ${fileName}`);
+
+    // Markdown files are read-only info panels – Blockly ignores them.
+    // Keep showing the last active Java workspace and don't push code.
+    if (fileName.endsWith('.md')) {
+      return;
+    }
+
     // Update the plain global property so save/load use the correct storage key.
     this.selected_file_name = fileName;
+    if (fileName.endsWith('.java')) {
+      this.last_java_file_name = fileName;
+    }
 
     // Load the saved Blockly workspace for this file.
     //console.log('starting to load workspace for ' + fileName);
@@ -122,5 +138,37 @@ export class IdeBridge {
     // Sync the class name used by the code generator.
     this.syncClassNameFromIDE();
     onBlocksChange();
+  }
+
+  /**
+   * If the IDE is currently displaying a Markdown file, programmatically
+   * switch it back to the last active Java file.  Called at the start of
+   * onBlocksChange() so that generated code always lands in the Java editor.
+   */
+  static ensureJavaFileActive() {
+    if (!globalThis.online_ide_access) return;
+    const ideAccess = globalThis.online_ide_access.getIDE?.('Java');
+    if (!ideAccess) return;
+    const ide = ideAccess.ide;
+    if (!ide?.fileExplorer) return;
+
+    // Check whether the IDE is currently showing something that is NOT our
+    // active Java file (e.g. it's showing a .md file).
+    const targetName = this.selected_file_name || this.last_java_file_name;
+    if (!targetName) return;
+
+    // Find the internal file object matching our target Java file.
+    const wrappedFiles = ideAccess.getFiles();
+    const wrapped = wrappedFiles.find(f => f.getName() === targetName);
+    if (!wrapped) return;
+    const internalFile = wrapped.file ?? wrapped;
+
+    // Only switch if the IDE is not already showing this file.
+    const currentlyActive = ide.fileExplorer.treeview
+      ?.getCurrentlySelectedNodes?.()
+      ?.[0]?.externalObject;
+    if (currentlyActive && currentlyActive.name === targetName) return;
+
+    ide.fileExplorer.selectFile(internalFile, false);
   }
 }
