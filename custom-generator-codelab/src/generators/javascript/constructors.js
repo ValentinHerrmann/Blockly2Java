@@ -22,6 +22,11 @@ import LocalStorageManager from '../../utils/LocalStorageManager.js';
 export function defconstructor(block, generator) {
   const className = getClassName();
   LocalStorageManager.storeConstructors(className, block);
+
+  // Reset per-method local-variable tracking so the first use inside every
+  // constructor is always emitted as a declaration, not a plain assignment.
+  generator.declaredLocalVarIds_ = new Set();
+
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
     xfix1 += generator.injectId(

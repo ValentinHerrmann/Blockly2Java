@@ -24,6 +24,10 @@ import * as Blockly from 'blockly';
 function buildMethodCode(block, generator, isStatic) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
 
+  // Reset per-method local-variable tracking so the first use inside every
+  // method is always emitted as a declaration, not a plain assignment.
+  generator.declaredLocalVarIds_ = new Set();
+
   // --- statement body ---
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
