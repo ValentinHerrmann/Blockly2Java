@@ -177,7 +177,7 @@ export class IdeBridge {
     const currentlyActive = ide.fileExplorer.treeview
       ?.getCurrentlySelectedNodes?.()
       ?.[0]?.externalObject;
-    if (currentlyActive && currentlyActive.name === targetName) return;
+    if (currentlyActive?.name === targetName) return;
 
     ide.fileExplorer.selectFile(internalFile, false);
   }
