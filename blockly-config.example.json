@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "description": "Toolbox-Konfiguration für diese Übung. Setze 'active' auf false, um eine Kategorie oder einen Block auszublenden. Nutze 'subcategories' um Ordner-Kategorien (Variablen, Methoden) auf Unterebene zu steuern. Diese Datei enthält immer alle verfügbaren Kategorien und Blöcke – die Standardwerte entsprechen dem vollständigen Toolbox-Umfang.",
+  "categories": [
+    {
+      "name": "Logik",
+      "active": true,
+      "blocks": [
+        { "type": "controls_if",       "active": true  },
+        { "type": "logic_compare",     "active": true  },
+        { "type": "logic_operation",   "active": true  },
+        { "type": "logic_negate",      "active": true  },
+        { "type": "logic_boolean",     "active": true  },
+        { "type": "logic_null",        "active": false }
+      ]
+    },
+    {
+      "name": "Schleifen",
+      "active": true,
+      "blocks": [
+        { "type": "controls_repeat_ext",    "active": true  },
+        { "type": "controls_whileUntil",    "active": true  },
+        { "type": "controls_for",           "active": true  },
+        { "type": "controls_flow_statements","active": true }
+      ]
+    },
+    {
+      "name": "Mathe",
+      "active": true,
+      "blocks": [
+        { "type": "math_number",          "active": true  },
+        { "type": "math_arithmetic",      "active": true  },
+        { "type": "math_single",          "active": true  },
+        { "type": "math_trig",            "active": true  },
+        { "type": "math_constant",        "active": false },
+        { "type": "math_number_property", "active": false },
+        { "type": "math_round",           "active": true  },
+        { "type": "math_on_list",         "active": false },
+        { "type": "math_modulo",          "active": true  },
+        { "type": "math_random_int",      "active": true  },
+        { "type": "math_random_float",    "active": false }
+      ]
+    },
+    {
+      "name": "Text",
+      "active": true,
+      "blocks": [
+        { "type": "text",             "active": true  },
+        { "type": "text_join",        "active": true  },
+        { "type": "text_length",      "active": true  },
+        { "type": "text_getSubstring","active": false },
+        { "type": "text_changeCase",  "active": false },
+        { "type": "text_trim",        "active": false },
+        { "type": "text_count",       "active": false },
+        { "type": "text_replace",     "active": false },
+        { "type": "text_reverse",     "active": false },
+        { "type": "text_print",       "active": true  }
+      ]
+    },
+    {
+      "name": "Variablen",
+      "active": true,
+      "subcategories": [
+        { "name": "Attribute",           "active": true  },
+        { "name": "Lokale Variablen",    "active": true  },
+        { "name": "Statische Attribute", "active": false }
+      ]
+    },
+    {
+      "name": "Methoden",
+      "active": true,
+      "subcategories": [
+        {
+          "name": "Objekt-Methoden",
+          "active": true,
+          "blocks": [
+            { "type": "java_method_noreturn", "active": true  },
+            { "type": "java_method_return",   "active": true  }
+          ]
+        },
+        {
+          "name": "Klassen-Methoden",
+          "active": false,
+          "blocks": [
+            { "type": "java_static_method_noreturn", "active": true  },
+            { "type": "java_static_method_return",   "active": true  }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Klassen",
+      "active": false,
+      "blocks": [
+        { "type": "defconstructor",   "active": false },
+        { "type": "callconstructor",  "active": false }
+      ]
+    }
+  ]
+}

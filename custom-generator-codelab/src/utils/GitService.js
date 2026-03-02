@@ -453,7 +453,15 @@ export class GitService {
       entries = [];
     }
 
-    const result = { json: {}, java: {}, md: {} };
+    const result = { json: {}, java: {}, md: {}, toolboxConfig: null };
+
+    // Look for a toolbox config file at the repo root.
+    try {
+      const raw = await fs.promises.readFile(`${this.REPO_DIR}/blockly-config.json`);
+      result.toolboxConfig = JSON.parse(new TextDecoder().decode(raw));
+    } catch {
+      /* No blockly-config.json present – that is perfectly fine. */
+    }
 
     for (const entry of entries) {
       if (entry.startsWith('.')) continue;

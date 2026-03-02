@@ -24,6 +24,7 @@ import { RestManager } from './utils/RestManager';
 import { UiManager } from './utils/UiManager';
 import { GitService } from './utils/GitService';
 import { GitDialog } from './utils/GitDialog';
+import { ToolboxConfigManager } from './utils/ToolboxConfigManager';
 
 // Module-level state
 export let ws;
@@ -347,6 +348,9 @@ async function handleClone() {
     const files = await GitService.clone(rawUrl, finalPassword);
     dismiss();
 
+    // Apply toolbox config from the repo (resets to full toolbox when absent).
+    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+
     // Import Java and Markdown files into the Online-IDE.
     importJavaFilesToIDE({ ...files.java, ...files.md });
 
@@ -394,6 +398,9 @@ async function handlePull() {
   try {
     const files = await GitService.pull();
     dismiss();
+
+    // Apply toolbox config from the repo (resets to full toolbox when absent).
+    ToolboxConfigManager.apply(files.toolboxConfig, ws);
 
     importJavaFilesToIDE({ ...files.java, ...files.md });
 
