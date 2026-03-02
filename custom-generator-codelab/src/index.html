@@ -3,7 +3,7 @@
    <head>
      <meta charset="utf-8" />
      <title>Blockly</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>
 
     <!-- favicon.ico — broadest fallback (IE, older Android WebView, bots) -->
     <link rel="shortcut icon" href="assets/favicon.ico">
@@ -158,36 +158,43 @@
                     </div>
                 </div>
                 <div class="pane-content">
-                    <div id="ide" class="java-online"
-                      data-java-online="{
-                      'id': 'Java',
-                      'speed': 20,
-                      'withBottomPanel': true ,
-                      'withPCode': false ,
-                      'withConsole': true ,
-                      'withFileList': true ,
-                      'withErrorList': true,
-                      'enableFileAccess': true,
-                      'withClassDiagram': false,
-                      'hideUnitTests': true,
-                      'hideWorkspaceFilesMng': true,
-                      'simplifyDebugger': true,
-                      'hideResetButton': true,
-                      'settings': {
-                        'editor.hoverVerbosity.showHelpOnKeywordsAndOperators': true,
-                        'editor.hoverVerbosity.showMethodDeclaration': 'declarationsAndComments',   
-                        'editor.hoverVerbosity.showClassDeclaration':  'declarationsAndComments',
-                        'editor.contextSensitiveHelp.StructureStatements' :'true',
-                        'editor.contextSensitiveHelp.ParameterHints' :'true',
-                        'editor.autoClosingBrackets': 'always',
-                        'editor.autoClosingQuotes': 'always',
-                        'editor.autoSemicolons': true,
-                        'compiler.shadowedSymbolErrorLevel': 'ignore'
-                      }
-                      }">
-                      <script type="text/plain" title="Main.java" data-type="java">
-                      </script>
+                    <!-- Top section: monaco editor fills this area -->
+                    <div id="ideTopSection" class="inner-split-pane">
+                        <div id="ide" class="java-online"
+                          data-java-online="{
+                          'id': 'Java',
+                          'speed': 20,
+                          'withBottomPanel': true ,
+                          'withPCode': false ,
+                          'withConsole': true ,
+                          'withFileList': true ,
+                          'withErrorList': true,
+                          'enableFileAccess': true,
+                          'withClassDiagram': false,
+                          'hideUnitTests': true,
+                          'hideWorkspaceFilesMng': true,
+                          'simplifyDebugger': true,
+                          'hideResetButton': true,
+                          'settings': {
+                            'editor.hoverVerbosity.showHelpOnKeywordsAndOperators': true,
+                            'editor.hoverVerbosity.showMethodDeclaration': 'declarationsAndComments',
+                            'editor.hoverVerbosity.showClassDeclaration':  'declarationsAndComments',
+                            'editor.contextSensitiveHelp.StructureStatements' :'true',
+                            'editor.contextSensitiveHelp.ParameterHints' :'true',
+                            'editor.autoClosingBrackets': 'always',
+                            'editor.autoClosingQuotes': 'always',
+                            'editor.autoSemicolons': true,
+                            'compiler.shadowedSymbolErrorLevel': 'ignore'
+                          }
+                          }">
+                          <script type="text/plain" title="Main.java" data-type="java">
+                          </script>
+                        </div>
                     </div>
+                    <!-- B2J-managed horizontal divider between editor and bottom panel -->
+                    <div id="rightHorizDivider" class="right-horiz-divider" title="Ziehen zum Anpassen"></div>
+                    <!-- Bottom section: receives .joe_bottomDiv after IDE init -->
+                    <div id="ideBottomSection" class="joeCssFence inner-split-pane"></div>
                 </div>
             </div>
             </div>

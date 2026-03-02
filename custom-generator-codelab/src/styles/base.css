@@ -1,0 +1,63 @@
+/* ==========================================================================
+   Base — global typography, page reset, preloader, root container
+   ========================================================================== */
+
+/* ── Typography ── */
+
+body, button, input, select, textarea {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── HTML/Body reset ── */
+
+html {
+    /* Prevent document-level scrolling on iOS Safari */
+    overflow: hidden;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    max-width: 100vw;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--quaternary-bg);
+    color: var(--text-primary);
+}
+
+/* ── Root page container  (flex column: [tab-bar?] + panes-row) ── */
+
+#pageContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    /* 100dvh accounts for iOS Safari's dynamic browser UI (address bar, bottom bar).
+       Falls back to 100vh on browsers that don't support dvh (Safari < 15.4). */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+/* ── Pre-loader splash screen ── */
+
+#preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+}
+
+#preloader img {
+    width: min(500px, 50vmin);
+    height: auto;
+}
+
+#preloader.preloader--hidden {
+    opacity: 0;
+    pointer-events: none;
+}

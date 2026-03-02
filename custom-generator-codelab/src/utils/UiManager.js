@@ -10,7 +10,7 @@ export class UiManager {
     const colors = {
       primaryBg: rootStyles.getPropertyValue('--primary-bg').trim(),
       secondaryBg: rootStyles.getPropertyValue('--secondary-bg').trim(),
-      tertiaryBg: rootStyles.getPropertyValue('--tertiary-bg').trim(),
+      tertiaryBg: rootStyles.getPropertyValue('--quaternary-bg').trim(),
       textPrimary: rootStyles.getPropertyValue('--text-primary').trim(),
       textSecondary: rootStyles.getPropertyValue('--text-secondary').trim(),
       textTertiary: rootStyles.getPropertyValue('--text-tertiary').trim(),
@@ -189,9 +189,13 @@ export class UiManager {
     let dragCache = null;
     let rafPending = false;
 
-    divider.addEventListener('mousedown', (e) => {
+    // ── Pointer-event drag (works for both mouse and touch / iPad) ────────────
+    divider.addEventListener('pointerdown', (e) => {
       if (isNarrow) return;
       isDragging = true;
+      // Pointer capture routes all subsequent pointer events to the divider
+      // even when the pointer moves outside it – essential for fast drags.
+      divider.setPointerCapture(e.pointerId);
       panesContainer.classList.add('is-dragging');
       document.body.style.cursor     = 'col-resize';
       document.body.style.userSelect = 'none';
@@ -209,7 +213,7 @@ export class UiManager {
       dragCache = { lMargin, rMargin, minL, minR, rect };
     });
 
-    document.addEventListener('mousemove', (e) => {
+    divider.addEventListener('pointermove', (e) => {
       if (!isDragging || !dragCache) return;
 
       const { lMargin, rMargin, minL, minR, rect } = dragCache;
@@ -233,17 +237,20 @@ export class UiManager {
       }
     });
 
-    document.addEventListener('mouseup', () => {
+    function endDividerDrag() {
       if (isDragging) {
         isDragging = false;
         dragCache  = null;
         panesContainer.classList.remove('is-dragging');
         document.body.style.cursor     = '';
         document.body.style.userSelect = '';
-        // Final resize after releasing the mouse.
+        // Final resize after releasing.
         Blockly.svgResize(workspace);
       }
-    });
+    }
+
+    divider.addEventListener('pointerup',     endDividerDrag);
+    divider.addEventListener('pointercancel', endDividerDrag);
 
     // ── Button event listeners ───────────────────────────────────────────────
 
@@ -265,6 +272,68 @@ export class UiManager {
     document.querySelectorAll('.narrow-tab').forEach(btn => {
       btn.addEventListener('click', () => showNarrowPane(btn.dataset.pane));
     });
+
+    // ── Right-pane vertical splitter (editor ↔ bottom panel) ─────────────────
+    // The .joe_bottomDiv is relocated from inside #ide to #ideBottomSection at
+    // runtime (after the IDE initialises). This drag handle lets the user resize
+    // that split on any device, including touch / iPad.
+
+    const rightHorizDivider  = document.getElementById('rightHorizDivider');
+    const ideTopSection      = document.getElementById('ideTopSection');
+    const ideBottomSection   = document.getElementById('ideBottomSection');
+
+    let vertDragging  = false;
+    let vertDragCache = null;
+
+    if (rightHorizDivider && ideTopSection && ideBottomSection) {
+      rightHorizDivider.addEventListener('pointerdown', (e) => {
+        vertDragging = true;
+        rightHorizDivider.setPointerCapture(e.pointerId);
+        rightPane.classList.add('right-pane-resizing');
+        document.body.style.cursor     = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+        vertDragCache = {
+          startY:   e.clientY,
+          botStart: ideBottomSection.getBoundingClientRect().height,
+        };
+      });
+
+      rightHorizDivider.addEventListener('pointermove', (e) => {
+        if (!vertDragging || !vertDragCache) return;
+
+        const dy      = e.clientY - vertDragCache.startY;
+        const newBot  = vertDragCache.botStart - dy;
+        const MIN     = 60;
+
+        // Clamp: ensure both sections keep a minimum usable height.
+        const paneH   = ideTopSection.parentElement.getBoundingClientRect().height;
+        const divH    = rightHorizDivider.getBoundingClientRect().height;
+        if (newBot < MIN || (paneH - divH - newBot) < MIN) return;
+
+        // Only set the bottom section's height; the top section remains
+        // flex: 1 and automatically fills the rest — so the split stays
+        // correct even when the parent pane is later resized.
+        ideBottomSection.style.height = `${newBot}px`;
+
+        // Notify Monaco so it reflows its canvas immediately.
+        window.dispatchEvent(new Event('resize'));
+      });
+
+      function endVertDrag() {
+        if (vertDragging) {
+          vertDragging  = false;
+          vertDragCache = null;
+          rightPane.classList.remove('right-pane-resizing');
+          document.body.style.cursor     = '';
+          document.body.style.userSelect = '';
+          window.dispatchEvent(new Event('resize'));
+        }
+      }
+
+      rightHorizDivider.addEventListener('pointerup',     endVertDrag);
+      rightHorizDivider.addEventListener('pointercancel', endVertDrag);
+    }
 
     // ── ResizeObserver – swap modes dynamically ──────────────────────────────
 
