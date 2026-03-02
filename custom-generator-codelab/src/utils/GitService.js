@@ -478,8 +478,6 @@ export class GitService {
         result.xml[entry] = content;
       } else if (entry.endsWith('.java')) {
         result.java[entry] = content;
-      } else if (entry.endsWith('.md')) {
-        result.md[entry] = content;
       }
     }
 

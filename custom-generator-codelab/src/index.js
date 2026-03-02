@@ -350,13 +350,22 @@ async function handleClone() {
     // Import Java and Markdown files into the Online-IDE.
     importJavaFilesToIDE({ ...files.java, ...files.md });
 
-    // Auto-select the first file if none is currently selected.
-    if (!IdeBridge.selected_file_name) {
-      const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
-      const ideFiles = ideAccess?.getFiles?.() ?? [];
+    // After importing, prefer displaying a markdown file if one exists.
+    // We use fileExplorer.selectFile directly because IdeBridge.fileSelected
+    // intentionally ignores .md files (they are view-only panels).
+    const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+    const ideFiles = ideAccess?.getFiles?.() ?? [];
+    const mdFile = ideFiles.find(f => f.getName().toLowerCase().endsWith('.md'));
+    if (mdFile) {
+      const ide = ideAccess.ide;
+      const internalFile = mdFile.file ?? mdFile;
+      // Select the treeview node so it gets highlighted in the file explorer.
+      const node = ide?.fileExplorer?.treeview?.nodes?.find(n => n.externalObject === internalFile);
+      if (node) ide.fileExplorer.treeview.selectNodeAndSetFocus(node, false);
+      ide?.fileExplorer?.selectFile?.(internalFile);
+    } else if (!IdeBridge.selected_file_name) {
       if (ideFiles.length > 0) {
-        const firstName = ideFiles[0].getName();
-        IdeBridge.fileSelected(firstName);
+        IdeBridge.fileSelected(ideFiles[0].getName());
       }
     } else {
       load(ws);

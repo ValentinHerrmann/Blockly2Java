@@ -146,6 +146,16 @@ export class IdeBridge {
    * onBlocksChange() so that generated code always lands in the Java editor.
    */
   static ensureJavaFileActive() {
+    // Backwards-compatible wrapper; prefer switchToLastJavaFileIfNeeded().
+    this.switchToLastJavaFileIfNeeded();
+  }
+
+  /**
+   * If the IDE is currently displaying a non-target file (for example, a
+   * Markdown info panel), switch it back to the last active Java file so
+   * that generated code is written into the correct editor tab.
+   */
+  static switchToLastJavaFileIfNeeded() {
     if (!globalThis.online_ide_access) return;
     const ideAccess = globalThis.online_ide_access.getIDE?.('Java');
     if (!ideAccess) return;
