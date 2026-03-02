@@ -10,7 +10,8 @@ export class UiManager {
     const colors = {
       primaryBg: rootStyles.getPropertyValue('--primary-bg').trim(),
       secondaryBg: rootStyles.getPropertyValue('--secondary-bg').trim(),
-      tertiaryBg: rootStyles.getPropertyValue('--quaternary-bg').trim(),
+      tertiaryBg: rootStyles.getPropertyValue('--tertiary-bg').trim(),
+      quaternaryBg: rootStyles.getPropertyValue('--quaternary-bg').trim(),
       textPrimary: rootStyles.getPropertyValue('--text-primary').trim(),
       textSecondary: rootStyles.getPropertyValue('--text-secondary').trim(),
       textTertiary: rootStyles.getPropertyValue('--text-tertiary').trim(),
@@ -28,7 +29,7 @@ export class UiManager {
         'flyoutBackgroundColour': colors.secondaryBg,
         'flyoutForegroundColour': colors.textPrimary,
         'flyoutOpacity': colors.opacityFlyout,
-        'scrollbarColour': colors.tertiaryBg,
+        'scrollbarColour': colors.quaternaryBg,
         'scrollbarOpacity': colors.opacityScrollbar,
         'insertionMarkerColour': colors.textSecondary,
         'insertionMarkerOpacity': colors.opacityMarker,
