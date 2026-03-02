@@ -1,8 +1,8 @@
-name: (on PR sync) Set PR Description
+name: Set PR Description
 
 on: 
-  pull_request:
-    types: [synchronize]
+  #pull_request:
+  #  types: [synchronize]
   # Manual trigger (Actions tab → Run workflow).
   workflow_dispatch:
 

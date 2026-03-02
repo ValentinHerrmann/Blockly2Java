@@ -1,0 +1,126 @@
+/* ==========================================================================
+   IDE — right-pane vertical split, Blockly workspace, third-party resets
+   ========================================================================== */
+
+/* ── Right-pane vertical split  (editor top / output panel bottom) ── */
+
+/* The IDE's outer wrapper must fill the top section without its own margin /
+   border / shadow — B2J's pane already provides those. */
+#ide {
+    flex: 1;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 0;
+    border: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Top section: flexible — takes all space above the horizontal divider.
+   Shadow points downward toward the divider. */
+#ideTopSection {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 10px var(--shadow-strong);
+}
+
+/* Bottom section: fixed default height, draggable to resize.
+   Shadow points upward toward the divider.
+   flex: 0 0 auto overrides the inner-split-pane flex:1 shorthand so that
+   flex-basis becomes "auto" and height is respected by both CSS and JS. */
+#ideBottomSection {
+    flex: 0 0 auto;
+    height: 220px;
+    min-height: 60px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 -4px 10px var(--shadow-strong);
+}
+
+/* Make the relocated IDE bottom div fill the section completely. */
+#ideBottomSection > .joe_bottomDiv {
+    height: 100% !important;
+    border-top: none; /* B2J's divider replaces the visual separator */
+    margin: 0;
+}
+
+/* Kill transitions while the user drags the horizontal resize handle */
+.right-pane-resizing #ideTopSection,
+.right-pane-resizing #ide {
+    transition: none;
+}
+
+/* ── Blockly / code panel element overrides ── */
+
+#generatedCode {
+    height: 100%;
+    background-color: var(--primary-bg);
+}
+
+#output { height: 0%; }
+
+#blocklyDiv {
+    background-color: var(--primary-bg);
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Blockly dark-mode theme overrides ── */
+
+.blocklyMainBackground        { fill: var(--primary-bg) !important; }
+.blocklyToolboxDiv            { background-color: var(--secondary-bg) !important; }
+.blocklyFlyoutBackground      { fill: var(--secondary-bg) !important; }
+
+/* Strip borders/outlines that Blockly adds to its SVG elements */
+.blocklySvg,
+.blocklyWorkspace,
+.injectionDiv,
+.blocklyWidgetDiv,
+svg.blocklySvg,
+g.blocklyWorkspace {
+    border: none !important;
+    outline: none !important;
+}
+
+/* Remove SVG stroke that can produce a faint border around the workspace */
+.blocklyWorkspace > rect:first-child,
+.blocklySvg > rect:first-child {
+    stroke: none !important;
+    stroke-width: 0 !important;
+}
+
+/* ── Global border / outline resets for third-party components ── */
+
+.split-pane,
+.java-online,
+#ide,
+#blocklyDiv {
+    border: none !important;
+    outline: none !important;
+}
+
+/* ── Larger toolbar buttons in the embedded IDE ── */
+.joeCssFence .joe_controlsDiv .jo_button,
+.joeCssFence .joe_controlPanel_top .jo_button,
+.jo_popout-debug-controls .jo_button,
+.jo_iconButton .img_add-dark/*,
+.jo_treeviewNode_buttons ,
+.jo_iconButton .img_delete-dark,
+.jo_iconButton .img_start-dark */
+{
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+}
+
+/* w2ui panels render their own borders — strip them all at once */
+.w2ui-panel {
+    border: none !important;
+}

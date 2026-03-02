@@ -4,9 +4,10 @@
 
 :root {
     /* Primary Colors */
-    --primary-bg: #1e1e1e;           /* Main background */
+    --primary-bg: #1c1c1c;           /* Main background */
     --secondary-bg: #252526;          /* Panels, toolbox */
     --tertiary-bg: #3c3c3c;           /* Scrollbars, tertiary elements */
+    --quaternary-bg: #3e3e3e;         /* Hover states, active elements */
     
     /* Text Colors */
     --text-primary: #d4d4d4;          /* Primary text */
@@ -15,8 +16,8 @@
     
     /* Interactive Elements */
     --divider: #222222;               /* Default divider */
-    --divider-hover: #333333;         /* Divider hover state */
-    --divider-active: #444444;        /* Divider active state */
+    --divider-hover: #2f2f2f;         /* Divider hover state */
+    --divider-active: #2f2f2f;        /* Divider active state */
     
     /* Effects */
     --shadow-strong: rgba(0, 0, 0, 0.8);

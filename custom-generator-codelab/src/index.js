@@ -14,7 +14,7 @@ import * as JAVA_METHODS from './blocks/java_method_blocks.js';
 import {getClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
-import './stylesheet.css';
+import './styles/stylesheet.css';
 import './index.css';
 
 // Utility classes
@@ -111,6 +111,38 @@ function setupListeners(workspace) {
         ideAccess.onFileCreated( (name)       => IdeBridge.fileCreated(name));
         ideAccess.onFileSelected((name)       => IdeBridge.fileSelected(name));
       }
+
+      // ── Lift the IDE's bottom panel into B2J's managed section ────────────
+      // The IDE creates .joe_bottomDiv inside #ide (inside #ideTopSection).
+      // We move it to #ideBottomSection so B2J's horizontal drag handle
+      // controls the split — giving a large, touch-friendly resize bar.
+      requestAnimationFrame(() => {
+        const ideDiv         = document.getElementById('ide');
+        const bottomDiv      = ideDiv?.querySelector('.joe_bottomDiv');
+        const ideBottomSection = document.getElementById('ideBottomSection');
+        if (bottomDiv && ideBottomSection) {
+          // Remove the IDE's own 4 px vertical slider strip (the .jo_slider
+          // that sits at the very top of .joe_bottomDiv) — B2J replaces it.
+          const ideInternalSlider = bottomDiv.querySelector(':scope > .jo_slider');
+          ideInternalSlider?.remove();
+
+          // The ThemeManager sets dark-mode CSS custom properties as inline
+          // styles on #ide. Since #ideBottomSection is a sibling (not a
+          // descendant), those vars won't cascade. Copy them across so the
+          // relocated bottom panel gets the same colors.
+          for (let i = 0; i < ideDiv.style.length; i++) {
+            const prop = ideDiv.style[i];
+            if (prop.startsWith('--')) {
+              ideBottomSection.style.setProperty(prop, ideDiv.style.getPropertyValue(prop));
+            }
+          }
+
+          // Relocate the bottom panel into B2J's section.
+          ideBottomSection.appendChild(bottomDiv);
+          // Let Monaco know its container dimensions changed.
+          window.dispatchEvent(new Event('resize'));
+        }
+      });
     },
     get: function() {
       return this._online_ide_access;
