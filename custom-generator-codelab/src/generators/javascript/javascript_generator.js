@@ -204,7 +204,11 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
       if (blocks[i].getInputTargetBlock('VALUE') != null) {
         const valueBlock = blocks[i].getInputTargetBlock('VALUE');
         //control if it's set to another variable- if yes, use its type.
-        if(valueBlock.type === 'variables_get') {
+        const GETTER_BLOCK_TYPES = new Set([
+          'variables_get', 'java_local_var_get', 'java_static_attr_get',
+          'java_normal_attr_get', 'java_param_get',
+        ]);
+        if(GETTER_BLOCK_TYPES.has(valueBlock.type)) {
           if(valueBlock.getFieldValue('VAR') !== varId) {
             varsAssignedToThis[c] = valueBlock.getFieldValue('VAR');
             c++;
@@ -287,6 +291,7 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
         //control if it is used to set a variable. if yes, use that type
         if (gb.getParent().type === 'variables_set'
           || gb.getParent().type === 'java_static_attr_set'
+          || gb.getParent().type === 'java_normal_attr_set'
           || gb.getParent().type === 'java_local_var_set') {
           if(gb.getParent().getFieldValue('VAR') !== varId) {
             varsAssignedFromThis[c] = gb.getParent().getFieldValue('VAR');
@@ -362,6 +367,49 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
   
 
 
+
+  // Search for the variable in custom method / static-method call blocks.
+  // This allows parameter types to be inferred from call-site arguments.
+  const methodDefCallPairs = [
+    ['java_method_noreturn',        'java_method_call_noreturn'],
+    ['java_method_return',          'java_method_call_return'],
+    ['java_static_method_noreturn', 'java_static_method_call_noreturn'],
+    ['java_static_method_return',   'java_static_method_call_return'],
+  ];
+  for (const [defType, callType] of methodDefCallPairs) {
+    for (const defBlock of workSpace.getBlocksByType(defType, true)) {
+      const varModels = defBlock.getVarModels ? defBlock.getVarModels() : [];
+      const numParams = defBlock.arguments_ ? defBlock.arguments_.length : 0;
+      for (let argIdx = 0; argIdx < numParams; argIdx++) {
+        if (varModels[argIdx] && varModels[argIdx].getId() === varId) {
+          const methodName = defBlock.getFieldValue('NAME');
+          for (const callBlock of workSpace.getBlocksByType(callType, true)) {
+            if (callBlock.getFieldValue('NAME') === methodName) {
+              const argBlock = callBlock.getInputTargetBlock('ARG' + argIdx);
+              if (argBlock) {
+                const t = getType(argBlock.type);
+                if (t !== TYPES.UNKNOWN) return t;
+                // Recurse if the argument is itself a variable getter
+                if (recursionDeepness > 0) {
+                  const GETTER_BLOCK_TYPES2 = new Set([
+                    'variables_get', 'java_local_var_get', 'java_static_attr_get',
+                    'java_normal_attr_get', 'java_param_get',
+                  ]);
+                  if (GETTER_BLOCK_TYPES2.has(argBlock.type)) {
+                    const argVarId = argBlock.getFieldValue('VAR');
+                    if (argVarId && argVarId !== varId) {
+                      const t2 = getVariableType(workSpace, argVarId, useCompares, recursionDeepness - 1);
+                      if (t2 !== TYPES.UNKNOWN && t2 !== 'var') return t2;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   if(recursionDeepness <= 0) {
     console.log("Recursion limit reached while searching for variable type");

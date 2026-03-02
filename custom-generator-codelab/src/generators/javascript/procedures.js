@@ -16,6 +16,11 @@ import * as Blockly from "blockly";
 
 export function procedures_defreturn(block, generator) {
   const funcName = generator.getProcedureName(block.getFieldValue('NAME'));
+
+  // Reset per-method local-variable tracking so the first use inside every
+  // method is always emitted as a declaration, not a plain assignment.
+  generator.declaredLocalVarIds_ = new Set();
+
   let xfix1 = '';
   if (generator.STATEMENT_PREFIX) {
     xfix1 += generator.injectId(

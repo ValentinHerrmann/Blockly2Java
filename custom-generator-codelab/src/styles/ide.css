@@ -128,22 +128,22 @@ g.blocklyWorkspace {
 /* ── Flyout button colors matching their variable block type ── */
 /* Normal attribute buttons (purple – matches variable_blocks category style) */
 .b2j-btn-normal-attr > .blocklyFlyoutButtonBackground {
-    fill: #da93da;
+    fill: #923e92;
 }
 .b2j-btn-normal-attr > .blocklyFlyoutButtonBackground:hover {
-    fill: #cf97cf;
+    fill: #a952a9;
 }
 /* Local variable buttons (green – matches LOCAL_COLOUR) */
 .b2j-btn-local-var > .blocklyFlyoutButtonBackground {
-    fill: #80d480;
+    fill: #219a21;
 }
 .b2j-btn-local-var > .blocklyFlyoutButtonBackground:hover {
-    fill: #9aee9a;
+    fill: #388e38;
 }
 /* Static attribute buttons (indigo – matches STATIC_COLOUR) */
 .b2j-btn-static-attr > .blocklyFlyoutButtonBackground {
-    fill: #8686dc;
+    fill: #3939a1;
 }
 .b2j-btn-static-attr > .blocklyFlyoutButtonBackground:hover {
-    fill: #9797ea;
+    fill: #3f3f9e;
 }
