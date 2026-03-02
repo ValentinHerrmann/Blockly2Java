@@ -206,19 +206,52 @@
       <h3>4.1 Google Fonts</h3>
       <p>
         Diese Seite verwendet Schriftarten von <strong>Google Fonts</strong> (Google Ireland Limited, Gordon House,
-        Barrow Street, Dublin 4, Irland). Beim Laden der Seite wird eine Verbindung zu den Servern von Google
-        hergestellt, dabei wird Ihre IP-Adresse übertragen. Google Fonts werden im Browser gecacht,
-        sodass bei Folgebesuchen keine erneute Verbindung aufgebaut wird.
+        Barrow Street, Dublin 4, Irland).
+      </p>
+      <p>
+        <strong>Werden Daten übertragen?</strong> Ja. Beim erstmaligen Laden der Seite wird eine Verbindung zu
+        <code>fonts.googleapis.com</code> hergestellt. Dabei wird Ihre IP-Adresse an Google übertragen.
+        Es werden keine Inhalte, Nutzernamen oder sonstige persönliche Informationen weitergegeben –
+        lediglich die technisch unvermeidbare IP-Adresse jeder HTTPS-Anfrage.
+      </p>
+      <p>
+        <strong>Warum ist das notwendig?</strong> Die Schriftart „Inter" wird von Googles Font-CDN geladen,
+        damit die Benutzeroberfläche korrekt dargestellt wird. Ohne diesen Abruf würde der Browser auf
+        eine systemseitige Fallback-Schrift zurückgreifen, was zu abweichendem Layout führen kann.
+      </p>
+      <p>
+        <strong>Unbedenklichkeit:</strong> Google Fonts überträgt ausschließlich die für jede HTTPS-Verbindung
+        ohnehin anfallende IP-Adresse. Google gibt an, keine Nutzerprofile auf Basis von Font-Anfragen zu
+        erstellen. Die Schriftdatei wird vom Browser gecacht, sodass bei Folgebesuchen keine erneute
+        Verbindung zu Google aufgebaut wird.
         Weitere Informationen: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Datenschutzerklärung von Google</a>.
       </p>
 
-      <h3>4.2 GitHub API (Git-Integration)</h3>
+      <h3>4.2 GitHub (Git-Integration)</h3>
       <p>
-        Wenn Sie die Git-Integrationsfunktion nutzen, werden Anfragen an die <strong>GitHub API</strong>
-        (github.com) gestellt. Diese Anfragen werden über einen CORS-Proxy geleitet.
-        Dabei werden die von Ihnen angegebenen Repository-URLs und – sofern eine Authentifizierung
-        eingerichtet ist – Ihre Git-Zugangsdaten im Rahmen der verschlüsselten HTTPS-Verbindung übertragen.
-        Die Nutzung der Git-Integration ist vollständig optional.
+        <strong>Werden Daten übertragen?</strong> Ja, aber <em>ausschließlich dann</em>, wenn Sie die
+        optionale Git-Integrationsfunktion aktiv nutzen (Clone, Push, Pull). In diesem Fall werden
+        Ihre Anfragen zunächst über einen technischen <strong>CORS-Proxy</strong> (Cloudflare Worker,
+        betrieben unter <code>workers.dev</code>) geleitet und dann verschlüsselt an <strong>github.com</strong>
+        weitergeleitet. Dabei werden übertragen:
+      </p>
+      <ul>
+        <li>Die von Ihnen eingegebene Repository-URL</li>
+        <li>Git-Protokolldaten (Commits, Dateiinhalte Ihres Projekts)</li>
+        <li>Sofern konfiguriert: Ihr GitHub-Benutzername und Zugriffstoken im Rahmen der HTTPS-Authentifizierung</li>
+      </ul>
+      <p>
+        <strong>Warum ist das notwendig?</strong> Browser dürfen aus Sicherheitsgründen (Same-Origin-Policy)
+        keine direkten git-Protokoll-Anfragen an externe Server stellen. Der CORS-Proxy ist daher technisch
+        erforderlich, um die Git-Funktionalität im Browser überhaupt zu ermöglichen. Er leitet die Anfragen
+        nur weiter und speichert <strong>keine</strong> Daten.
+      </p>
+      <p>
+        <strong>Unbedenklichkeit:</strong> Die Übertragung erfolgt ausschließlich auf Ihren aktiven Wunsch
+        hin und ist auf das für den Git-Betrieb Notwendige beschränkt. Kein Schulprojektinhalt wird ohne
+        Ihre ausdrückliche Aktion (Push) übertragen. Die gesamte Kommunikation ist TLS-verschlüsselt.
+        Die Git-Integration ist vollständig optional und kann ohne Einschränkung der übrigen Funktionen
+        deaktiviert werden.
       </p>
 
       <h3>4.3 OnlineIDE</h3>
