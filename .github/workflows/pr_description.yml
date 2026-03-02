@@ -1,4 +1,4 @@
-name: (on PR sync) Set PR Description
+name: Set PR Description
 
 on: 
   #pull_request:
