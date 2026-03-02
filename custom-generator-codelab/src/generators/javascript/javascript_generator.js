@@ -586,7 +586,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     for(let b = 0; b < blocks.length; b++)
     {
       if(validRoots.includes(blocks[b].type) ||
-          blocks[b].type === 'controls_forEach')
+          blocks[b].type === 'controls_forEach' ||
+          blocks[b].type === 'controls_for')
       {
         funcs[c] = blocks[b];
         c++;
