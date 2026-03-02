@@ -403,13 +403,42 @@ export class GitService {
   // ── File I/O helpers ─────────────────────────────────────────────────────
 
   /**
+   * Recursively collects all .md files under a directory into `mdMap`.
+   * Keys are the filename only (basename), values are the UTF-8 content.
+   * Dotfiles and dot-directories are skipped.
+   * @param {LightningFS} fs
+   * @param {string} dirPath  absolute path inside the virtual FS
+   * @param {Object<string,string>} mdMap  accumulator
+   */
+  static async _collectMdFiles(fs, dirPath, mdMap) {
+    let entries;
+    try {
+      entries = await fs.promises.readdir(dirPath);
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.startsWith('.')) continue;
+      const fullPath = `${dirPath}/${entry}`;
+      const stat = await fs.promises.stat(fullPath);
+      if (stat.isDirectory()) {
+        await this._collectMdFiles(fs, fullPath, mdMap);
+      } else if (entry.endsWith('.md')) {
+        const content = new TextDecoder().decode(await fs.promises.readFile(fullPath));
+        // Use the basename as key; later entries with the same name overwrite earlier ones.
+        mdMap[entry] = content;
+      }
+    }
+  }
+
+  /**
    * Reads all tracked files (non-dotfiles, non-directories) from the repo
-   * and categorises them into xml and java buckets.
+   * and categorises them into xml, java, and md buckets.
    *
-   * XML files are immediately persisted to localStorage; Java files are
-   * returned to the caller so the IDE bridge can inject them.
+   * XML files are immediately persisted to localStorage; Java files and
+   * Markdown files are returned to the caller so the IDE bridge can inject them.
    *
-   * @returns {Promise<{ xml: Object<string,string>, java: Object<string,string> }>}
+   * @returns {Promise<{ xml: Object<string,string>, java: Object<string,string>, md: Object<string,string> }>}
    */
   static async _readRepoFiles() {
     const fs = this._getFs();
@@ -424,7 +453,7 @@ export class GitService {
       entries = [];
     }
 
-    const result = { xml: {}, java: {} };
+    const result = { xml: {}, java: {}, md: {} };
 
     for (const entry of entries) {
       if (entry.startsWith('.')) continue;
@@ -451,6 +480,9 @@ export class GitService {
         result.java[entry] = content;
       }
     }
+
+    // Also collect .md files from anywhere in the repo tree (outside src/).
+    await this._collectMdFiles(fs, this.REPO_DIR, result.md);
 
     // Remove XML entries from localStorage that no longer exist in the repo.
     const repoXmlKeys = new Set(Object.keys(result.xml));

@@ -198,8 +198,13 @@ function setupListeners(workspace) {
  * Called whenever the Blockly blocks change meaningfully.
  * Clears stale constructor data, regenerates Java code, transforms it,
  * and pushes the result to the online IDE.
+ * If the IDE is currently showing a Markdown file, it is switched back to
+ * the last active Java file first.
  */
 export function onBlocksChange() {
+  // If the IDE is showing a .md file, switch it back to the Java file.
+  IdeBridge.ensureJavaFileActive();
+
   IdeBridge.syncClassNameFromIDE();
   LocalStorageManager.clearConstructors(getClassName());
 
@@ -342,16 +347,25 @@ async function handleClone() {
     const files = await GitService.clone(rawUrl, finalPassword);
     dismiss();
 
-    // Import Java files into the Online-IDE.
-    importJavaFilesToIDE(files.java);
+    // Import Java and Markdown files into the Online-IDE.
+    importJavaFilesToIDE({ ...files.java, ...files.md });
 
-    // Auto-select the first file if none is currently selected.
-    if (!IdeBridge.selected_file_name) {
-      const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
-      const ideFiles = ideAccess?.getFiles?.() ?? [];
+    // After importing, prefer displaying a markdown file if one exists.
+    // We use fileExplorer.selectFile directly because IdeBridge.fileSelected
+    // intentionally ignores .md files (they are view-only panels).
+    const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+    const ideFiles = ideAccess?.getFiles?.() ?? [];
+    const mdFile = ideFiles.find(f => f.getName().toLowerCase().endsWith('.md'));
+    if (mdFile) {
+      const ide = ideAccess.ide;
+      const internalFile = mdFile.file ?? mdFile;
+      // Select the treeview node so it gets highlighted in the file explorer.
+      const node = ide?.fileExplorer?.treeview?.nodes?.find(n => n.externalObject === internalFile);
+      if (node) ide.fileExplorer.treeview.selectNodeAndSetFocus(node, false);
+      ide?.fileExplorer?.selectFile?.(internalFile);
+    } else if (!IdeBridge.selected_file_name) {
       if (ideFiles.length > 0) {
-        const firstName = ideFiles[0].getName();
-        IdeBridge.fileSelected(firstName);
+        IdeBridge.fileSelected(ideFiles[0].getName());
       }
     } else {
       load(ws);
@@ -360,7 +374,7 @@ async function handleClone() {
 
     updateGitButtonStates();
 
-    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length;
+    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length + Object.keys(files.md).length;
     await GitDialog.showMessage(
       'Erfolgreich geklont',
       `${fileCount} Datei(en) importiert.`,
@@ -381,7 +395,7 @@ async function handlePull() {
     const files = await GitService.pull();
     dismiss();
 
-    importJavaFilesToIDE(files.java);
+    importJavaFilesToIDE({ ...files.java, ...files.md });
 
     if (IdeBridge.selected_file_name) {
       load(ws);
@@ -390,7 +404,7 @@ async function handlePull() {
 
     updateGitButtonStates();
 
-    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length;
+    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length + Object.keys(files.md).length;
     await GitDialog.showMessage(
       'Pull erfolgreich',
       `${fileCount} Datei(en) aktualisiert.`,
@@ -448,7 +462,7 @@ function importJavaFilesToIDE(javaFiles) {
   // ── Remove IDE files that no longer exist in the repo ─────────────────
   for (const ideFile of ideFiles) {
     const name = ideFile.getName();
-    if (name.endsWith('.java') && !pulledNames.has(name)) {
+    if ((name.endsWith('.java') || name.endsWith('.md')) && !pulledNames.has(name)) {
       const ide = ideAccess.ide;
       // ideFile wraps the internal file object; access it via .file
       const internalFile = ideFile.file ?? ideFile;
@@ -459,9 +473,9 @@ function importJavaFilesToIDE(javaFiles) {
         ide.fileExplorer.removeFile(internalFile);
       }
       // Also clean up the corresponding Blockly workspace from localStorage.
-      IdeBridge.fileDeleted(name);
+      if (name.endsWith('.java')) IdeBridge.fileDeleted(name);
       structureChanged = true;
-      console.log(`Git: Java-Datei „${name}" aus IDE entfernt.`);
+      console.log(`Git: Datei „${name}" aus IDE entfernt.`);
     }
   }
 
@@ -484,10 +498,10 @@ function importJavaFilesToIDE(javaFiles) {
           ide.fileExplorer.addFile(file);
         }
         structureChanged = true;
-        console.log(`Git: Java-Datei „${fileName}" in IDE angelegt.`);
+        console.log(`Git: Datei „${fileName}" in IDE angelegt.`);
       } else {
         console.warn(
-          `Git: Java-Datei „${fileName}" existiert nicht in der IDE – ` +
+          `Git: Datei „${fileName}" existiert nicht in der IDE – ` +
           'bitte manuell anlegen und erneut pullen.',
         );
       }
