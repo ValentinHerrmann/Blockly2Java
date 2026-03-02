@@ -24,6 +24,7 @@ import { RestManager } from './utils/RestManager';
 import { UiManager } from './utils/UiManager';
 import { GitService } from './utils/GitService';
 import { GitDialog } from './utils/GitDialog';
+import { ToolboxConfigManager } from './utils/ToolboxConfigManager';
 
 // Module-level state
 export let ws;
@@ -347,6 +348,9 @@ async function handleClone() {
     const files = await GitService.clone(rawUrl, finalPassword);
     dismiss();
 
+    // Apply toolbox config from the repo (resets to full toolbox when absent).
+    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+
     // Import Java and Markdown files into the Online-IDE.
     importJavaFilesToIDE({ ...files.java, ...files.md });
 
@@ -374,7 +378,7 @@ async function handleClone() {
 
     updateGitButtonStates();
 
-    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length + Object.keys(files.md).length;
+    const fileCount = Object.keys(files.json).length + Object.keys(files.java).length + Object.keys(files.md).length;
     await GitDialog.showMessage(
       'Erfolgreich geklont',
       `${fileCount} Datei(en) importiert.`,
@@ -395,6 +399,9 @@ async function handlePull() {
     const files = await GitService.pull();
     dismiss();
 
+    // Apply toolbox config from the repo (resets to full toolbox when absent).
+    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+
     importJavaFilesToIDE({ ...files.java, ...files.md });
 
     if (IdeBridge.selected_file_name) {
@@ -404,7 +411,7 @@ async function handlePull() {
 
     updateGitButtonStates();
 
-    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length + Object.keys(files.md).length;
+    const fileCount = Object.keys(files.json).length + Object.keys(files.java).length + Object.keys(files.md).length;
     await GitDialog.showMessage(
       'Pull erfolgreich',
       `${fileCount} Datei(en) aktualisiert.`,

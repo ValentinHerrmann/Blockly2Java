@@ -14,6 +14,7 @@
  */
 
 import * as Blockly from 'blockly/core';
+import { ToolboxConfigManager } from '../utils/ToolboxConfigManager.js';
 
 // ─── Type & colour constants ────────────────────────────────────────────────
 // These type strings are the Blockly variable-type tags used to separate the
@@ -321,17 +322,30 @@ function makeCallBlock(callType, name, argNames) {
 }
 
 export function methodFlyoutCategory(workspace) {
+  const methodConfig    = ToolboxConfigManager.getSubcategoryConfig('Methoden');
+  const showGroup = (name) => !methodConfig || methodConfig.get(name) !== false;
+
   const xmlList = [];
-  for (const group of METHOD_GROUPS) {
+  const GROUP_NAMES = ['Objekt-Methoden', 'Klassen-Methoden'];
+  for (let i = 0; i < METHOD_GROUPS.length; i++) {
+    const groupName = GROUP_NAMES[i];
+    if (!showGroup(groupName)) continue;
+    const group = METHOD_GROUPS[i];
+
+    // Per-group block filter: null means show everything.
+    const blockFilter = ToolboxConfigManager.getSubcategoryBlockConfig('Methoden', groupName);
+    const showDef = (type) => !blockFilter || blockFilter.get(type) !== false;
+
     xmlList.push(makeLabel(group.label));
 
-    // Always show definition templates.
+    // Definition templates – filtered by return-type config.
     for (const def of group.defs) {
-      xmlList.push(makeBlockTemplate(def.type));
+      if (showDef(def.type)) xmlList.push(makeBlockTemplate(def.type));
     }
 
-    // Dynamically add call blocks + param-get blocks for each defined method.
+    // Call blocks + param-get blocks – only for active def types.
     for (const { defType, callType } of group.calls) {
+      if (!showDef(defType)) continue;
       for (const block of workspace.getBlocksByType(defType, true)) {
         const name = block.getFieldValue('NAME') || 'unbekannt';
         const argNames = block.arguments_ || [];
@@ -348,7 +362,6 @@ export function methodFlyoutCategory(workspace) {
           if (paramVar) {
             const getBlock = Blockly.utils.xml.createElement('block');
             getBlock.setAttribute('type', 'java_param_get');
-            // Last param gets bigger gap to visually separate from next method.
             getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
             getBlock.appendChild(varField(paramVar));
             xmlList.push(getBlock);
@@ -500,6 +513,9 @@ export function staticAttrFlyoutCategory(workspace) {
 // Combined flyout: Attribute + Stat. Attribute + Lok. Variablen in one panel
 // ─────────────────────────────────────────────────────────────────────────────
 export function allVariablesFlyoutCategory(workspace) {
+  const varConfig = ToolboxConfigManager.getSubcategoryConfig('Variablen');
+  const show = (name) => !varConfig || varConfig.get(name) !== false;
+
   function sectionLabel(text, gap = '8') {
     const lbl = Blockly.utils.xml.createElement('label');
     lbl.setAttribute('text', text);
@@ -507,14 +523,30 @@ export function allVariablesFlyoutCategory(workspace) {
     return lbl;
   }
 
-  return [
-    sectionLabel('Lokale Variable'),
-    ...localVarFlyoutCategory(workspace),
-    sectionLabel('Instanz-Attribute'),
-    sectionLabel('(1 Wert pro Objekt)'),
-    ...normalAttrFlyoutCategory(workspace),
-    sectionLabel('Klassen-Attribute'),
-    sectionLabel('(1 Wert pro Klasse)'),
-    ...staticAttrFlyoutCategory(workspace),
-  ];
+  const sections = [];
+
+  if (show('Lokale Variablen')) {
+    sections.push(
+      sectionLabel('Lokale Variable'),
+      ...localVarFlyoutCategory(workspace),
+    );
+  }
+
+  if (show('Attribute')) {
+    sections.push(
+      sectionLabel('Instanz-Attribute'),
+      sectionLabel('(1 Wert pro Objekt)'),
+      ...normalAttrFlyoutCategory(workspace),
+    );
+  }
+
+  if (show('Statische Attribute')) {
+    sections.push(
+      sectionLabel('Klassen-Attribute'),
+      sectionLabel('(1 Wert pro Klasse)'),
+      ...staticAttrFlyoutCategory(workspace),
+    );
+  }
+
+  return sections;
 }
