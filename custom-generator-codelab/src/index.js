@@ -374,7 +374,7 @@ async function handleClone() {
 
     updateGitButtonStates();
 
-    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length + Object.keys(files.md).length;
+    const fileCount = Object.keys(files.json).length + Object.keys(files.java).length + Object.keys(files.md).length;
     await GitDialog.showMessage(
       'Erfolgreich geklont',
       `${fileCount} Datei(en) importiert.`,
@@ -404,7 +404,7 @@ async function handlePull() {
 
     updateGitButtonStates();
 
-    const fileCount = Object.keys(files.xml).length + Object.keys(files.java).length + Object.keys(files.md).length;
+    const fileCount = Object.keys(files.json).length + Object.keys(files.java).length + Object.keys(files.md).length;
     await GitDialog.showMessage(
       'Pull erfolgreich',
       `${fileCount} Datei(en) aktualisiert.`,

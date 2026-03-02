@@ -12,7 +12,7 @@ import LocalStorageManager from './LocalStorageManager.js';
  * survive page reloads but are cleared when the browser tab closes.
  *
  * File mapping:
- *  - `.xml` files  → Blockly workspace JSON stored in localStorage
+ *  - `.json` files → Blockly workspace JSON stored in localStorage
  *  - `.java` files → pushed to / read from the embedded Online-IDE
  */
 export class GitService {
@@ -363,7 +363,7 @@ export class GitService {
     const fs = this._getFs();
 
     // ── Export current workspace into the virtual filesystem ──────────────
-    await this._exportXmlFiles(fs);
+    await this._exportJsonFiles(fs);
     await this._exportJavaFiles(fs, { stripTopLevelCode });
 
     // ── Stage all changed / new / deleted files ──────────────────────────
@@ -453,7 +453,7 @@ export class GitService {
       entries = [];
     }
 
-    const result = { xml: {}, java: {}, md: {} };
+    const result = { json: {}, java: {}, md: {} };
 
     for (const entry of entries) {
       if (entry.startsWith('.')) continue;
@@ -466,16 +466,16 @@ export class GitService {
         await fs.promises.readFile(fullPath),
       );
 
-      if (entry.endsWith('.xml')) {
+      if (entry.endsWith('.json')) {
         // Blockly workspace JSON → localStorage
-        const className = entry.replace(/\.xml$/, '');
+        const className = entry.replace(/\.json$/, '');
         try {
           LocalStorageManager.saveWorkspace(className, JSON.parse(content));
         } catch {
           // If the content is not valid JSON, store as-is.
           LocalStorageManager.saveWorkspace(className, content);
         }
-        result.xml[entry] = content;
+        result.json[entry] = content;
       } else if (entry.endsWith('.java')) {
         result.java[entry] = content;
       }
@@ -484,12 +484,12 @@ export class GitService {
     // Also collect .md files from anywhere in the repo tree (outside src/).
     await this._collectMdFiles(fs, this.REPO_DIR, result.md);
 
-    // Remove XML entries from localStorage that no longer exist in the repo.
-    const repoXmlKeys = new Set(Object.keys(result.xml));
+    // Remove JSON entries from localStorage that no longer exist in the repo.
+    const repoJsonKeys = new Set(Object.keys(result.json));
     for (let i = globalThis.localStorage.length - 1; i >= 0; i--) {
       const key = globalThis.localStorage.key(i);
-      if (key?.endsWith('.xml') && !repoXmlKeys.has(key)) {
-        const className = key.replace(/\.xml$/, '');
+      if (key?.endsWith('.json') && !repoJsonKeys.has(key)) {
+        const className = key.replace(/\.json$/, '');
         LocalStorageManager.deleteClass(className);
       }
     }
@@ -498,34 +498,41 @@ export class GitService {
   }
 
   /**
-   * Exports all `.xml` workspace entries from localStorage to the virtual
-   * filesystem, and removes `.xml` files that no longer exist.
+   * Exports all `.json` workspace entries from localStorage to the virtual
+   * filesystem, and removes `.json` files that no longer exist.
+   * JSON content is pretty-printed (2-space indent) for best auto-mergeability.
    * @param {LightningFS} fs
    */
-  static async _exportXmlFiles(fs) {
+  static async _exportJsonFiles(fs) {
     const srcPath = `${this.REPO_DIR}/${this.SRC_DIR}`;
     await fs.promises.mkdir(srcPath).catch(() => {});
 
-    // Collect current XML keys from localStorage.
-    const currentXmlKeys = new Set();
+    // Collect current JSON keys from localStorage.
+    const currentJsonKeys = new Set();
     for (let i = 0; i < globalThis.localStorage.length; i++) {
       const key = globalThis.localStorage.key(i);
-      if (key?.endsWith('.xml')) currentXmlKeys.add(key);
+      if (key?.endsWith('.json')) currentJsonKeys.add(key);
     }
 
-    // Remove .xml files from the repo that are no longer in localStorage.
+    // Remove .json files from the repo that are no longer in localStorage.
     const entries = await fs.promises.readdir(srcPath).catch(() => []);
     for (const entry of entries) {
-      if (entry.endsWith('.xml') && !currentXmlKeys.has(entry)) {
+      if (entry.endsWith('.json') && !currentJsonKeys.has(entry)) {
         await fs.promises.unlink(`${srcPath}/${entry}`).catch(() => {});
       }
     }
 
-    // Write current XML files.
-    for (const key of currentXmlKeys) {
+    // Write current JSON files, pretty-printed for readability and git auto-mergeability.
+    for (const key of currentJsonKeys) {
       const data = globalThis.localStorage.getItem(key);
       if (data) {
-        await fs.promises.writeFile(`${srcPath}/${key}`, data);
+        let prettyData = data;
+        try {
+          prettyData = JSON.stringify(JSON.parse(data), null, 2);
+        } catch {
+          // Fall back to raw value if parsing fails.
+        }
+        await fs.promises.writeFile(`${srcPath}/${key}`, prettyData);
       }
     }
   }
@@ -585,7 +592,7 @@ export class GitService {
     if (!this.isConnected()) return false;
     const fs = this._getFs();
     try {
-      await this._exportXmlFiles(fs);
+      await this._exportJsonFiles(fs);
       await this._exportJavaFiles(fs);
       const matrix = await git.statusMatrix({ fs, dir: this.REPO_DIR });
       return matrix.some(([, head, workdir, stage]) => {

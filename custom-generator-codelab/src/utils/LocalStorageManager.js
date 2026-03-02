@@ -55,13 +55,15 @@ class LocalStorageManager {
             delete ctrObjs[className];
             globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
         }
-        const key = this.WORKSPACE_STORAGE_KEY + className + '.xml';
+        const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
         globalThis.localStorage?.removeItem(key);
+        // Also remove legacy .xml key if present.
+        globalThis.localStorage?.removeItem(this.WORKSPACE_STORAGE_KEY + className + '.xml');
     }
 
     static renameClass(className, newClassName) {
-        const oldKey = this.WORKSPACE_STORAGE_KEY + className + '.xml';
-        const newKey = this.WORKSPACE_STORAGE_KEY + newClassName + '.xml';
+        const oldKey = this.WORKSPACE_STORAGE_KEY + className + '.json';
+        const newKey = this.WORKSPACE_STORAGE_KEY + newClassName + '.json';
 
         const savedData = globalThis.localStorage?.getItem(oldKey);
         if (savedData) {
@@ -87,19 +89,30 @@ class LocalStorageManager {
         ctrObjs[className] = []
         globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
 
-        const key = this.WORKSPACE_STORAGE_KEY + className + '.xml';
+        const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
         globalThis.localStorage?.setItem(key, '');
     }
 
     static loadWorkspace(className) {
-        const key = this.WORKSPACE_STORAGE_KEY + className + '.xml';
-        const data = globalThis.localStorage?.getItem(key);
+        const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
+        let data = globalThis.localStorage?.getItem(key);
+
+        // Migrate legacy .xml key on first access.
+        if (data == null) {
+            const legacyKey = this.WORKSPACE_STORAGE_KEY + className + '.xml';
+            const legacyData = globalThis.localStorage?.getItem(legacyKey);
+            if (legacyData != null) {
+                globalThis.localStorage?.setItem(key, legacyData);
+                globalThis.localStorage?.removeItem(legacyKey);
+                data = legacyData;
+            }
+        }
 
         return data;
     }
 
     static saveWorkspace(className, data) {
-        const key = this.WORKSPACE_STORAGE_KEY + className + '.xml';
+        const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
         globalThis.localStorage?.setItem(key, JSON.stringify(data));
     }
 }
