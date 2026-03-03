@@ -351,6 +351,10 @@ export class WorkspaceManager {
     const file = await this._pickZipFile();
     if (!file) return null;              // user cancelled
 
+    // Confirm destructive import before overwriting current workspace/IDE files.
+    const confirmed = await GitDialog.showDragDropConfirm(file.name);
+    if (!confirmed) return null;
+
     const counts = await this._processZipFile(file, ws);
     if (onDone) onDone(counts);
     return counts;
