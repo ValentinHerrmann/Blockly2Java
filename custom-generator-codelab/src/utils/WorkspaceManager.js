@@ -515,7 +515,6 @@ export class WorkspaceManager {
     // Update overlay immediately for the newly active class (flag may have
     // just been restored from the archive).
     if (activeFile) {
-      const { BlocklyOverlayManager } = await import('./BlocklyOverlayManager.js');
       BlocklyOverlayManager.updateForClass(activeFile.replace('.java', ''));
     }
 
