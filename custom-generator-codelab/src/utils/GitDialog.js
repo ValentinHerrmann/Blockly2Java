@@ -168,7 +168,24 @@ export class GitDialog {
       submitLabel: 'Verbinden',
     });
   }
-
+  /**
+   * Prompts for a filename before downloading the workspace.
+   * @param {string} defaultName – pre-filled filename (without extension)
+   * @returns {Promise<{ filename: string }|null>}
+   */
+  static showDownloadFilenameDialog(defaultName) {
+    return this._showModal({
+      title: 'Workspace exportieren',
+      fields: [{
+        key: 'filename',
+        label: 'Dateiname',
+        placeholder: 'blockly2java-workspace',
+        value: defaultName,
+        autofocus: true,
+      }],
+      submitLabel: 'Herunterladen',
+    });
+  }
   /**
    * Prompts for a commit message before commit & push.
    * @returns {Promise<{ message: string }|null>}
@@ -371,6 +388,135 @@ export class GitDialog {
       fields: [],
       submitLabel: 'OK',
       cancelable: false,
+    });
+  }
+
+  /**
+   * Shows a destructive-action confirmation dialog before clearing the workspace.
+   * Returns `true` when the user confirms, `false` / `null` on cancel.
+   * @returns {Promise<boolean>}
+   */
+  static showClearConfirm() {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'git-modal-overlay';
+
+      const card = document.createElement('div');
+      card.className = 'git-modal-card';
+
+      const title = document.createElement('h3');
+      title.className = 'git-modal-title';
+      title.textContent = 'Workspace zurücksetzen?';
+      card.appendChild(title);
+
+      const body = document.createElement('p');
+      body.className = 'git-modal-body';
+      body.textContent =
+        'Alle Blockly-Workspaces, Java-Dateien und die Git-Verbindung werden ' +
+        'unwiderruflich gelöscht und das Projekt auf den Ausgangszustand zurückgesetzt. ' +
+        'Lokale Änderungen gehen verloren.';
+      card.appendChild(body);
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'git-modal-buttons';
+
+      const close = (val) => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+        resolve(val);
+      };
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'git-modal-btn git-modal-btn--cancel';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.addEventListener('click', () => close(false));
+      btnRow.appendChild(cancelBtn);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'git-modal-btn git-modal-btn--danger';
+      confirmBtn.textContent = 'Zurücksetzen';
+      confirmBtn.addEventListener('click', () => close(true));
+      btnRow.appendChild(confirmBtn);
+
+      card.appendChild(btnRow);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      const onKey = (e) => {
+        if (e.key === 'Escape') close(false);
+        if (e.key === 'Enter')  confirmBtn.click();
+      };
+      document.addEventListener('keydown', onKey);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close(false);
+      });
+
+      requestAnimationFrame(() => cancelBtn.focus());
+    });
+  }
+
+  /**
+   * Shows a confirmation dialog when a .b2j file is drag-and-dropped onto the page.
+   * Returns `true` when the user confirms the import, `false` on cancel.
+   * @param {string} filename – the name of the dropped file
+   * @returns {Promise<boolean>}
+   */
+  static showDragDropConfirm(filename) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'git-modal-overlay';
+
+      const card = document.createElement('div');
+      card.className = 'git-modal-card';
+
+      const title = document.createElement('h3');
+      title.className = 'git-modal-title';
+      title.textContent = 'Workspace importieren?';
+      card.appendChild(title);
+
+      const body = document.createElement('p');
+      body.className = 'git-modal-body';
+      body.innerHTML =
+        `<strong>${filename}</strong><br><br>` +
+        'Der aktuelle Workspace (alle Blockly-Dateien, Java-Quellcode und die Git-Verbindung) ' +
+        'wird überschrieben. Lokale Änderungen gehen verloren.';
+      card.appendChild(body);
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'git-modal-buttons';
+
+      const close = (val) => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+        resolve(val);
+      };
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'git-modal-btn git-modal-btn--cancel';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.addEventListener('click', () => close(false));
+      btnRow.appendChild(cancelBtn);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'git-modal-btn git-modal-btn--danger';
+      confirmBtn.textContent = 'Importieren';
+      confirmBtn.addEventListener('click', () => close(true));
+      btnRow.appendChild(confirmBtn);
+
+      card.appendChild(btnRow);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      const onKey = (e) => {
+        if (e.key === 'Escape') close(false);
+        if (e.key === 'Enter')  confirmBtn.click();
+      };
+      document.addEventListener('keydown', onKey);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close(false);
+      });
+
+      requestAnimationFrame(() => cancelBtn.focus());
     });
   }
 

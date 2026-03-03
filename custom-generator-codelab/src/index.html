@@ -74,6 +74,29 @@
           <path d="M8 14V4M5 7l3-3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
           <path d="M3 14h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </symbol>
+        <!-- Trash / clear icon -->
+        <symbol id="icon-clear" viewBox="0 0 16 16">
+          <path d="M2 4h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+          <path d="M3.5 4l.8 9a1 1 0 0 0 1 .9h5.4a1 1 0 0 0 1-.9l.8-9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+          <line x1="6" y1="7" x2="6" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="10" y1="7" x2="10" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </symbol>
+        <!-- Download icon (arrow down into tray) -->
+        <symbol id="icon-download" viewBox="0 0 16 16">
+          <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M2 12v2h12v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <!-- Upload icon (arrow up from tray) -->
+        <symbol id="icon-upload" viewBox="0 0 16 16">
+          <path d="M8 10V2M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M2 12v2h12v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <!-- Workspace / layers icon -->
+        <symbol id="icon-workspace" viewBox="0 0 16 16">
+          <polygon points="8,2 15,6 8,10 1,6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>
+          <polyline points="1,10 8,14 15,10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
       </defs>
     </svg>
 
@@ -115,14 +138,37 @@
                         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#icon-git-push"/></svg>
                         <span>Push</span>
                     </button>
-                    <div class="git-sidebar__info">
-                        <button id="gitInfoBtn" class="git-sidebar-btn git-sidebar-btn--info" title="Repository-Info" aria-label="Repository-Info" disabled>
-                            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="8" cy="8" r="6.5"/>
-                                <line x1="8" y1="7" x2="8" y2="11.5" stroke-linecap="round"/>
-                                <circle cx="8" cy="4.8" r="0.7" fill="currentColor" stroke="none"/>
-                            </svg>
-                            <span>Info</span>
+                    <button id="gitInfoBtn" class="git-sidebar-btn git-sidebar-btn--info" title="Repository-Info" aria-label="Repository-Info" disabled>
+                        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="8" cy="8" r="6.5"/>
+                            <line x1="8" y1="7" x2="8" y2="11.5" stroke-linecap="round"/>
+                            <circle cx="8" cy="4.8" r="0.7" fill="currentColor" stroke="none"/>
+                        </svg>
+                        <span>Info</span>
+                    </button>
+                </div>
+
+                <!-- spacer pushes workspace section to the bottom -->
+                <div class="git-sidebar__spacer" aria-hidden="true"></div>
+
+                <!-- ── Workspace management section ── -->
+                <div class="git-sidebar__ws-section">
+                    <div class="git-sidebar__ws-header">
+                        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><use href="#icon-workspace"/></svg>
+                        <span>WS</span>
+                    </div>
+                    <div class="git-sidebar__actions">
+                        <button id="workspaceClearBtn" class="git-sidebar-btn git-sidebar-btn--danger" title="Workspace zurücksetzen" aria-label="Workspace zurücksetzen">
+                            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#icon-clear"/></svg>
+                            <span>Reset</span>
+                        </button>
+                        <button id="workspaceDownloadBtn" class="git-sidebar-btn" title="Workspace herunterladen" aria-label="Workspace herunterladen">
+                            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#icon-download"/></svg>
+                            <span>Export</span>
+                        </button>
+                        <button id="workspaceUploadBtn" class="git-sidebar-btn" title="Workspace hochladen" aria-label="Workspace hochladen">
+                            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#icon-upload"/></svg>
+                            <span>Import</span>
                         </button>
                     </div>
                 </div>

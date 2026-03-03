@@ -25,6 +25,7 @@ import { UiManager } from './utils/UiManager';
 import { GitService } from './utils/GitService';
 import { GitDialog } from './utils/GitDialog';
 import { ToolboxConfigManager } from './utils/ToolboxConfigManager';
+import { WorkspaceManager, FULL_ACTIVE_CONFIG } from './utils/WorkspaceManager';
 
 // Module-level state
 export let ws;
@@ -47,6 +48,11 @@ function init() {
   const theme = UiManager.setupTheme();
   ws = setupBlockly(theme);
   UiManager.setupLayout(ws);
+
+  // Restore a toolbox config that was applied in a previous session,
+  // or apply the grade-9 default when the page is opened for the first time.
+  const storedToolboxConfig = ToolboxConfigManager.loadStored();
+  ToolboxConfigManager.apply(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
 
   // Load the initial state from storage and run the code.
   load(ws);
@@ -258,6 +264,7 @@ function generateCode() {
 
 init();
 setupGitActions();
+setupWorkspaceActions();
 
 // Register service worker for installability (best-effort; silent on failure).
 // Skip on localhost to avoid Chrome debug reload loops caused by skipWaiting()+clients.claim().
@@ -269,7 +276,93 @@ if ('serviceWorker' in navigator && location.hostname !== 'localhost' && locatio
 
 
 // ---------------------------------------------------------------------------
-// Step 4 – Git integration
+// Step 4 – Workspace management (clear / download / upload)
+// ---------------------------------------------------------------------------
+
+/**
+ * Wires up the three workspace action buttons:
+ *  - Reset  – clears the workspace after a confirmation dialog
+ *  - Export – downloads the workspace as a .zip archive
+ *  - Import – uploads a previously exported .zip archive
+ */
+function setupWorkspaceActions() {
+  const clearBtn    = document.getElementById('workspaceClearBtn');
+  const downloadBtn = document.getElementById('workspaceDownloadBtn');
+  const uploadBtn   = document.getElementById('workspaceUploadBtn');
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      const confirmed = await GitDialog.showClearConfirm();
+      if (!confirmed) return;
+
+      WorkspaceManager.clearWorkspace(ws);
+
+      // Push freshly generated code (empty template) into the new Main.java.
+      onBlocksChange();
+
+      // After clearing, update git button states (clone becomes available again).
+      updateGitButtonStates();
+    });
+  }
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', async () => {
+      try {
+        await WorkspaceManager.downloadWorkspace();
+      } catch (err) {
+        console.error('Workspace export failed:', err);
+        await GitDialog.showMessage('Fehler beim Export', err.message);
+      }
+    });
+  }
+
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', async () => {
+      try {
+        // Pick + read the zip first (no loading overlay during file picker).
+        const counts = await WorkspaceManager.uploadWorkspace(ws, null);
+
+        if (counts === null) return; // user cancelled the file picker
+
+        // After upload, regenerate the code for the active file.
+        onBlocksChange();
+
+        // Update git button states: connecting git after import still works.
+        updateGitButtonStates();
+
+        const total = counts.json + counts.java + counts.md;
+        await GitDialog.showMessage(
+          'Import erfolgreich',
+          `${total} Datei(en) importiert (${counts.java} Java, ${counts.json} Workspace, ${counts.md} Markdown).`,
+        );
+      } catch (err) {
+        console.error('Workspace import failed:', err);
+        await GitDialog.showMessage('Fehler beim Import', err.message);
+      }
+    });
+  }
+
+  // ── Drag-and-drop anywhere on the page ──────────────────────────────────
+  WorkspaceManager.setupDragDrop(
+    ws,
+    async (counts) => {
+      onBlocksChange();
+      updateGitButtonStates();
+      const total = counts.json + counts.java + counts.md;
+      await GitDialog.showMessage(
+        'Import erfolgreich',
+        `${total} Datei(en) importiert (${counts.java} Java, ${counts.json} Workspace, ${counts.md} Markdown).`,
+      );
+    },
+    async (err) => {
+      await GitDialog.showMessage('Fehler beim Import', err.message);
+    },
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Step 5 – Git integration
 // ---------------------------------------------------------------------------
 
 /**
