@@ -282,8 +282,8 @@ if ('serviceWorker' in navigator && location.hostname !== 'localhost' && locatio
 /**
  * Wires up the three workspace action buttons:
  *  - Reset  – clears the workspace after a confirmation dialog
- *  - Export – downloads the workspace as a .zip archive
- *  - Import – uploads a previously exported .zip archive
+ *  - Export – downloads the workspace as a .b2j archive
+ *  - Import – uploads a previously exported .b2j archive
  */
 function setupWorkspaceActions() {
   const clearBtn    = document.getElementById('workspaceClearBtn');
