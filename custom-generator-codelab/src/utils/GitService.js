@@ -8,8 +8,10 @@ import LocalStorageManager from './LocalStorageManager.js';
  * Browser-based Git client for cloning, pulling, and pushing B2J projects.
  *
  * Uses isomorphic-git with a LightningFS (IndexedDB-backed) virtual
- * filesystem.  Connection credentials are kept in sessionStorage so they
- * survive page reloads but are cleared when the browser tab closes.
+ * filesystem.  The repository URL and username are persisted in localStorage
+ * so they survive browser restarts.  The password / token is kept only in
+ * sessionStorage for security, meaning the user may be prompted to re-enter
+ * it after closing and reopening the browser.
  *
  * File mapping:
  *  - `.json` files → Blockly workspace JSON stored in localStorage
@@ -34,8 +36,14 @@ export class GitService {
     ? __CORS_PROXY_URL__
     : '/cors-proxy';
 
-  /** sessionStorage key that holds URL + credentials for the active repo. */
+  /** sessionStorage key that holds the full config (URL + credentials) for the active session. */
   static SESSION_KEY = 'b2j_git_config';
+
+  /**
+   * localStorage key that persists the non-sensitive parts of the config
+   * (URL + username, NO password/token) across browser sessions.
+   */
+  static LOCAL_KEY = 'b2j_git_persist';
 
   /** Root directory inside the virtual filesystem. */
   static REPO_DIR = '/repo';
@@ -85,32 +93,61 @@ export class GitService {
 
   /**
    * Returns the stored git connection config, or `null` if none exists.
+   *
+   * Priority:
+   *  1. sessionStorage – has full config including password (current session).
+   *  2. localStorage   – has URL + username only (persisted across sessions);
+   *                      password will be empty and must be re-entered for
+   *                      operations that require authentication.
+   *
    * @returns {{ url: string, username: string, password: string }|null}
    */
   static getStoredConfig() {
-    const raw = globalThis.sessionStorage?.getItem(this.SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const sessionRaw = globalThis.sessionStorage?.getItem(this.SESSION_KEY);
+    if (sessionRaw) return JSON.parse(sessionRaw);
+
+    // Fall back to the persistent (non-sensitive) localStorage entry.
+    const localRaw = globalThis.localStorage?.getItem(this.LOCAL_KEY);
+    return localRaw ? { ...JSON.parse(localRaw), password: '' } : null;
   }
 
   /**
-   * Persists git connection config to sessionStorage.
+   * Returns true if the current session has a stored password / token.
+   * When false the user must re-enter credentials before pull / push.
+   */
+  static hasSessionCredentials() {
+    return globalThis.sessionStorage?.getItem(this.SESSION_KEY) !== null;
+  }
+
+  /**
+   * Persists git connection config.
+   *  - URL + username → localStorage (survives browser close)
+   *  - Full config incl. password → sessionStorage (cleared on browser close)
+   *
    * @param {string} url      – clean repo URL (without embedded credentials)
    * @param {string} username
    * @param {string} password – token or password
    */
   static _storeConfig(url, username, password) {
+    // Persist non-sensitive parts across sessions.
+    globalThis.localStorage?.setItem(
+      this.LOCAL_KEY,
+      JSON.stringify({ url, username }),
+    );
+    // Full config (including password) only for the current session.
     globalThis.sessionStorage?.setItem(
       this.SESSION_KEY,
       JSON.stringify({ url, username, password }),
     );
   }
 
-  /** Clears the stored git config (effectively "disconnects"). */
+  /** Clears the stored git config from both storages (effectively "disconnects"). */
   static clearConfig() {
     globalThis.sessionStorage?.removeItem(this.SESSION_KEY);
+    globalThis.localStorage?.removeItem(this.LOCAL_KEY);
   }
 
-  /** Whether a git repository is currently connected. */
+  /** Whether a git repository URL is known (even if session credentials have expired). */
   static isConnected() {
     return this.getStoredConfig() !== null;
   }
