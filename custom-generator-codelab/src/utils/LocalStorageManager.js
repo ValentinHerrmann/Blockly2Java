@@ -100,18 +100,6 @@ class LocalStorageManager {
             globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
             globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
         }
-        modifiedVal = globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
-        if (modifiedVal != null) {
-            globalThis.localStorage?.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
-            globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
-        }
-
-        // Migrate last-generated-code cache.
-        generatedVal = globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className);
-        if (generatedVal != null) {
-            globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
-            globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
-        }
     }
 
     static createClass(className) {
