@@ -367,6 +367,16 @@ async function handleClone() {
       const node = ide?.fileExplorer?.treeview?.nodes?.find(n => n.externalObject === internalFile);
       if (node) ide.fileExplorer.treeview.selectNodeAndSetFocus(node, false);
       ide?.fileExplorer?.selectFile?.(internalFile);
+
+      // Load the first Java file's Blockly workspace without switching the IDE
+      // view away from the markdown file.
+      const firstJavaFile = ideFiles.find(f => f.getName().toLowerCase().endsWith('.java'));
+      if (firstJavaFile) {
+        IdeBridge.selected_file_name = firstJavaFile.getName();
+        IdeBridge.last_java_file_name = firstJavaFile.getName();
+        IdeBridge.syncClassNameFromIDE();
+        load(ws);
+      }
     } else if (!IdeBridge.selected_file_name) {
       if (ideFiles.length > 0) {
         IdeBridge.fileSelected(ideFiles[0].getName());
