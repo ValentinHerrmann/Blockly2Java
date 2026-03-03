@@ -476,10 +476,15 @@ export class GitDialog {
 
       const body = document.createElement('p');
       body.className = 'git-modal-body';
-      body.innerHTML =
-        `<strong>${filename}</strong><br><br>` +
+      const filenameEl = document.createElement('strong');
+      filenameEl.textContent = filename;
+      body.appendChild(filenameEl);
+      body.appendChild(document.createElement('br'));
+      body.appendChild(document.createElement('br'));
+      body.appendChild(document.createTextNode(
         'Der aktuelle Workspace (alle Blockly-Dateien, Java-Quellcode und die Git-Verbindung) ' +
-        'wird überschrieben. Lokale Änderungen gehen verloren.';
+        'wird überschrieben. Lokale Änderungen gehen verloren.'
+      ));
       card.appendChild(body);
 
       const btnRow = document.createElement('div');
