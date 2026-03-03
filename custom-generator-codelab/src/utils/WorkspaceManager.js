@@ -465,11 +465,23 @@ export class WorkspaceManager {
 
     this._importFilesToIDE(allIdeFiles);
 
+    // Ensure there is an active Java target after import.
+    // If the previously selected file was deleted by _importFilesToIDE(),
+    // IdeBridge.selected_file_name may now be falsy. In that case, pick a
+    // sensible default from the imported Java files (prefer Main.java).
+    if (!IdeBridge.selected_file_name && counts.java > 0) {
+      const javaNames = Object.keys(javaFiles);
+      let activeJava = javaNames.find(name => name === 'Main.java') || javaNames[0];
+      IdeBridge.selected_file_name = activeJava;
+      IdeBridge.last_java_file_name = activeJava;
+    }
+
     // ── Apply toolbox config (resets to full toolbox if absent) ----------
     ToolboxConfigManager.apply(toolboxConfig, ws);
 
     // ── Reload Blockly for the active file -------------------------------
-    if (IdeBridge.selected_file_name) {
+    const activeFile = IdeBridge.selected_file_name;
+    if (activeFile) {
       load(ws);
     }
 
