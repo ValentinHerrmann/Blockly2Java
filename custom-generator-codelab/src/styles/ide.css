@@ -147,3 +147,76 @@ g.blocklyWorkspace {
 .b2j-btn-static-attr > .blocklyFlyoutButtonBackground:hover {
     fill: #3f3f9e;
 }
+
+/* ── Blockly "java-modified" overlay ─────────────────────────────────────── */
+
+/*
+ * The left pane's .pane-content must be a positioned container so the overlay
+ * can be absolute-positioned inside it.
+ */
+#leftPane > .pane-content {
+    position: relative;
+}
+
+/*
+ * The overlay itself.  Hidden by default; shown by adding --visible.
+ * It sits on top of #blocklyDiv and intercepts all pointer events so the user
+ * can't accidentally drag blocks while java-modified is active.
+ */
+.blockly-modified-overlay {
+    display: none;          /* hidden by default */
+    position: absolute;
+    inset: 0;
+    z-index: 200;           /* above Blockly's own z-index but below modal dialogs */
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.60);
+    cursor: pointer;
+    user-select: none;
+    /* Smooth fade-in */
+    animation: none;
+}
+
+.blockly-modified-overlay--visible {
+    display: flex;
+}
+
+/* Central card shown inside the overlay */
+.blockly-modified-overlay__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 28px 36px;
+    max-width: 340px;
+    text-align: center;
+    background: var(--secondary-bg, #1e293b);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+    color: var(--text-primary, #f8fafc);
+    pointer-events: none; /* card itself doesn't swallow the click – overlay does */
+}
+
+.blockly-modified-overlay__icon {
+    color: #f59e0b;   /* amber warning colour */
+    flex-shrink: 0;
+}
+
+.blockly-modified-overlay__title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.blockly-modified-overlay__hint {
+    font-size: 12.5px;
+    color: var(--text-secondary, #94a3b8);
+    margin: 0;
+    line-height: 1.55;
+}
+
+.blockly-modified-overlay__hint strong {
+    color: var(--text-primary, #f8fafc);
+}

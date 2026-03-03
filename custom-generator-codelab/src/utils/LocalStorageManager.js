@@ -2,6 +2,8 @@ class LocalStorageManager {
 
     static WORKSPACE_STORAGE_KEY = '';
     static CTR_STORAGE_KEY = 'constructors';
+    static JAVA_MODIFIED_KEY_PREFIX  = 'javaModified_';
+    static JAVA_GENERATED_KEY_PREFIX = 'javaGenerated_';
     
     static clearConstructors(className) {
         if(className == null || className === '') {
@@ -59,6 +61,9 @@ class LocalStorageManager {
         globalThis.localStorage?.removeItem(key);
         // Also remove legacy .xml key if present.
         globalThis.localStorage?.removeItem(this.WORKSPACE_STORAGE_KEY + className + '.xml');
+        // Clean up java-modified flag and generated-code cache.
+        globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX  + className);
+        globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
     }
 
     static renameClass(className, newClassName) {
@@ -80,6 +85,20 @@ class LocalStorageManager {
                 delete ctrs[className];
                 globalThis.localStorage.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrs));
             }
+        }
+
+        // Migrate java-modified flag.
+        const modifiedVal = globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+        if (modifiedVal !== null) {
+            globalThis.localStorage.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
+            globalThis.localStorage.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+        }
+
+        // Migrate last-generated-code cache.
+        const generatedVal = globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        if (generatedVal !== null) {
+            globalThis.localStorage.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
+            globalThis.localStorage.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
         }
     }
 
@@ -114,6 +133,58 @@ class LocalStorageManager {
     static saveWorkspace(className, data) {
         const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
         globalThis.localStorage?.setItem(key, JSON.stringify(data));
+    }
+
+    // ── Java-modified flag ────────────────────────────────────────────────────
+
+    /**
+     * Returns true when the user has manually edited the Java code for this class
+     * after the last Blockly-generated push, making the Blockly workspace stale.
+     * @param {string} className
+     * @returns {boolean}
+     */
+    static isJavaModified(className) {
+        if (!className) return false;
+        return globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className) === '1';
+    }
+
+    /**
+     * Sets or clears the java-modified flag for a class.
+     * @param {string}  className
+     * @param {boolean} modified
+     */
+    static setJavaModified(className, modified) {
+        if (!className) return;
+        const key = this.JAVA_MODIFIED_KEY_PREFIX + className;
+        if (modified) {
+            globalThis.localStorage?.setItem(key, '1');
+        } else {
+            globalThis.localStorage?.removeItem(key);
+        }
+    }
+
+    // ── Last Blockly-generated code cache ────────────────────────────────────
+
+    /**
+     * Persists the Java code that was last pushed by Blockly so we can later
+     * compare it against the IDE content to detect manual edits.
+     * @param {string} className
+     * @param {string} code
+     */
+    static saveLastGeneratedCode(className, code) {
+        if (!className) return;
+        globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + className, code);
+    }
+
+    /**
+     * Returns the last Blockly-generated Java code for this class, or null if
+     * Blockly has never pushed code for it.
+     * @param {string} className
+     * @returns {string|null}
+     */
+    static loadLastGeneratedCode(className) {
+        if (!className) return null;
+        return globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className) ?? null;
     }
 }
 

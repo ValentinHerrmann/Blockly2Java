@@ -26,6 +26,7 @@ import { GitService } from './utils/GitService';
 import { GitDialog } from './utils/GitDialog';
 import { ToolboxConfigManager } from './utils/ToolboxConfigManager';
 import { WorkspaceManager, FULL_ACTIVE_CONFIG } from './utils/WorkspaceManager';
+import { BlocklyOverlayManager } from './utils/BlocklyOverlayManager';
 
 // Module-level state
 export let ws;
@@ -57,6 +58,17 @@ function init() {
   // Load the initial state from storage and run the code.
   load(ws);
   //onBlocksChange();
+
+  // Initialise the overlay manager that guards Blockly when Java was manually edited.
+  BlocklyOverlayManager.init({
+    getIDECode:     () => IdeBridge.getCurrentIDECode(),
+    getClassName:   () => IdeBridge.selected_file_name.replace('.java', ''),
+    onBlocksChange: () => onBlocksChange(),
+  });
+
+  // Show overlay immediately if the initially loaded class is already flagged.
+  const initialClassName = IdeBridge.selected_file_name.replace('.java', '');
+  BlocklyOverlayManager.updateForClass(initialClassName);
 
   setupListeners(ws);
 }
@@ -108,6 +120,8 @@ function setupListeners(workspace) {
   // Intercept assignments to globalThis.online_ide_access.
   // When the embedded IDE initialises it sets window.online_ide_access;
   // register IdeBridge callbacks at that moment.
+  let _javaModifiedPollId = null;
+
   Object.defineProperty(globalThis, 'online_ide_access', {
     set: function(value) {
       this._online_ide_access = value;
@@ -117,6 +131,20 @@ function setupListeners(workspace) {
         ideAccess.onFileDeleted( (name)       => IdeBridge.fileDeleted(name));
         ideAccess.onFileCreated( (name)       => IdeBridge.fileCreated(name));
         ideAccess.onFileSelected((name)       => IdeBridge.fileSelected(name));
+
+        // ── Java-modified detection polling ───────────────────────────
+        // Poll every 350 ms to compare the IDE's current code against the
+        // last Blockly-generated baseline.  As soon as they diverge (= the
+        // user typed something in the Java editor) we set the flag and show
+        // the overlay without waiting for the next Blockly event.
+        if (_javaModifiedPollId) clearInterval(_javaModifiedPollId);
+        _javaModifiedPollId = setInterval(() => {
+          const className = IdeBridge.selected_file_name.replace('.java', '');
+          if (!className) return;
+          // Already flagged — overlay is visible, nothing more to do.
+          if (LocalStorageManager.isJavaModified(className)) return;
+          BlocklyOverlayManager.detectAndMarkIfModified(className);
+        }, 350);
       }
 
       // ── Lift the IDE's bottom panel into B2J's managed section ────────────
@@ -163,6 +191,15 @@ function setupListeners(workspace) {
       workspace.isDragging()) {
       return;
     }
+
+    // Before regenerating, check whether the user manually edited the Java code
+    // since the last Blockly push.  If so, lock Blockly via the overlay and
+    // skip the push — preserving the manual edits.
+    const className = IdeBridge.selected_file_name.replace('.java', '');
+    if (BlocklyOverlayManager.detectAndMarkIfModified(className)) {
+      return;
+    }
+
     onBlocksChange();
   });
 
