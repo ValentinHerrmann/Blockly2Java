@@ -32,6 +32,14 @@ export class BlocklyOverlayManager {
     static _dialogOpen = false;
 
     /**
+     * Timestamp (Date.now()) of the last Blockly → IDE push.
+     * The poll skips detection for PUSH_GRACE_MS after each push to avoid
+     * false positives while Monaco is asynchronously applying the new text.
+     */
+    static _lastPushAt = 0;
+    static PUSH_GRACE_MS = 1500;
+
+    /**
      * Callback that returns the current IDE Java code, or null if unavailable.
      * @type {(() => string|null)|null}
      */
@@ -99,6 +107,15 @@ export class BlocklyOverlayManager {
     }
 
     /**
+     * Called by IdeBridge.pushCodeToIDE() immediately after every Blockly push.
+     * Starts the grace period during which the poll skips detection so Monaco
+     * has time to settle before we compare texts.
+     */
+    static notifyPushed() {
+        this._lastPushAt = Date.now();
+    }
+
+    /**
      * Checks whether the IDE currently contains code that differs from what
      * Blockly last generated.  If so, persists the java-modified flag and
      * shows the overlay.
@@ -117,6 +134,10 @@ export class BlocklyOverlayManager {
             this.show();
             return true;
         }
+
+        // Skip detection during the grace period after a Blockly push so
+        // Monaco has time to update getText() before we compare.
+        if (Date.now() - this._lastPushAt < this.PUSH_GRACE_MS) return false;
 
         // No cache yet → Blockly has never pushed code for this class.
         const lastGenerated = LocalStorageManager.loadLastGeneratedCode(className);

@@ -402,6 +402,7 @@ export class GitService {
     // ── Export current workspace into the virtual filesystem ──────────────
     await this._exportJsonFiles(fs);
     await this._exportJavaFiles(fs, { stripTopLevelCode });
+    await this._exportMetadataFile(fs);
 
     // ── Stage all changed / new / deleted files ──────────────────────────
     const matrix = await git.statusMatrix({ fs, dir: this.REPO_DIR });
@@ -435,6 +436,23 @@ export class GitService {
       headers: this._authHeaders(config.username, config.password),
       onAuth: () => ({ username: config.username, password: config.password }),
     });
+  }
+
+  // ── Metadata file helper ──────────────────────────────────────────────────
+
+  /**
+   * Writes `b2j-metadata.json` at the repository root.
+   * Records which classes have been manually edited so the flag survives a
+   * round-trip through commit → clone/pull.
+   * @param {LightningFS} fs
+   */
+  static async _exportMetadataFile(fs) {
+    const modifiedClasses = LocalStorageManager.getAllJavaModifiedClassNames();
+    const content = JSON.stringify({ javaModified: modifiedClasses }, null, 2);
+    await fs.promises.writeFile(
+      `${this.REPO_DIR}/b2j-metadata.json`,
+      new TextEncoder().encode(content),
+    );
   }
 
   // ── File I/O helpers ─────────────────────────────────────────────────────
@@ -498,6 +516,22 @@ export class GitService {
       result.toolboxConfig = JSON.parse(new TextDecoder().decode(raw));
     } catch {
       /* No blockly-config.json present – that is perfectly fine. */
+    }
+
+    // Restore java-modified flags from the repo metadata file.
+    // If the file is absent (legacy repo or flags were cleared and pushed),
+    // treat it as "no classes modified" and wipe any stale local flags.
+    try {
+      const raw = await fs.promises.readFile(`${this.REPO_DIR}/b2j-metadata.json`);
+      const meta = JSON.parse(new TextDecoder().decode(raw));
+      if (Array.isArray(meta?.javaModified)) {
+        LocalStorageManager.restoreJavaModifiedClassNames(meta.javaModified);
+      } else {
+        LocalStorageManager.restoreJavaModifiedClassNames([]);
+      }
+    } catch {
+      // File absent → clear all stale flags.
+      LocalStorageManager.restoreJavaModifiedClassNames([]);
     }
 
     for (const entry of entries) {

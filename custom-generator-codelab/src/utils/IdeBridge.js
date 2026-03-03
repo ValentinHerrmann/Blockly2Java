@@ -57,6 +57,9 @@ export class IdeBridge {
       LocalStorageManager.saveLastGeneratedCode(className, modCode);
       LocalStorageManager.setJavaModified(className, false);
       BlocklyOverlayManager.hide();
+      // Start the grace period so the poll doesn't fire a false positive
+      // while Monaco asynchronously applies the new text.
+      BlocklyOverlayManager.notifyPushed();
     }
   }
 

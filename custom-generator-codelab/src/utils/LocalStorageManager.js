@@ -147,6 +147,71 @@ class LocalStorageManager {
         globalThis.localStorage?.setItem(key, JSON.stringify(data));
     }
 
+    // ── Java-modified bulk helpers ────────────────────────────────────────────
+
+    /**
+     * Removes all java-modified flags and last-generated-code cache entries
+     * from localStorage.  Call this when the entire workspace is reset.
+     */
+    static clearAllJavaModifiedData() {
+        const ls = globalThis.localStorage;
+        if (!ls) return;
+        const toRemove = [];
+        for (let i = 0; i < ls.length; i++) {
+            const key = ls.key(i);
+            if (key?.startsWith(this.JAVA_MODIFIED_KEY_PREFIX) ||
+                key?.startsWith(this.JAVA_GENERATED_KEY_PREFIX)) {
+                toRemove.push(key);
+            }
+        }
+        for (const key of toRemove) ls.removeItem(key);
+    }
+
+    /**
+     * Returns an array of class names whose java-modified flag is currently set.
+     * Used when serialising the flag state into an export archive or git commit.
+     * @returns {string[]}
+     */
+    static getAllJavaModifiedClassNames() {
+        const result = [];
+        const ls = globalThis.localStorage;
+        if (!ls) return result;
+        for (let i = 0; i < ls.length; i++) {
+            const key = ls.key(i);
+            if (key?.startsWith(this.JAVA_MODIFIED_KEY_PREFIX) && ls.getItem(key) === '1') {
+                result.push(key.slice(this.JAVA_MODIFIED_KEY_PREFIX.length));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Clears all existing java-modified flags and restores the supplied set.
+     * Also wipes the last-generated-code cache for every class so stale
+     * baselines can't trigger false positives while the IDE settles after a
+     * clone, pull, or import.
+     * Used when importing an export archive or reading from a git clone/pull.
+     * @param {string[]} classNames – class names (without .java) to flag as modified
+     */
+    static restoreJavaModifiedClassNames(classNames) {
+        const ls = globalThis.localStorage;
+        if (!ls) return;
+        // Remove all existing flags AND all generated-code cache entries.
+        const toRemove = [];
+        for (let i = 0; i < ls.length; i++) {
+            const key = ls.key(i);
+            if (key?.startsWith(this.JAVA_MODIFIED_KEY_PREFIX) ||
+                key?.startsWith(this.JAVA_GENERATED_KEY_PREFIX)) {
+                toRemove.push(key);
+            }
+        }
+        for (const key of toRemove) ls.removeItem(key);
+        // Set the incoming flags.
+        for (const name of classNames) {
+            this.setJavaModified(name, true);
+        }
+    }
+
     // ── Java-modified flag ────────────────────────────────────────────────────
 
     /**

@@ -191,15 +191,6 @@ function setupListeners(workspace) {
       workspace.isDragging()) {
       return;
     }
-
-    // Before regenerating, check whether the user manually edited the Java code
-    // since the last Blockly push.  If so, lock Blockly via the overlay and
-    // skip the push — preserving the manual edits.
-    const className = IdeBridge.selected_file_name.replace('.java', '');
-    if (BlocklyOverlayManager.detectAndMarkIfModified(className)) {
-      return;
-    }
-
     onBlocksChange();
   });
 
@@ -250,6 +241,15 @@ export function onBlocksChange() {
   IdeBridge.ensureJavaFileActive();
 
   IdeBridge.syncClassNameFromIDE();
+
+  // Do not overwrite manually edited Java code.  This guard covers every call
+  // site: Blockly events, post-import, post-clone/pull, etc.
+  const className = IdeBridge.selected_file_name.replace('.java', '');
+  if (className && LocalStorageManager.isJavaModified(className)) {
+    BlocklyOverlayManager.show();
+    return;
+  }
+
   LocalStorageManager.clearConstructors(getClassName());
 
   const rawCode = generateCode();
