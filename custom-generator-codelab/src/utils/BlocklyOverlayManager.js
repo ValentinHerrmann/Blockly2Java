@@ -276,10 +276,18 @@ export class BlocklyOverlayManager {
             backdrop.appendChild(card);
             document.body.appendChild(backdrop);
 
-            // Keyboard: Escape → cancel, Enter → confirm
+            // Keyboard: Escape → cancel (always), Enter → confirm only when the
+            // confirm button itself has focus to avoid accidental overwrites.
             const onKey = (e) => {
-                if (e.key === 'Escape') { e.preventDefault(); close(false); }
-                if (e.key === 'Enter')  { e.preventDefault(); close(true);  }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    close(false);
+                    return;
+                }
+                if (e.key === 'Enter' && document.activeElement === confirmBtn) {
+                    e.preventDefault();
+                    close(true);
+                }
             };
             document.addEventListener('keydown', onKey);
 
