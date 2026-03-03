@@ -494,9 +494,33 @@ async function handleClone() {
 }
 
 /**
+ * Ensures that git credentials (URL + password) are available for the current
+ * session.  If the session has expired (browser was closed and reopened) but
+ * the repo URL is still known from localStorage, prompts the user to re-enter
+ * their password and re-stores it in sessionStorage.
+ *
+ * @returns {Promise<boolean>} false when the user cancels the password dialog
+ */
+async function ensureCredentials() {
+  if (GitService.hasSessionCredentials()) return true;  // already have password
+
+  const cfg = GitService.getStoredConfig();
+  if (!cfg) return false;  // no repo known at all
+
+  // Session expired — ask for password.
+  const pwResult = await GitDialog.showPasswordDialog(cfg.username);
+  if (!pwResult) return false;  // user cancelled
+
+  GitService._storeConfig(cfg.url, cfg.username, pwResult.password);
+  return true;
+}
+
+/**
  * Handles the "Pull" flow.
  */
 async function handlePull() {
+  if (!await ensureCredentials()) return;
+
   const dismiss = GitDialog.showLoading('Lade Änderungen…');
   try {
     const files = await GitService.pull();
@@ -530,6 +554,8 @@ async function handlePull() {
  * Handles the "Commit & Push" flow.
  */
 async function handleCommitAndPush() {
+  if (!await ensureCredentials()) return;
+
   const commitResult = await GitDialog.showCommitDialog();
   if (!commitResult) return;
 
