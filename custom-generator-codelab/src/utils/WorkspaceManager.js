@@ -372,10 +372,12 @@ export class WorkspaceManager {
     });
 
     document.addEventListener('drop', async (e) => {
-      const file = [...(e.dataTransfer?.files ?? [])].find(f => f.name.endsWith('.b2j'));
-      if (!file) return;
+      const hasFiles = e.dataTransfer?.types?.includes('Files');
+      if (!hasFiles) return;
       e.preventDefault();
 
+      const file = [...(e.dataTransfer.files ?? [])].find(f => f.name.endsWith('.b2j'));
+      if (!file) return;
       const confirmed = await GitDialog.showDragDropConfirm(file.name);
       if (!confirmed) return;
 
