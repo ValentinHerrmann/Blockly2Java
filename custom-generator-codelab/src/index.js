@@ -251,6 +251,7 @@ export function onBlocksChange() {
   }
 
   LocalStorageManager.clearConstructors(getClassName());
+  LocalStorageManager.clearMethods(getClassName());
 
   const rawCode = generateCode();
   const modCode = CodeTransformer.transformCode(rawCode);

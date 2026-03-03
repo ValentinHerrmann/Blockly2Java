@@ -30,6 +30,16 @@ export function getClassName() {
   return className;
 }
 
+let extendsClass = '';
+
+export function setExtendsClass(name) {
+  extendsClass = name;
+}
+
+export function getExtendsClass() {
+  return extendsClass;
+}
+
 export var ctrCount = 0;
 
 /**
@@ -571,6 +581,9 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
     // Reset per-generation tracking for local variable first-declaration.
     this.declaredLocalVarIds_ = new Set();
+
+    // Reset extends-class so that a removed java_extends block takes effect.
+    extendsClass = '';
 
     if (!this.nameDB_) {
       this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);

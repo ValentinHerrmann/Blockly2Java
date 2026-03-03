@@ -15,6 +15,7 @@
 
 import * as Blockly from 'blockly/core';
 import { ToolboxConfigManager } from '../utils/ToolboxConfigManager.js';
+import LocalStorageManager from '../utils/LocalStorageManager.js';
 
 // ─── Type & colour constants ────────────────────────────────────────────────
 // These type strings are the Blockly variable-type tags used to separate the
@@ -326,6 +327,28 @@ export function methodFlyoutCategory(workspace) {
   const showGroup = (name) => !methodConfig || methodConfig.get(name) !== false;
 
   const xmlList = [];
+
+  // ── Constructor parameters ──────────────────────────────────────────────
+  // Scan all defconstructor blocks and add param-get blocks so students can
+  // read constructor parameters inside their method bodies.
+  const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
+  for (const ctrBlock of ctrBlocks) {
+    const argNames = ctrBlock.arguments_ || [];
+    if (argNames.length > 0) {
+      xmlList.push(makeLabel('Konstruktor-Parameter'));
+      for (let pi = 0; pi < argNames.length; pi++) {
+        const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
+        if (paramVar) {
+          const getBlock = Blockly.utils.xml.createElement('block');
+          getBlock.setAttribute('type', 'java_param_get');
+          getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
+          getBlock.appendChild(varField(paramVar));
+          xmlList.push(getBlock);
+        }
+      }
+    }
+  }
+
   const GROUP_NAMES = ['Objekt-Methoden', 'Klassen-Methoden'];
   for (let i = 0; i < METHOD_GROUPS.length; i++) {
     const groupName = GROUP_NAMES[i];
@@ -370,6 +393,31 @@ export function methodFlyoutCategory(workspace) {
       }
     }
   }
+
+  // ── Super-class methods ───────────────────────────────────────────────────
+  // If there is a java_extends block, also expose call blocks for every
+  // method defined in the parent class (stored in LocalStorage during
+  // parent-class code generation).
+  const extendsBlocks = workspace.getBlocksByType('java_extends', false);
+  if (extendsBlocks.length > 0) {
+    const parentClass = extendsBlocks[0].getFieldValue('PARENT_CLASS');
+    if (parentClass && parentClass !== 'NONE') {
+      const allMethods = LocalStorageManager.getAllMethods();
+      const parentMethods = allMethods[parentClass] || [];
+      if (parentMethods.length > 0) {
+        xmlList.push(makeLabel('Methoden von ' + parentClass + ' (Elternklasse)'));
+        for (const method of parentMethods) {
+          const callType = method.isStatic
+            ? (method.hasReturn ? 'java_static_method_call_return' : 'java_static_method_call_noreturn')
+            : (method.hasReturn ? 'java_method_call_return'        : 'java_method_call_noreturn');
+          const callBlock = makeCallBlock(callType, method.name, method.arguments || []);
+          callBlock.setAttribute('gap', '8');
+          xmlList.push(callBlock);
+        }
+      }
+    }
+  }
+
   return xmlList;
 }
 

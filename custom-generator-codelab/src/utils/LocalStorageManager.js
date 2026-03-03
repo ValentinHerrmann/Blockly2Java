@@ -2,6 +2,7 @@ class LocalStorageManager {
 
     static WORKSPACE_STORAGE_KEY = '';
     static CTR_STORAGE_KEY = 'constructors';
+    static METHODS_STORAGE_KEY = 'methodDefinitions';
     static JAVA_MODIFIED_KEY_PREFIX  = 'javaModified_';
     static JAVA_GENERATED_KEY_PREFIX = 'javaGenerated_';
     
@@ -50,6 +51,51 @@ class LocalStorageManager {
         return ret;
     }
 
+    // ── Method-definition storage ─────────────────────────────────────────────
+
+    /**
+     * Clears all stored method definitions for className so they can be
+     * re-populated on the next code generation.
+     * @param {string} className
+     */
+    static clearMethods(className) {
+        if (!className) return;
+        const raw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        const store = JSON.parse(raw) || {};
+        store[className] = [];
+        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
+    }
+
+    /**
+     * Removes all stored method definitions for every class.
+     */
+    static clearAllMethods() {
+        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify({}));
+    }
+
+    /**
+     * Stores a method definition for className.
+     * @param {string} className
+     * @param {{ name: string, arguments: string[], isStatic: boolean, hasReturn: boolean }} methodData
+     */
+    static storeMethods(className, methodData) {
+        if (!className) return;
+        const raw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        const store = JSON.parse(raw) || {};
+        if (!store[className]) store[className] = [];
+        store[className].push(methodData);
+        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
+    }
+
+    /**
+     * Returns all stored method definitions grouped by class name.
+     * @returns {Object.<string, Array<{name:string, arguments:string[], isStatic:boolean, hasReturn:boolean}>>}
+     */
+    static getAllMethods() {
+        const raw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        return JSON.parse(raw) || {};
+    }
+
     static deleteClass(className) {
         let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
@@ -64,6 +110,8 @@ class LocalStorageManager {
         // Clean up java-modified flag and generated-code cache.
         globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX  + className);
         globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        // Clean up stored method definitions.
+        this.clearMethods(className);
     }
 
     static renameClass(className, newClassName) {

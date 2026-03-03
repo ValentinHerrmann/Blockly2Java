@@ -11,7 +11,7 @@
 // Former goog.module ID: Blockly.JavaScript.procedures
 
 import { javascriptGenerator } from 'blockly/javascript.js';
-import {getType, getVariableType, Order, getClassName, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, Order, getClassName, setExtendsClass, TYPES} from './javascript_generator.js';
 import * as Blockly from "blockly";
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
@@ -108,4 +108,28 @@ export function callconstructor(block, generator) {
 
   const code = 'new ' + funcName + '(' + args.join(', ') + ')';
   return [code, Order.FUNCTION_CALL];
+};
+
+// ── java_extends – inheritance declaration ────────────────────────────────
+export function java_extends(block, generator) {
+  const parentClass = block.getFieldValue('PARENT_CLASS');
+  if (parentClass && parentClass !== 'NONE') {
+    setExtendsClass(parentClass);
+  }
+  return null;
+};
+
+// ── java_super_call – super-constructor call ──────────────────────────────
+export function java_super_call(block, generator) {
+  const args = [];
+  const argNames = block.argNames_ || [];
+  for (let i = 0; i < argNames.length; i++) {
+    const inp = block.getInput('ARG' + i);
+    if (inp && inp.connection && inp.connection.targetBlock()) {
+      args.push(generator.valueToCode(block, 'ARG' + i, Order.NONE) || 'null');
+    } else {
+      args.push('null');
+    }
+  }
+  return 'super(' + args.join(', ') + ');\n';
 };

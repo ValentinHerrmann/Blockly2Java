@@ -294,3 +294,162 @@ Blockly.Blocks['callconstructor'] = {
     }
   }
 };
+
+// ── Colour shared by the two inheritance blocks ───────────────────────────
+const INHERIT_COLOUR = '#5B6B8A';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// java_extends – declares the parent class (inheritance)
+// ─────────────────────────────────────────────────────────────────────────────
+Blockly.Blocks['java_extends'] = {
+  init: function () {
+    const block = this;
+    this.appendDummyInput('TOP_LINE')
+      .appendField('erbt von')
+      .appendField(
+        new Blockly.FieldDropdown(() => block.getClassOptions_()),
+        'PARENT_CLASS'
+      );
+    this.setPreviousStatement(false, null);
+    this.setNextStatement(false, null);
+    this.setColour(INHERIT_COLOUR);
+    this.setTooltip('Legt die Elternklasse (Vererbung) für diese Klasse fest.');
+    this.setHelpUrl('');
+  },
+
+  /** Build dropdown options from all classes registered in LocalStorage. */
+  getClassOptions_: function () {
+    const allCtrs = LocalStorageManager.getAllConstructors();
+    const options = Object.keys(allCtrs)
+      .filter(name => name !== getClassName())   // exclude the current class
+      .map(name => [name, name]);
+    if (options.length === 0) {
+      options.push(['(keine)', 'NONE']);
+    }
+    return options;
+  },
+
+  saveExtraState: function () {
+    return { parentClass: this.getFieldValue('PARENT_CLASS') || 'NONE' };
+  },
+
+  loadExtraState: function (state) {
+    const saved = (state && state.parentClass) || 'NONE';
+    if (saved && saved !== 'NONE') {
+      // The dynamic dropdown may not include the saved value until options are
+      // computed; force-set the field value after deserialization.
+      const field = this.getField('PARENT_CLASS');
+      if (field) {
+        // Temporarily extend the option list so setValue doesn't reject it.
+        const origGetOptions = field.getOptions.bind(field);
+        field.getOptions = () => {
+          const opts = origGetOptions();
+          if (!opts.find(([, v]) => v === saved)) opts.push([saved, saved]);
+          return opts;
+        };
+        field.setValue(saved);
+        field.getOptions = origGetOptions;
+      }
+    }
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// java_super_call – calls the parent constructor  super(arg1, arg2, …)
+// Arguments are auto-determined from the parent class constructor stored in
+// LocalStorage (populated when the parent class is generated).
+// ─────────────────────────────────────────────────────────────────────────────
+Blockly.Blocks['java_super_call'] = {
+  init: function () {
+    this.argNames_ = [];
+    this.appendDummyInput('TOP_LINE').appendField('super()', 'SUPER_LABEL');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(INHERIT_COLOUR);
+    this.setTooltip('Ruft den Konstruktor der Elternklasse auf.');
+    this.setHelpUrl('');
+  },
+
+  /** Finds the parent class from the java_extends block in the same workspace. */
+  _getParentClass: function () {
+    if (!this.workspace) return null;
+    const extendsBlocks = this.workspace.getBlocksByType('java_extends', false);
+    if (!extendsBlocks.length) return null;
+    const val = extendsBlocks[0].getFieldValue('PARENT_CLASS');
+    return (val && val !== 'NONE') ? val : null;
+  },
+
+  /**
+   * Reads the parent class's constructors from LocalStorage and rebuilds the
+   * value inputs.  Called automatically when the workspace finishes loading or
+   * when the java_extends block changes.
+   */
+  refreshFromParent_: function () {
+    const parentClass = this._getParentClass();
+    let argNames = [];
+    if (parentClass) {
+      const allCtrs = LocalStorageManager.getAllConstructors();
+      const ctrs = allCtrs[parentClass] || [];
+      if (ctrs.length > 0) argNames = ctrs[0].arguments || [];
+    }
+    this.updateShape_(argNames);
+  },
+
+  onchange: function (event) {
+    if (!this.workspace || this.isInserted && !this.isInserted()) return;
+    const needsRefresh =
+      event.type === Blockly.Events.FINISHED_LOADING ||
+      (event.type === Blockly.Events.BLOCK_CREATE &&
+        event.ids && event.ids.includes(this.id)) ||
+      (event.type === Blockly.Events.BLOCK_CHANGE &&
+        event.name === 'PARENT_CLASS');
+    if (needsRefresh) {
+      this.refreshFromParent_();
+    }
+  },
+
+  /**
+   * Rebuilds value inputs ARG0..ARGn from argNames.
+   * Existing connections are preserved if the arg count doesn't shrink.
+   */
+  updateShape_: function (argNames) {
+    // Save existing connections.
+    const saved = [];
+    for (let i = 0; this.getInput('ARG' + i); i++) {
+      const conn = this.getInput('ARG' + i).connection;
+      saved[i] = conn && conn.targetConnection;
+    }
+
+    // Remove old ARG inputs.
+    let i = 0;
+    while (this.getInput('ARG' + i)) { this.removeInput('ARG' + i); i++; }
+
+    this.argNames_ = argNames || [];
+
+    // Update the TOP_LINE label.
+    const label = this.argNames_.length
+      ? 'super(' + this.argNames_.join(', ') + ')'
+      : 'super()';
+    this.setFieldValue(label, 'SUPER_LABEL');
+
+    // Recreate value inputs with proper type-check.
+    for (let j = 0; j < this.argNames_.length; j++) {
+      this.appendValueInput('ARG' + j)
+        .setCheck(null)
+        .setAlign(Blockly.inputs.Align.RIGHT)
+        .appendField(this.argNames_[j]);
+      // Restore previous connection if still alive.
+      if (saved[j] && saved[j].getSourceBlock().workspace) {
+        this.getInput('ARG' + j).connection.connect(saved[j]);
+      }
+    }
+  },
+
+  saveExtraState: function () {
+    return { argNames: this.argNames_ };
+  },
+
+  loadExtraState: function (state) {
+    this.updateShape_((state && state.argNames) || []);
+  },
+};

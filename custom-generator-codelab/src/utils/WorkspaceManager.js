@@ -180,6 +180,8 @@ export const FULL_ACTIVE_CONFIG = {
       blocks: [
         { type: 'defconstructor',  active: true },
         { type: 'callconstructor', active: true },
+        { type: 'java_extends',    active: true },
+        { type: 'java_super_call', active: true },
       ],
     },
   ],
