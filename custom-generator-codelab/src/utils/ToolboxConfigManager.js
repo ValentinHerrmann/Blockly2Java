@@ -64,6 +64,28 @@ export class ToolboxConfigManager {
   // Structure: Map< categoryName, Map< subcategoryName, Map< blockType, boolean > > >
   static _subcategoryBlockConfigs = new Map();
 
+  /** localStorage key used to persist the active toolbox config across sessions. */
+  static STORAGE_KEY = 'b2j_toolbox_config';
+
+  /**
+   * The last config object passed to apply(), or null when the full toolbox
+   * is active.  Kept in sync with localStorage; use loadStored() to restore
+   * it on page load.
+   * @type {Object|null}
+   */
+  static lastConfig = null;
+
+  /**
+   * Reads the toolbox config that was last saved to localStorage.
+   * Returns null when no config has been stored (full toolbox should be used).
+   * @returns {Object|null}
+   */
+  static loadStored() {
+    const raw = globalThis.localStorage?.getItem(this.STORAGE_KEY);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+
   /**
    * Returns the subcategory active-flags for the given category name, or null
    * if no subcategory config was specified for it.
@@ -112,6 +134,15 @@ export class ToolboxConfigManager {
     }
 
     const filtered = this.buildFilteredToolbox(config);
+
+    // Remember the last applied config in memory and in localStorage so it
+    // survives page reloads / browser session restarts.
+    this.lastConfig = config;
+    if (config !== null) {
+      globalThis.localStorage?.setItem(this.STORAGE_KEY, JSON.stringify(config));
+    } else {
+      globalThis.localStorage?.removeItem(this.STORAGE_KEY);
+    }
 
     // ── Store subcategory configs for flyout callbacks ────────────────────
     this._subcategoryConfigs.clear();

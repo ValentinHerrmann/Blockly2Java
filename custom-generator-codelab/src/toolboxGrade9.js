@@ -30,11 +30,10 @@ export const toolbox = {
                     'kind': 'block',
                     'type': 'logic_null',
                 },
-                // Type determination too complicated
-                //{
-                //    'kind': 'block',
-                //    'type': 'logic_ternary',
-                //},
+                {
+                    'kind': 'block',
+                    'type': 'logic_ternary',
+                },
             ],
         },
         {
@@ -90,11 +89,10 @@ export const toolbox = {
                         },
                     },
                 },
-                /* Only useful if used with lists/arrays
                 {
                     'kind': 'block',
                     'type': 'controls_forEach',
-                },*/
+                },
                 {
                     'kind': 'block',
                     'type': 'controls_flow_statements',
@@ -227,7 +225,6 @@ export const toolbox = {
                         },
                     },
                 },
-                /* Con easily be replaced with native operations
                 {
                     'kind': 'block',
                     'type': 'math_constrain',
@@ -257,7 +254,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },*/
+                },
                 {
                     'kind': 'block',
                     'type': 'math_random_int',
@@ -284,7 +281,6 @@ export const toolbox = {
                     'kind': 'block',
                     'type': 'math_random_float',
                 },
-                /* WTF
                 {
                     'kind': 'block',
                     'type': 'math_atan2',
@@ -306,7 +302,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },*/
+                },
             ],
         },
         {
@@ -318,16 +314,14 @@ export const toolbox = {
                     'kind': 'block',
                     'type': 'text',
                 },
-                /* In Java unnötig
                 {
                     'kind': 'block',
                     'type': 'text_multiline',
-                },*/
+                },
                 {
                     'kind': 'block',
                     'type': 'text_join',
                 },
-                /* Type determination for item not working
                 {
                     'kind': 'block',
                     'type': 'text_append',
@@ -341,7 +335,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },*/
+                },
                 {
                     'kind': 'block',
                     'type': 'text_length',
@@ -356,7 +350,6 @@ export const toolbox = {
                         },
                     },
                 },
-                /* Can easily be replaced with String.length==0 (reduce number of blocks)
                 {
                     'kind': 'block',
                     'type': 'text_isEmpty',
@@ -370,8 +363,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },*/
-                /* Type determination for item not working
+                },
                 {
                     'kind': 'block',
                     'type': 'text_indexOf',
@@ -390,8 +382,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },*/
-                /* Too complicated if char not already known (if not, this is basically a substring)
+                },
                 {
                     'kind': 'block',
                     'type': 'text_charAt',
@@ -402,7 +393,7 @@ export const toolbox = {
                             },
                         },
                     },
-                },*/
+                },
                 {
                     'kind': 'block',
                     'type': 'text_getSubstring',
@@ -502,9 +493,6 @@ export const toolbox = {
                         }
                     }
                 },
-                
-
-                /* Type determination too complicated and uses gui --> replace with scanner when reusing
                 {
                     "kind": "BLOCK",
                     "type": "text_prompt_ext",
@@ -516,7 +504,76 @@ export const toolbox = {
                             }
                         }
                     }
-                },*/
+                },
+            ],
+        },
+        {
+            'kind': 'category',
+            'name': 'Listen',
+            'categorystyle': 'list_category',
+            'contents': [
+                { 'kind': 'block', 'type': 'lists_create_with' },
+                {
+                    'kind': 'block',
+                    'type': 'lists_repeat',
+                    'inputs': { 'NUM': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 5 } } } },
+                },
+                { 'kind': 'block', 'type': 'lists_length' },
+                { 'kind': 'block', 'type': 'lists_isEmpty' },
+                {
+                    'kind': 'block',
+                    'type': 'lists_indexOf',
+                    'inputs': { 'VALUE': { 'block': { 'type': 'variables_get' } } },
+                },
+                {
+                    'kind': 'block',
+                    'type': 'lists_getIndex',
+                    'inputs': { 'VALUE': { 'block': { 'type': 'variables_get' } } },
+                },
+                {
+                    'kind': 'block',
+                    'type': 'lists_setIndex',
+                    'inputs': { 'LIST': { 'block': { 'type': 'variables_get' } } },
+                },
+                {
+                    'kind': 'block',
+                    'type': 'lists_getSublist',
+                    'inputs': { 'LIST': { 'block': { 'type': 'variables_get' } } },
+                },
+                {
+                    'kind': 'block',
+                    'type': 'lists_split',
+                    'inputs': { 'DELIM': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': ',' } } } },
+                },
+                { 'kind': 'block', 'type': 'lists_sort' },
+                { 'kind': 'block', 'type': 'lists_reverse' },
+            ],
+        },
+        {
+            'kind': 'category',
+            'name': 'Farben',
+            'categorystyle': 'colour_category',
+            'contents': [
+                { 'kind': 'block', 'type': 'colour_picker' },
+                { 'kind': 'block', 'type': 'colour_random' },
+                {
+                    'kind': 'block',
+                    'type': 'colour_rgb',
+                    'inputs': {
+                        'RED':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
+                        'GREEN': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50  } } },
+                        'BLUE':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
+                    },
+                },
+                {
+                    'kind': 'block',
+                    'type': 'colour_blend',
+                    'inputs': {
+                        'COLOUR1': { 'shadow': { 'type': 'colour_picker', 'fields': { 'COLOUR': '#ff0000' } } },
+                        'COLOUR2': { 'shadow': { 'type': 'colour_picker', 'fields': { 'COLOUR': '#3333ff' } } },
+                        'RATIO':   { 'shadow': { 'type': 'math_number',   'fields': { 'NUM': 0.5 } } },
+                    },
+                },
             ],
         },
         {

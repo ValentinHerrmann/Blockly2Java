@@ -51,3 +51,61 @@
     text-decoration: underline;
     opacity: 1;
 }
+
+/* ==========================================================================
+   Footer – narrow-screen responsive layout (single row, truncate-on-squeeze)
+   ========================================================================== */
+
+/* Shared: allow text to truncate instead of wrapping or overflowing */
+.app-footer__left,
+.app-footer__right {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Tablet / small laptop  (< 1033 px)
+   Still a single 30 px row; shrink font and let the side columns compress. */
+@media (max-width: 1032px) {
+    .app-footer {
+        font-size: 11px;
+        gap: 4px;
+        padding: 4px 8px;
+    }
+
+    .app-footer__logo {
+        height: 24px;
+    }
+}
+
+/* Medium phones: hide the "Powered by …" right column to free up space.
+   Also hide the Impressum link (and its separator) from the left column so
+   the shorter copyright text cannot reach the absolutely-centred logo. */
+@media (max-width: 680px) {
+    .app-footer__right { display: none; }
+
+    .app-footer__left .app-footer__link,
+    .app-footer__left .app-footer__sep { display: none; }
+
+    .app-footer__left {
+        flex: 1 1 auto;
+        text-align: left;
+    }
+}
+
+/* Small phones: keep only the logo centred */
+@media (max-width: 420px) {
+    .app-footer__left  { display: none; }
+
+    .app-footer__center {
+        position: static;
+        transform: none;
+        margin: 0 auto;
+    }
+
+    .app-footer__logo {
+        height: 20px;
+        margin: 0 auto;
+    }
+}
