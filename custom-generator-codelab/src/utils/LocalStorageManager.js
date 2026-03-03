@@ -83,22 +83,34 @@ class LocalStorageManager {
             if (ctrs[className] !== undefined) {
                 ctrs[newClassName] = ctrs[className];
                 delete ctrs[className];
-                globalThis.localStorage.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrs));
+                globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrs));
             }
         }
 
         // Migrate java-modified flag.
         const modifiedVal = globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
-        if (modifiedVal !== null) {
-            globalThis.localStorage.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
-            globalThis.localStorage.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+        if (modifiedVal != null) {
+            globalThis.localStorage?.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
+            globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
         }
 
         // Migrate last-generated-code cache.
         const generatedVal = globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className);
-        if (generatedVal !== null) {
-            globalThis.localStorage.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
-            globalThis.localStorage.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        if (generatedVal != null) {
+            globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
+            globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        }
+        modifiedVal = globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+        if (modifiedVal != null) {
+            globalThis.localStorage?.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
+            globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+        }
+
+        // Migrate last-generated-code cache.
+        generatedVal = globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        if (generatedVal != null) {
+            globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
+            globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
         }
     }
 

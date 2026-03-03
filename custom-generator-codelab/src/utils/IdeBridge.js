@@ -170,8 +170,15 @@ export class IdeBridge {
     // If the class was manually edited, show the overlay and do NOT push
     // Blockly-generated code (which would overwrite the user's edits).
     const className = fileName.replace('.java', '');
+    // First, perform an immediate check to detect recent manual edits
+    // that may not yet have been picked up by the polling mechanism.
+    const wasJustDetectedAsModified =
+      BlocklyOverlayManager.detectAndMarkIfModified
+        ? BlocklyOverlayManager.detectAndMarkIfModified(className) === true
+        : false;
+
     BlocklyOverlayManager.updateForClass(className);
-    if (!LocalStorageManager.isJavaModified(className)) {
+    if (!wasJustDetectedAsModified && !LocalStorageManager.isJavaModified(className)) {
       onBlocksChange();
     }
   }
