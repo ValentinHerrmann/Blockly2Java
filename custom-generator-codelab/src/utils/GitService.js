@@ -274,60 +274,97 @@ export class GitService {
   }
 
   /**
-   * Scans `lines` with brace-depth tracking and returns the index of the
-   * first line that opens the outermost class/interface/enum body and the
-   * index of the last line that closes it.
+   * Scans `content` at character level, correctly skipping string literals
+   * and comments, and returns the character positions of the outermost
+   * class-body delimiters.
    *
-   * @param {string[]} lines
-   * @returns {{ firstOpenLineIdx: number, lastCloseLineIdx: number }}
-   *   Both indices are -1 when no class body is found.
+   * This is more precise than the old line-level scanner because it correctly
+   * handles cases where top-level code sits on the *same line* as `{` or `}`.
+   *
+   * @param {string} content
+   * @returns {{ firstOpenPos: number, lastClosePos: number }}
+   *   Both values are -1 when no class body is found.
    */
-  static _findClassBoundaries(lines) {
+  static _findClassBoundariesPos(content) {
     let depth = 0;
-    let firstOpenLineIdx = -1;
-    let lastCloseLineIdx = -1;
+    let firstOpenPos = -1;
+    let lastClosePos = -1;
+    let i = 0;
 
-    for (let i = 0; i < lines.length; i++) {
-      for (const char of lines[i]) {
-        if (char === '{') {
-          if (depth === 0 && firstOpenLineIdx === -1) firstOpenLineIdx = i;
-          depth++;
-        } else if (char === '}') {
-          depth--;
-          if (depth === 0) lastCloseLineIdx = i;
-        }
+    while (i < content.length) {
+      // Skip line comments
+      if (content[i] === '/' && content[i + 1] === '/') {
+        const nl = content.indexOf('\n', i);
+        i = nl === -1 ? content.length : nl + 1;
+        continue;
       }
+      // Skip block comments
+      if (content[i] === '/' && content[i + 1] === '*') {
+        const end = content.indexOf('*/', i + 2);
+        i = end === -1 ? content.length : end + 2;
+        continue;
+      }
+      // Skip string / char literals
+      if (content[i] === '"' || content[i] === "'") {
+        const q = content[i++];
+        while (i < content.length && content[i] !== q) {
+          if (content[i] === '\\') i++;
+          i++;
+        }
+        i++;
+        continue;
+      }
+
+      if (content[i] === '{') {
+        if (depth === 0) firstOpenPos = i;
+        depth++;
+      } else if (content[i] === '}') {
+        depth--;
+        if (depth === 0) lastClosePos = i;
+      }
+      i++;
     }
 
-    return { firstOpenLineIdx, lastCloseLineIdx };
+    return { firstOpenPos, lastClosePos };
   }
 
   /**
    * Detects top-level Java code: executable statements that appear either
-   * before or after the outermost class/interface/enum body.
+   * before or after the outermost class/interface/enum body, including code
+   * that shares a line with the opening `{` or closing `}`.
    *
    * @param {string} javaContent
    * @returns {string|null} trimmed top-level code, or null if none found
    */
   static detectTopLevelCode(javaContent) {
-    const lines = javaContent.split('\n');
-    const { firstOpenLineIdx, lastCloseLineIdx } = this._findClassBoundaries(lines);
+    const { firstOpenPos, lastClosePos } = this._findClassBoundariesPos(javaContent);
 
     const parts = [];
 
-    // Code before the first class/interface/enum definition
-    if (firstOpenLineIdx > 0) {
-      const preCode = lines
-        .slice(0, firstOpenLineIdx)
-        .filter(l => !this._isHeaderLine(l))
-        .join('\n')
-        .trim();
-      if (preCode) parts.push(preCode);
+    // Code before the class/interface/enum keyword (not the opening brace),
+    // so that the declaration itself is not included in the preview.
+    if (firstOpenPos > 0) {
+      const lineStart = javaContent.lastIndexOf('\n', firstOpenPos - 1) + 1;
+      const linePre = javaContent.substring(lineStart, firstOpenPos);
+      const classMatch = linePre.match(
+        /((?:(?:public|protected|private|abstract|final|strictfp)\s+)*)(?:class|interface|enum)\s/
+      );
+      const classStartInLine = classMatch ? linePre.indexOf(classMatch[0]) : linePre.length;
+      const classStartPos = lineStart + classStartInLine;
+
+      if (classStartPos > 0) {
+        const preContent = javaContent.substring(0, classStartPos);
+        const preCode = preContent.split('\n')
+          .filter(l => !this._isHeaderLine(l))
+          .join('\n')
+          .trim();
+        if (preCode) parts.push(preCode);
+      }
     }
 
-    // Code after the last class closing brace
-    if (lastCloseLineIdx !== -1) {
-      const postCode = lines.slice(lastCloseLineIdx + 1).join('\n').trim();
+    // Code after the last closing brace (may include content on the same line)
+    if (lastClosePos !== -1 && lastClosePos < javaContent.length - 1) {
+      const postCode = javaContent.substring(lastClosePos + 1).trim();
       if (postCode) parts.push(postCode);
     }
 
@@ -336,29 +373,67 @@ export class GitService {
 
   /**
    * Returns a copy of the Java content with all top-level executable code
-   * removed (both before and after the outermost class body).
-   * Preamble lines (import, package, blank, comments) are preserved.
+   * commented out using block comments, both before and after the outermost
+   * class body.  Code that shares a line with the opening '{' or closing '}'
+   * is commented out inline so no newlines are introduced.
+   * Preamble lines (import, package, blank, existing comments) are preserved.
    *
    * @param {string} javaContent
    * @returns {string}
    */
   static stripTopLevelCode(javaContent) {
-    const lines = javaContent.split('\n');
-    const { firstOpenLineIdx, lastCloseLineIdx } = this._findClassBoundaries(lines);
+    const { firstOpenPos, lastClosePos } = this._findClassBoundariesPos(javaContent);
 
-    if (firstOpenLineIdx === -1 && lastCloseLineIdx === -1) return javaContent;
+    if (firstOpenPos === -1 && lastClosePos === -1) return javaContent;
 
-    const closeLine = lastCloseLineIdx !== -1 ? lastCloseLineIdx : lines.length - 1;
+    let result = javaContent;
 
-    if (firstOpenLineIdx <= 0) {
-      // No pre-class lines at all; just drop everything after the closing brace.
-      return lines.slice(0, closeLine + 1).join('\n');
+    // ── Post-class code (after lastClosePos) ─────────────────────────────
+    // Must be done first so that firstOpenPos stays valid (it comes earlier).
+    if (lastClosePos !== -1 && lastClosePos < result.length - 1) {
+      const postContent = result.substring(lastClosePos + 1);
+      if (postContent.trim()) {
+        result =
+          result.substring(0, lastClosePos + 1) +
+          ' /*' + postContent.trim() + '*/';
+      }
     }
 
-    // Keep only header lines (import/package/blank/comments) from before the class.
-    const preamble = lines.slice(0, firstOpenLineIdx).filter(l => this._isHeaderLine(l));
-    const classBody = lines.slice(firstOpenLineIdx, closeLine + 1);
-    return [...preamble, ...classBody].join('\n');
+    // ── Pre-class code (before firstOpenPos) ─────────────────────────────
+    if (firstOpenPos > 0) {
+      // Find the start of the line that contains the opening '{'.
+      const lineStart = result.lastIndexOf('\n', firstOpenPos - 1) + 1;
+      // The portion of that line sitting before '{'.
+      const linePre = result.substring(lineStart, firstOpenPos);
+
+      // Locate the beginning of the class/interface/enum declaration within
+      // that line so we know exactly what to comment out.
+      const classMatch = linePre.match(
+        /((?:(?:public|protected|private|abstract|final|strictfp)\s+)*)(?:class|interface|enum)\s/
+      );
+      const classStartInLine = classMatch ? linePre.indexOf(classMatch[0]) : 0;
+      const classStartPos = lineStart + classStartInLine;
+
+      // Split the text before the class keyword into lines.
+      const preContent = result.substring(0, classStartPos);
+      const preLines = preContent.split('\n');
+
+      // All fully-preceding lines: use `// ` for non-header lines.
+      const commentOutLine = l => this._isHeaderLine(l) ? l : '// ' + l;
+      const fullPrecedingLines = preLines.slice(0, -1).map(commentOutLine);
+
+      // The partial line sharing the row with the class declaration:
+      // wrap in `/* … */` inline (only if it contains non-whitespace).
+      const partialLine = preLines[preLines.length - 1];
+      const commentedPartialLine =
+        partialLine.trim() ? '/*' + partialLine.trimEnd() + '*/ ' : partialLine;
+
+      result =
+        [...fullPrecedingLines, commentedPartialLine].join('\n') +
+        result.substring(classStartPos);
+    }
+
+    return result;
   }
 
   /**
@@ -402,6 +477,7 @@ export class GitService {
     // ── Export current workspace into the virtual filesystem ──────────────
     await this._exportJsonFiles(fs);
     await this._exportJavaFiles(fs, { stripTopLevelCode });
+    await this._exportMetadataFile(fs);
 
     // ── Stage all changed / new / deleted files ──────────────────────────
     const matrix = await git.statusMatrix({ fs, dir: this.REPO_DIR });
@@ -435,6 +511,23 @@ export class GitService {
       headers: this._authHeaders(config.username, config.password),
       onAuth: () => ({ username: config.username, password: config.password }),
     });
+  }
+
+  // ── Metadata file helper ──────────────────────────────────────────────────
+
+  /**
+   * Writes `b2j-metadata.json` at the repository root.
+   * Records which classes have been manually edited so the flag survives a
+   * round-trip through commit → clone/pull.
+   * @param {LightningFS} fs
+   */
+  static async _exportMetadataFile(fs) {
+    const modifiedClasses = LocalStorageManager.getAllJavaModifiedClassNames();
+    const content = JSON.stringify({ javaModified: modifiedClasses }, null, 2);
+    await fs.promises.writeFile(
+      `${this.REPO_DIR}/b2j-metadata.json`,
+      new TextEncoder().encode(content),
+    );
   }
 
   // ── File I/O helpers ─────────────────────────────────────────────────────
@@ -498,6 +591,22 @@ export class GitService {
       result.toolboxConfig = JSON.parse(new TextDecoder().decode(raw));
     } catch {
       /* No blockly-config.json present – that is perfectly fine. */
+    }
+
+    // Restore java-modified flags from the repo metadata file.
+    // If the file is absent (legacy repo or flags were cleared and pushed),
+    // treat it as "no classes modified" and wipe any stale local flags.
+    try {
+      const raw = await fs.promises.readFile(`${this.REPO_DIR}/b2j-metadata.json`);
+      const meta = JSON.parse(new TextDecoder().decode(raw));
+      if (Array.isArray(meta?.javaModified)) {
+        LocalStorageManager.restoreJavaModifiedClassNames(meta.javaModified);
+      } else {
+        LocalStorageManager.restoreJavaModifiedClassNames([]);
+      }
+    } catch {
+      // File absent → clear all stale flags.
+      LocalStorageManager.restoreJavaModifiedClassNames([]);
     }
 
     for (const entry of entries) {

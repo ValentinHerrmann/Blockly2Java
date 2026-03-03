@@ -23,6 +23,7 @@ import { IdeBridge } from './IdeBridge.js';
 import { GitService } from './GitService.js';
 import { ToolboxConfigManager } from './ToolboxConfigManager.js';
 import { GitDialog } from './GitDialog.js';
+import { BlocklyOverlayManager } from './BlocklyOverlayManager.js';
 import emptyTemplate from '../emptyTemplate.json';
 import * as Blockly from 'blockly/core';
 import { load } from '../serialization.js';
@@ -211,6 +212,11 @@ export class WorkspaceManager {
     // Clear constructor data.
     LocalStorageManager.clearAllConstructors();
 
+    // Clear java-modified flags and generated-code cache so no overlay
+    // is shown after the reset.
+    LocalStorageManager.clearAllJavaModifiedData();
+    BlocklyOverlayManager.hide();
+
     // Apply the full-active config so the blank workspace has an explicit
     // blockly-config.json (all categories on) rather than implicit defaults.
     ToolboxConfigManager.apply(FULL_ACTIVE_CONFIG, ws);
@@ -323,6 +329,12 @@ export class WorkspaceManager {
       zip.file('blockly-config.json', JSON.stringify(toolboxConfig, null, 2));
     } catch { /* skip */ }
 
+    // ── Blockly-override metadata (b2j-metadata.json) ────────────────────
+    // Stores which classes have been manually edited so the flag survives
+    // a round-trip through export + import.
+    const modifiedClasses = LocalStorageManager.getAllJavaModifiedClassNames();
+    zip.file('b2j-metadata.json', JSON.stringify({ javaModified: modifiedClasses }, null, 2));
+
     // ── Generate and download -------------------------------------------
     const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
     const url  = URL.createObjectURL(blob);
@@ -428,6 +440,17 @@ export class WorkspaceManager {
         continue;
       }
 
+      if (normalised === 'b2j-metadata.json') {
+        // Restore java-modified flags from the archive.
+        try {
+          const meta = JSON.parse(await zipEntry.async('string'));
+          if (Array.isArray(meta?.javaModified)) {
+            LocalStorageManager.restoreJavaModifiedClassNames(meta.javaModified);
+          }
+        } catch { /* ignore malformed metadata */ }
+        continue;
+      }
+
       // Only process files inside src/.
       if (!normalised.startsWith('src/')) continue;
 
@@ -487,6 +510,12 @@ export class WorkspaceManager {
     const activeFile = IdeBridge.selected_file_name;
     if (activeFile) {
       load(ws);
+    }
+
+    // Update overlay immediately for the newly active class (flag may have
+    // just been restored from the archive).
+    if (activeFile) {
+      BlocklyOverlayManager.updateForClass(activeFile.replace('.java', ''));
     }
 
     return counts;

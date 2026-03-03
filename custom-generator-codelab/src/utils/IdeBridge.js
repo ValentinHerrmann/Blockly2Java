@@ -3,6 +3,7 @@ import { setClassName } from "../generators/javascript/javascript_generator";
 import LocalStorageManager from "./LocalStorageManager.js";
 import { load } from "../serialization.js";
 import { onBlocksChange } from '../index.js';
+import { BlocklyOverlayManager } from './BlocklyOverlayManager.js';
 
 
 export class IdeBridge {
@@ -47,6 +48,36 @@ export class IdeBridge {
         file.setText(modCode);
       }
     }
+
+    // Persist what Blockly generated so detectAndMarkIfModified() can later
+    // compare it to the IDE content and detect manual user edits.
+    // Also clear the java-modified flag and overlay: Blockly is now in sync.
+    const className = selectedFileName.replace('.java', '');
+    if (className) {
+      LocalStorageManager.saveLastGeneratedCode(className, modCode);
+      LocalStorageManager.setJavaModified(className, false);
+      BlocklyOverlayManager.hide();
+      // Start the grace period so the poll doesn't fire a false positive
+      // while Monaco asynchronously applies the new text.
+      BlocklyOverlayManager.notifyPushed();
+    }
+  }
+
+  /**
+   * Returns the current text content of the selected file as shown in the IDE
+   * editor, or null if the IDE is not ready / no file is selected.
+   * Used by BlocklyOverlayManager to detect manual edits.
+   * @returns {string|null}
+   */
+  static getCurrentIDECode() {
+    if (!globalThis.online_ide_access) return null;
+    const ideAccess = globalThis.online_ide_access.getIDE?.('Java');
+    if (!ideAccess) return null;
+    const files = ideAccess.getFiles();
+    const fileName = this.selected_file_name;
+    const file = files.find(f => f.getName() === fileName);
+    if (!file) return null;
+    return file.getText?.() ?? file.text ?? null;
   }
 
   /**
@@ -137,7 +168,22 @@ export class IdeBridge {
 
     // Sync the class name used by the code generator.
     this.syncClassNameFromIDE();
-    onBlocksChange();
+
+    // Update the java-modified overlay for the newly selected class.
+    // If the class was manually edited, show the overlay and do NOT push
+    // Blockly-generated code (which would overwrite the user's edits).
+    const className = fileName.replace('.java', '');
+    // First, perform an immediate check to detect recent manual edits
+    // that may not yet have been picked up by the polling mechanism.
+    const wasJustDetectedAsModified =
+      BlocklyOverlayManager.detectAndMarkIfModified
+        ? BlocklyOverlayManager.detectAndMarkIfModified(className) === true
+        : false;
+
+    BlocklyOverlayManager.updateForClass(className);
+    if (!wasJustDetectedAsModified && !LocalStorageManager.isJavaModified(className)) {
+      onBlocksChange();
+    }
   }
 
   /**
