@@ -131,6 +131,77 @@ export class GitDialog {
     });
   }
 
+  /**
+   * Shows a danger-confirmation dialog (red confirm button) and resolves with
+   * `true` when the user confirms, or `false` on cancel / Escape.
+   *
+   * @param {Object}       opts
+   * @param {string}       opts.title        – dialog title
+   * @param {string|Node}  opts.bodyContent  – plain-text string or a pre-built
+   *                                           DOM Node / DocumentFragment
+   * @param {string}       opts.confirmLabel – label on the danger button
+   * @returns {Promise<boolean>}
+   */
+  static _showDangerConfirm({ title, bodyContent, confirmLabel }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'git-modal-overlay';
+
+      const card = document.createElement('div');
+      card.className = 'git-modal-card';
+
+      const titleEl = document.createElement('h3');
+      titleEl.className = 'git-modal-title';
+      titleEl.textContent = title;
+      card.appendChild(titleEl);
+
+      const body = document.createElement('p');
+      body.className = 'git-modal-body';
+      if (typeof bodyContent === 'string') {
+        body.textContent = bodyContent;
+      } else {
+        body.appendChild(bodyContent);
+      }
+      card.appendChild(body);
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'git-modal-buttons';
+
+      const close = (val) => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+        resolve(val);
+      };
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'git-modal-btn git-modal-btn--cancel';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.addEventListener('click', () => close(false));
+      btnRow.appendChild(cancelBtn);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'git-modal-btn git-modal-btn--danger';
+      confirmBtn.textContent = confirmLabel;
+      confirmBtn.addEventListener('click', () => close(true));
+      btnRow.appendChild(confirmBtn);
+
+      card.appendChild(btnRow);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      const onKey = (e) => {
+        if (e.key === 'Escape') close(false);
+        if (e.key === 'Enter')  confirmBtn.click();
+      };
+      document.addEventListener('keydown', onKey);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close(false);
+      });
+
+      requestAnimationFrame(() => cancelBtn.focus());
+    });
+  }
+
   // ── Specific dialogs ──────────────────────────────────────────────────
 
   /**
@@ -393,65 +464,17 @@ export class GitDialog {
 
   /**
    * Shows a destructive-action confirmation dialog before clearing the workspace.
-   * Returns `true` when the user confirms, `false` / `null` on cancel.
+   * Returns `true` when the user confirms, `false` on cancel.
    * @returns {Promise<boolean>}
    */
   static showClearConfirm() {
-    return new Promise((resolve) => {
-      const overlay = document.createElement('div');
-      overlay.className = 'git-modal-overlay';
-
-      const card = document.createElement('div');
-      card.className = 'git-modal-card';
-
-      const title = document.createElement('h3');
-      title.className = 'git-modal-title';
-      title.textContent = 'Workspace zurücksetzen?';
-      card.appendChild(title);
-
-      const body = document.createElement('p');
-      body.className = 'git-modal-body';
-      body.textContent =
+    return this._showDangerConfirm({
+      title: 'Workspace zurücksetzen?',
+      bodyContent:
         'Alle Blockly-Workspaces, Java-Dateien und die Git-Verbindung werden ' +
         'unwiderruflich gelöscht und das Projekt auf den Ausgangszustand zurückgesetzt. ' +
-        'Lokale Änderungen gehen verloren.';
-      card.appendChild(body);
-
-      const btnRow = document.createElement('div');
-      btnRow.className = 'git-modal-buttons';
-
-      const close = (val) => {
-        overlay.remove();
-        document.removeEventListener('keydown', onKey);
-        resolve(val);
-      };
-
-      const cancelBtn = document.createElement('button');
-      cancelBtn.className = 'git-modal-btn git-modal-btn--cancel';
-      cancelBtn.textContent = 'Abbrechen';
-      cancelBtn.addEventListener('click', () => close(false));
-      btnRow.appendChild(cancelBtn);
-
-      const confirmBtn = document.createElement('button');
-      confirmBtn.className = 'git-modal-btn git-modal-btn--danger';
-      confirmBtn.textContent = 'Zurücksetzen';
-      confirmBtn.addEventListener('click', () => close(true));
-      btnRow.appendChild(confirmBtn);
-
-      card.appendChild(btnRow);
-      overlay.appendChild(card);
-      document.body.appendChild(overlay);
-
-      const onKey = (e) => {
-        if (e.key === 'Escape') close(false);
-        if (e.key === 'Enter')  confirmBtn.click();
-      };
-      document.addEventListener('keydown', onKey);
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) close(false);
-      });
-
-      requestAnimationFrame(() => cancelBtn.focus());
+        'Lokale Änderungen gehen verloren.',
+      confirmLabel: 'Zurücksetzen',
     });
   }
 
@@ -462,66 +485,20 @@ export class GitDialog {
    * @returns {Promise<boolean>}
    */
   static showDragDropConfirm(filename) {
-    return new Promise((resolve) => {
-      const overlay = document.createElement('div');
-      overlay.className = 'git-modal-overlay';
-
-      const card = document.createElement('div');
-      card.className = 'git-modal-card';
-
-      const title = document.createElement('h3');
-      title.className = 'git-modal-title';
-      title.textContent = 'Workspace importieren?';
-      card.appendChild(title);
-
-      const body = document.createElement('p');
-      body.className = 'git-modal-body';
-      const filenameEl = document.createElement('strong');
-      filenameEl.textContent = filename;
-      body.appendChild(filenameEl);
-      body.appendChild(document.createElement('br'));
-      body.appendChild(document.createElement('br'));
-      body.appendChild(document.createTextNode(
-        'Der aktuelle Workspace (alle Blockly-Dateien, Java-Quellcode und die Git-Verbindung) ' +
-        'wird überschrieben. Lokale Änderungen gehen verloren.'
-      ));
-      card.appendChild(body);
-
-      const btnRow = document.createElement('div');
-      btnRow.className = 'git-modal-buttons';
-
-      const close = (val) => {
-        overlay.remove();
-        document.removeEventListener('keydown', onKey);
-        resolve(val);
-      };
-
-      const cancelBtn = document.createElement('button');
-      cancelBtn.className = 'git-modal-btn git-modal-btn--cancel';
-      cancelBtn.textContent = 'Abbrechen';
-      cancelBtn.addEventListener('click', () => close(false));
-      btnRow.appendChild(cancelBtn);
-
-      const confirmBtn = document.createElement('button');
-      confirmBtn.className = 'git-modal-btn git-modal-btn--danger';
-      confirmBtn.textContent = 'Importieren';
-      confirmBtn.addEventListener('click', () => close(true));
-      btnRow.appendChild(confirmBtn);
-
-      card.appendChild(btnRow);
-      overlay.appendChild(card);
-      document.body.appendChild(overlay);
-
-      const onKey = (e) => {
-        if (e.key === 'Escape') close(false);
-        if (e.key === 'Enter')  confirmBtn.click();
-      };
-      document.addEventListener('keydown', onKey);
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) close(false);
-      });
-
-      requestAnimationFrame(() => cancelBtn.focus());
+    const fragment = document.createDocumentFragment();
+    const filenameEl = document.createElement('strong');
+    filenameEl.textContent = filename;
+    fragment.appendChild(filenameEl);
+    fragment.appendChild(document.createElement('br'));
+    fragment.appendChild(document.createElement('br'));
+    fragment.appendChild(document.createTextNode(
+      'Der aktuelle Workspace (alle Blockly-Dateien, Java-Quellcode und die Git-Verbindung) ' +
+      'wird überschrieben. Lokale Änderungen gehen verloren.',
+    ));
+    return this._showDangerConfirm({
+      title: 'Workspace importieren?',
+      bodyContent: fragment,
+      confirmLabel: 'Importieren',
     });
   }
 
