@@ -147,10 +147,20 @@ export const FULL_ACTIVE_CONFIG = {
       name: 'Variablen',
       active: true,
       subcategories: [
-        { name: 'Lokale Variablen',    active: true },
-        { name: 'Attribute',           active: true },
-        { name: 'Statische Attribute', active: true },
+        { name: 'Lokale Variablen', active: true },
       ],
+    },
+    {
+      name: 'Attribute',
+      active: true,
+      subcategories: [
+        { name: 'Instanz-Attribute', active: true },
+        { name: 'Klassen-Attribute', active: true },
+      ],
+    },
+    {
+      name: 'Parameter',
+      active: true,
     },
     {
       name: 'Methoden',
@@ -180,6 +190,8 @@ export const FULL_ACTIVE_CONFIG = {
       blocks: [
         { type: 'defconstructor',  active: true },
         { type: 'callconstructor', active: true },
+        { type: 'java_extends',    active: true },
+        { type: 'java_super_call', active: true },
       ],
     },
   ],
@@ -219,7 +231,7 @@ export class WorkspaceManager {
 
     // Apply the full-active config so the blank workspace has an explicit
     // blockly-config.json (all categories on) rather than implicit defaults.
-    ToolboxConfigManager.apply(FULL_ACTIVE_CONFIG, ws);
+    ToolboxConfigManager.applyConfig(FULL_ACTIVE_CONFIG, ws);
 
     // ── 2. Disconnect git ────────────────────────────────────────────────
     GitService.clearConfig();
@@ -504,7 +516,7 @@ export class WorkspaceManager {
     }
 
     // ── Apply toolbox config (resets to full toolbox if absent) ----------
-    ToolboxConfigManager.apply(toolboxConfig, ws);
+    ToolboxConfigManager.applyConfig(toolboxConfig, ws);
 
     // ── Reload Blockly for the active file -------------------------------
     const activeFile = IdeBridge.selected_file_name;

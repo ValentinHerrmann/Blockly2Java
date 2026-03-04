@@ -115,8 +115,9 @@ g.blocklyWorkspace {
 .jo_iconButton .img_delete-dark,
 .jo_iconButton .img_start-dark */
 {
-    width: 20px;
-    height: 20px;
+    width: 25px;
+    height: 25px;
+    margin-left: 15px;
     background-size: contain;
 }
 

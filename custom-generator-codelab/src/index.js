@@ -9,9 +9,9 @@ import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
-import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory } from './blocks/java_variable_blocks.js';
+import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import * as JAVA_METHODS from './blocks/java_method_blocks.js';
-import {getClassName} from "./generators/javascript/javascript_generator";
+import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
 import './styles/stylesheet.css';
@@ -30,6 +30,10 @@ import { BlocklyOverlayManager } from './utils/BlocklyOverlayManager';
 
 // Module-level state
 export let ws;
+
+/** Guard: prevents the workspace change listener from re-entering onBlocksChange
+ *  while a background multi-pass generation is in progress. */
+let _batchGenerating = false;
 
 // Instantiate managers
 // Passing onXmlLoaded as callback for REST response
@@ -53,7 +57,7 @@ function init() {
   // Restore a toolbox config that was applied in a previous session,
   // or apply the grade-9 default when the page is opened for the first time.
   const storedToolboxConfig = ToolboxConfigManager.loadStored();
-  ToolboxConfigManager.apply(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
+  ToolboxConfigManager.applyConfig(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
 
   // Load the initial state from storage and run the code.
   load(ws);
@@ -93,6 +97,7 @@ function setupBlockly(theme) {
   workspace.registerToolboxCategoryCallback('JAVA_STATIC_ATTR', staticAttrFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_PARAM', paramFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_VARIABLES_ALL', allVariablesFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_ATTR', allAttrFlyoutCategory);
 
   // Button callbacks: open the built-in dialog but create a typed variable.
   workspace.registerButtonCallback('CREATE_JAVA_NORMAL_ATTR',
@@ -101,7 +106,10 @@ function setupBlockly(theme) {
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'local'));
   workspace.registerButtonCallback('CREATE_JAVA_STATIC_ATTR',
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'static'));
-
+  // Toolbox config editor button.
+  document.getElementById('toolboxConfigBtn')?.addEventListener('click', () => {
+    ToolboxConfigManager.openConfigEditor(ws, FULL_ACTIVE_CONFIG);
+  });
   return workspace;
 }
 
@@ -186,12 +194,21 @@ function setupListeners(workspace) {
   });
 
   // Re-generate code after every meaningful workspace change.
+  // The listener is DEBOUNCED: we wait until the current JS task (and all
+  // synchronous workspace events it produces) finishes before running code
+  // generation.  Without this, a single block-shape mutation (which fires a
+  // burst of removeInput / appendInput / setValue events) would trigger
+  // onBlocksChange() for each individual event, and each call would swap
+  // workspaces via silentGenerateForClass → load(ws) mid-mutation, creating
+  // an endless event→generation→swap→event loop.
+  let _codeGenTimer = null;
   workspace.addChangeListener((e) => {
     if (e.isUiEvent || e.type == Blockly.Events.FINISHED_LOADING ||
       workspace.isDragging()) {
       return;
     }
-    onBlocksChange();
+    clearTimeout(_codeGenTimer);
+    _codeGenTimer = setTimeout(() => onBlocksChange(), 0);
   });
 
   // Clean up orphaned 'param' variables whenever any block is deleted.
@@ -237,6 +254,9 @@ function setupListeners(workspace) {
  * the last active Java file first.
  */
 export function onBlocksChange() {
+  // Do not re-enter while a background multi-pass generation is in progress.
+  if (_batchGenerating) return;
+
   // If the IDE is showing a .md file, switch it back to the Java file.
   IdeBridge.ensureJavaFileActive();
 
@@ -245,17 +265,63 @@ export function onBlocksChange() {
   // Do not overwrite manually edited Java code.  This guard covers every call
   // site: Blockly events, post-import, post-clone/pull, etc.
   const className = IdeBridge.selected_file_name.replace('.java', '');
+  if (!className) return;
   if (className && LocalStorageManager.isJavaModified(className)) {
     BlocklyOverlayManager.show();
     return;
   }
 
+  // ── Pass 0: generate the currently active class ─────────────────────────
+  // This populates its callsite hints (e.g. new Child(42)) in localStorage
+  // so the background passes below can read them for downstream classes.
   LocalStorageManager.clearConstructors(getClassName());
+  LocalStorageManager.clearMethods(getClassName());
 
   const rawCode = generateCode();
   const modCode = CodeTransformer.transformCode(rawCode);
   IdeBridge.pushCodeToIDE(modCode);
+
+  // ── Background multi-pass: propagate type hints across all other classes ─
+  // Pass 1: each other class reads hints written by pass 0 (or older state).
+  // Pass 2: classes further down the inheritance chain (e.g. Super) pick up
+  //         the super-call hints written by pass 1 (e.g. in Child).
+  // After both passes the active class is re-generated so IT benefits too
+  // from any hints that were updated during the background passes.
+  _batchGenerating = true;
+  try {
+    const activeClass = getClassName();
+    const allConstructors = LocalStorageManager.getAllConstructors() ?? {};
+    const otherClasses = Object.keys(allConstructors).filter(
+      c => c && c !== activeClass && !LocalStorageManager.isJavaModified(c)
+    );
+
+    if (otherClasses.length > 0) {
+      // Pass 1 — propagate from active class outward.
+      for (const cls of otherClasses) {
+        silentGenerateForClass(cls);
+      }
+      // Pass 2 — handle indirect chains (A→B→C: B must be done before C).
+      for (const cls of otherClasses) {
+        silentGenerateForClass(cls);
+      }
+
+      // Restore the active class workspace so the user still sees their class.
+      IdeBridge.selected_file_name = activeClass + '.java';
+      setClassName(activeClass);
+      load(ws);
+
+      // Re-generate the active class now that all downstream hints are fresh.
+      LocalStorageManager.clearConstructors(activeClass);
+      LocalStorageManager.clearMethods(activeClass);
+      const rawCode2 = generateCode();
+      const modCode2 = CodeTransformer.transformCode(rawCode2);
+      IdeBridge.pushCodeToIDE(modCode2);
+    }
+  } finally {
+    _batchGenerating = false;
+  }
 }
+
 
 
 // ---------------------------------------------------------------------------
@@ -293,6 +359,51 @@ function onXmlLoaded(xhttp) {
 function generateCode() {
   return javaGenerator.workspaceToCode(ws);
 }
+
+// ---------------------------------------------------------------------------
+// Background silent generation helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Silently loads, generates, transforms, and pushes code for an arbitrary
+ * class without disturbing the currently visible workspace.
+ *
+ * The workspace is swapped in with events disabled so no UI repaint or
+ * spurious onBlocksChange() calls occur.  selected_file_name is temporarily
+ * overwritten so that load() and pushCodeToIDEForClass() target the right
+ * storage keys, then restored before returning.
+ *
+ * @param {string} className  Name of the class to (re)generate (no .java).
+ */
+function silentGenerateForClass(className) {
+  if (!className) return;
+  if (LocalStorageManager.isJavaModified(className)) return;
+
+  // Bail out if there is no saved workspace for this class.
+  const data = LocalStorageManager.loadWorkspace(className);
+  if (!data) return;
+
+  // Redirect load/save to the target class.
+  const prevFileName = IdeBridge.selected_file_name;
+  IdeBridge.selected_file_name = className + '.java';
+
+  setClassName(className);
+  LocalStorageManager.clearConstructors(className);
+  LocalStorageManager.clearMethods(className);
+
+  // load() internally calls Blockly.Events.disable/enable, so the workspace
+  // change listener won't fire and trigger a recursive onBlocksChange().
+  load(ws);
+
+  const rawCode = generateCode();
+  const modCode = CodeTransformer.transformCode(rawCode);
+  IdeBridge.pushCodeToIDEForClass(className, modCode);
+
+  // Restore the previously selected file name so subsequent calls and the
+  // final restore in onBlocksChange() operate on the right class.
+  IdeBridge.selected_file_name = prevFileName;
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -332,13 +443,16 @@ function setupWorkspaceActions() {
       const confirmed = await GitDialog.showClearConfirm();
       if (!confirmed) return;
 
-      WorkspaceManager.clearWorkspace(ws);
+      for(var i = 0; i < 2; i++) {
+          WorkspaceManager.clearWorkspace(ws);
 
-      // Push freshly generated code (empty template) into the new Main.java.
-      onBlocksChange();
+        // Push freshly generated code (empty template) into the new Main.java.
+        onBlocksChange();
 
-      // After clearing, update git button states (clone becomes available again).
-      updateGitButtonStates();
+        // After clearing, update git button states (clone becomes available again).
+        updateGitButtonStates();
+
+      }
     });
   }
 
@@ -479,7 +593,7 @@ async function handleClone() {
     dismiss();
 
     // Apply toolbox config from the repo (resets to full toolbox when absent).
-    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+    ToolboxConfigManager.applyConfig(files.toolboxConfig, ws);
 
     // Import Java and Markdown files into the Online-IDE.
     importJavaFilesToIDE({ ...files.java, ...files.md });
@@ -564,7 +678,7 @@ async function handlePull() {
     dismiss();
 
     // Apply toolbox config from the repo (resets to full toolbox when absent).
-    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+    ToolboxConfigManager.applyConfig(files.toolboxConfig, ws);
 
     importJavaFilesToIDE({ ...files.java, ...files.md });
 

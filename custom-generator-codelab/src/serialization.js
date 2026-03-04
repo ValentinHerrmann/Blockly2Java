@@ -36,7 +36,8 @@ export const load = function(workspace) {
     console.warn('No file selected, skipping workspace save.');
     return;
   }
-  const data = LocalStorageManager.loadWorkspace(className) || JSON.stringify(emptyTemplate);
+  const defaultTemplate = className === 'Main' ? emptyTemplate : { blocks: { languageVersion: 0, blocks: [] } };
+  const data = LocalStorageManager.loadWorkspace(className) || JSON.stringify(defaultTemplate);
 
   // Don't emit events during loading.
   Blockly.Events.disable();
