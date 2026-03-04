@@ -31,6 +31,7 @@ class LocalStorageManager {
         globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify({}));
         globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify({}));
         globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify({}));
+        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify({}));
         //console.log("Cleared all stored constructors.");
     }
 
