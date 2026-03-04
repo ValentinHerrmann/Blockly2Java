@@ -264,6 +264,36 @@ Blockly.Blocks['callconstructor'] = {
     }
   },
 
+  /** Creates a dropdown field whose validator calls updateShape_ on change. */
+  _makeDropdown_: function() {
+    const dd = new Blockly.FieldDropdown(() => this.getConstructorOptions_());
+    dd.setValidator((newValue) => {
+      if (!this._updatingShape_ && newValue !== this.getFieldValue('CONSTRUCTOR_CLASS')) {
+        this.updateShape_(newValue);
+      }
+      return newValue;
+    });
+    return dd;
+  },
+
+  /**
+   * Forces a dropdown field to accept a value even if it is not yet in the
+   * dynamically-computed options list.
+   */
+  _forceSetField_: function(field, val, displayLabel) {
+    if (!field) return;
+    const origGet = field.getOptions.bind(field);
+    field.getOptions = () => {
+      const opts = origGet();
+      if (!opts.some(([, v]) => v === val)) {
+        opts.push([displayLabel || val, val]);
+      }
+      return opts;
+    };
+    field.setValue(val);          // events are already disabled by the caller
+    field.getOptions = origGet;   // restore original getter
+  },
+
   _updateShapeInner_: function (value) {
     // Accept value as argument (called from loadExtraState / validator)
     // or fall back to reading the field (called from onchange).
@@ -275,7 +305,7 @@ Blockly.Blocks['callconstructor'] = {
     const savedConns = {};
     for (const arg of (this.arguments_ || [])) {
       const inp = this.getInput('ARG_' + arg);
-      if (inp && inp.connection) savedConns[arg] = inp.connection.targetConnection;
+      if (inp?.connection) savedConns[arg] = inp.connection.targetConnection;
     }
 
     // ── Remove all existing inputs ──────────────────────────────────────
@@ -285,39 +315,7 @@ Blockly.Blocks['callconstructor'] = {
     if (this.getInput('TOP_LINE')) this.removeInput('TOP_LINE');
 
     // ── Helper: create a dropdown with a shape-update validator ──────────
-    // The validator fires synchronously BEFORE Blockly dispatches the
-    // BLOCK_CHANGE event, so the block shape is always consistent with the
-    // field value by the time any workspace change listener serializes it.
-    // The _updatingShape_ guard prevents validator → updateShape_ →
-    // make new dropdown → validator re-entrancy.
-    const block = this;
-    const makeDropdown = () => {
-      const dd = new Blockly.FieldDropdown(() => block.getConstructorOptions_());
-      dd.setValidator(function (newValue) {
-        if (!block._updatingShape_ && newValue !== block.getFieldValue('CONSTRUCTOR_CLASS')) {
-          block.updateShape_(newValue);
-        }
-        return newValue; // accept the value
-      });
-      return dd;
-    };
-
-    // ── Helper: force-set the field value ───────────────────────────────
-    // Temporarily patches getOptions so the value is accepted even if
-    // the dynamic option list hasn't been re-evaluated yet.
-    const forceSetField = (field, val, displayLabel) => {
-      if (!field) return;
-      const origGet = field.getOptions.bind(field);
-      field.getOptions = () => {
-        const opts = origGet();
-        if (!opts.find(([, v]) => v === val)) {
-          opts.push([displayLabel || val, val]);
-        }
-        return opts;
-      };
-      field.setValue(val);          // events are already disabled by the caller
-      field.getOptions = origGet;   // restore original getter
-    };
+    // Delegates to this._makeDropdown_() which is defined as a block method.
 
     // ── NONE / empty ────────────────────────────────────────────────────
     if (!value || value === 'NONE') {
@@ -325,7 +323,7 @@ Blockly.Blocks['callconstructor'] = {
       this.setOutput(true, 'CLASS');
       this.appendDummyInput('TOP_LINE')
         .appendField('new ')
-        .appendField(makeDropdown(), 'CONSTRUCTOR_CLASS');
+        .appendField(this._makeDropdown_(), 'CONSTRUCTOR_CLASS');
       return;
     }
 
@@ -343,16 +341,16 @@ Blockly.Blocks['callconstructor'] = {
       // ── No-arg constructor ────────────────────────────────────────────
       this.appendDummyInput('TOP_LINE')
         .appendField('new ')
-        .appendField(makeDropdown(), 'CONSTRUCTOR_CLASS');
-      forceSetField(this.getField('CONSTRUCTOR_CLASS'), value, displayLabel);
+        .appendField(this._makeDropdown_(), 'CONSTRUCTOR_CLASS');
+      this._forceSetField_(this.getField('CONSTRUCTOR_CLASS'), value, displayLabel);
     } else {
       // ── Constructor with args ─────────────────────────────────────────
       const firstArg = this.arguments_[0];
       this.appendValueInput('ARG_' + firstArg)
         .appendField('new ')
-        .appendField(makeDropdown(), 'CONSTRUCTOR_CLASS')
+        .appendField(this._makeDropdown_(), 'CONSTRUCTOR_CLASS')
         .appendField('( ' + firstArg + (this.arguments_.length > 1 ? ' ,' : ' )'));
-      forceSetField(this.getField('CONSTRUCTOR_CLASS'), value, displayLabel);
+      this._forceSetField_(this.getField('CONSTRUCTOR_CLASS'), value, displayLabel);
 
       // Restore first-arg connection.
       if (savedConns[firstArg]?.getSourceBlock?.()?.workspace) {
@@ -370,7 +368,7 @@ Blockly.Blocks['callconstructor'] = {
         }
       }
     }
-  }
+  },
 };
 
 // ── Colour shared by the two inheritance blocks ───────────────────────────
@@ -381,11 +379,10 @@ const INHERIT_COLOUR = '#5B6B8A';
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_extends'] = {
   init: function () {
-    const block = this;
     this.appendDummyInput('TOP_LINE')
       .appendField('erbt von')
       .appendField(
-        new Blockly.FieldDropdown(() => block.getClassOptions_()),
+        new Blockly.FieldDropdown(() => this.getClassOptions_()),
         'PARENT_CLASS'
       );
     this.setPreviousStatement(false, null);
@@ -422,7 +419,7 @@ Blockly.Blocks['java_extends'] = {
         const origGetOptions = field.getOptions.bind(field);
         field.getOptions = () => {
           const opts = origGetOptions();
-          if (!opts.find(([, v]) => v === saved)) opts.push([saved, saved]);
+          if (!opts.some(([, v]) => v === saved)) opts.push([saved, saved]);
           return opts;
         };
         field.setValue(saved);
@@ -478,11 +475,50 @@ Blockly.Blocks['java_super_call'] = {
     const needsRefresh =
       event.type === Blockly.Events.FINISHED_LOADING ||
       (event.type === Blockly.Events.BLOCK_CREATE &&
-        event.ids && event.ids.includes(this.id)) ||
+        event.ids?.includes(this.id)) ||
       (event.type === Blockly.Events.BLOCK_CHANGE &&
         event.name === 'PARENT_CLASS');
     if (needsRefresh) {
       this.refreshFromParent_();
+    }
+  },
+
+  /** Save existing ARG connections and return them as an array. */
+  _saveArgConnections_: function() {
+    const saved = [];
+    for (let i = 0; this.getInput('ARG' + i); i++) {
+      saved[i] = this.getInput('ARG' + i).connection?.targetConnection;
+    }
+    return saved;
+  },
+
+  /** Remove all existing ARG and TOP_LINE inputs. */
+  _removeArgInputs_: function() {
+    let i = 0;
+    while (this.getInput('ARG' + i)) { this.removeInput('ARG' + i); i++; }
+    if (this.getInput('TOP_LINE')) this.removeInput('TOP_LINE');
+  },
+
+  /** Build TOP_LINE + ARG inputs from argNames, restoring saved connections. */
+  _buildArgInputsShape_: function(saved) {
+    if (this.argNames_.length === 0) {
+      this.appendDummyInput('TOP_LINE').appendField('super()', 'SUPER_LABEL');
+      return;
+    }
+    const label0 = this.argNames_[0];
+    this.appendValueInput('ARG0')
+      .appendField('super( ' + label0 + (this.argNames_.length > 1 ? ' ,' : ' )'));
+    if (saved[0]?.getSourceBlock()?.workspace) {
+      this.getInput('ARG0').connection.connect(saved[0]);
+    }
+    for (let j = 1; j < this.argNames_.length; j++) {
+      const label = this.argNames_[j];
+      this.appendValueInput('ARG' + j)
+        .setAlign(Blockly.inputs.Align.RIGHT)
+        .appendField(label + (j + 1 === this.argNames_.length ? ' )' : ' ,'));
+      if (saved[j]?.getSourceBlock()?.workspace) {
+        this.getInput('ARG' + j).connection.connect(saved[j]);
+      }
     }
   },
 
@@ -493,44 +529,10 @@ Blockly.Blocks['java_super_call'] = {
    * Existing connections are preserved if the arg count doesn't shrink.
    */
   updateShape_: function (argNames) {
-    // Save existing connections.
-    const saved = [];
-    for (let i = 0; this.getInput('ARG' + i); i++) {
-      const conn = this.getInput('ARG' + i).connection;
-      saved[i] = conn && conn.targetConnection;
-    }
-
-    // Remove old ARG inputs.
-    let i = 0;
-    while (this.getInput('ARG' + i)) { this.removeInput('ARG' + i); i++; }
-
+    const saved = this._saveArgConnections_();
+    this._removeArgInputs_();
     this.argNames_ = argNames || [];
-
-    // Rebuild TOP_LINE and arg inputs.
-    if (this.getInput('TOP_LINE')) { this.removeInput('TOP_LINE'); }
-
-    if (this.argNames_.length === 0) {
-      // No args: plain dummy with 'super()' label.
-      this.appendDummyInput('TOP_LINE').appendField('super()', 'SUPER_LABEL');
-    } else {
-      // First arg connector on the same row as the 'super(' label.
-      const label0 = this.argNames_[0];
-      this.appendValueInput('ARG0')
-        .appendField('super( ' + label0 + (this.argNames_.length > 1 ? ' ,' : ' )'));
-      if (saved[0] && saved[0].getSourceBlock().workspace) {
-        this.getInput('ARG0').connection.connect(saved[0]);
-      }
-      // Remaining args below, right-aligned.
-      for (let j = 1; j < this.argNames_.length; j++) {
-        const label = this.argNames_[j];
-        this.appendValueInput('ARG' + j)
-          .setAlign(Blockly.inputs.Align.RIGHT)
-          .appendField(label + (j + 1 === this.argNames_.length ? ' )' : ' ,'));
-        if (saved[j] && saved[j].getSourceBlock().workspace) {
-          this.getInput('ARG' + j).connection.connect(saved[j]);
-        }
-      }
-    }
+    this._buildArgInputsShape_(saved);
   },
 
   saveExtraState: function () {

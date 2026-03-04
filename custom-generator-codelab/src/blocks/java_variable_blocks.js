@@ -322,6 +322,48 @@ function makeCallBlock(callType, name, argNames) {
   return b;
 }
 
+/**
+ * Appends call blocks for every method defined by the parent class into xmlList.
+ * Only called when a java_extends block is present in the workspace.
+ */
+function _appendParentClassMethods(workspace, xmlList) {
+  const extendsBlocks = workspace.getBlocksByType('java_extends', false);
+  if (!extendsBlocks.length) return;
+  const parentClass = extendsBlocks[0].getFieldValue('PARENT_CLASS');
+  if (!parentClass || parentClass === 'NONE') return;
+  const allMethods = LocalStorageManager.getAllMethods();
+  const parentMethods = allMethods[parentClass] || [];
+  if (!parentMethods.length) return;
+  xmlList.push(makeLabel('Methoden von ' + parentClass + ' (Elternklasse)'));
+  for (const method of parentMethods) {
+    let callType;
+    if (method.isStatic) {
+      callType = method.hasReturn ? 'java_static_method_call_return' : 'java_static_method_call_noreturn';
+    } else {
+      callType = method.hasReturn ? 'java_method_call_return' : 'java_method_call_noreturn';
+    }
+    const callBlock = makeCallBlock(callType, method.name, method.arguments || []);
+    callBlock.setAttribute('gap', '8');
+    xmlList.push(callBlock);
+  }
+}
+
+/**
+ * Appends inline param-get blocks for argNames when the Parameter category is hidden.
+ */
+function _appendInlineParams(workspace, xmlList, argNames) {
+  for (let pi = 0; pi < argNames.length; pi++) {
+    const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
+    if (paramVar) {
+      const getBlock = Blockly.utils.xml.createElement('block');
+      getBlock.setAttribute('type', 'java_param_get');
+      getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
+      getBlock.appendChild(varField(paramVar));
+      xmlList.push(getBlock);
+    }
+  }
+}
+
 export function methodFlyoutCategory(workspace) {
   const methodConfig = ToolboxConfigManager.getSubcategoryConfig('Methoden');
   const showGroup = (name) => !methodConfig || methodConfig.get(name) !== false;
@@ -337,16 +379,7 @@ export function methodFlyoutCategory(workspace) {
       const argNames = ctrBlock.arguments_ || [];
       if (argNames.length === 0) continue;
       xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
-      for (let pi = 0; pi < argNames.length; pi++) {
-        const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
-        if (paramVar) {
-          const getBlock = Blockly.utils.xml.createElement('block');
-          getBlock.setAttribute('type', 'java_param_get');
-          getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
-          getBlock.appendChild(varField(paramVar));
-          xmlList.push(getBlock);
-        }
-      }
+      _appendInlineParams(workspace, xmlList, argNames);
     }
   }
 
@@ -380,45 +413,15 @@ export function methodFlyoutCategory(workspace) {
         xmlList.push(callBlock);
 
         // Inline param-get blocks when Parameter category is hidden.
-        if (showParamsInline) {
-          for (let pi = 0; pi < argNames.length; pi++) {
-            const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
-            if (paramVar) {
-              const getBlock = Blockly.utils.xml.createElement('block');
-              getBlock.setAttribute('type', 'java_param_get');
-              getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
-              getBlock.appendChild(varField(paramVar));
-              xmlList.push(getBlock);
-            }
-          }
-        }
+        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
       }
     }
   }
 
   // ── Super-class methods ───────────────────────────────────────────────────
   // If there is a java_extends block, also expose call blocks for every
-  // method defined in the parent class (stored in LocalStorage during
-  // parent-class code generation).
-  const extendsBlocks = workspace.getBlocksByType('java_extends', false);
-  if (extendsBlocks.length > 0) {
-    const parentClass = extendsBlocks[0].getFieldValue('PARENT_CLASS');
-    if (parentClass && parentClass !== 'NONE') {
-      const allMethods = LocalStorageManager.getAllMethods();
-      const parentMethods = allMethods[parentClass] || [];
-      if (parentMethods.length > 0) {
-        xmlList.push(makeLabel('Methoden von ' + parentClass + ' (Elternklasse)'));
-        for (const method of parentMethods) {
-          const callType = method.isStatic
-            ? (method.hasReturn ? 'java_static_method_call_return' : 'java_static_method_call_noreturn')
-            : (method.hasReturn ? 'java_method_call_return'        : 'java_method_call_noreturn');
-          const callBlock = makeCallBlock(callType, method.name, method.arguments || []);
-          callBlock.setAttribute('gap', '8');
-          xmlList.push(callBlock);
-        }
-      }
-    }
-  }
+  // method defined in the parent class.
+  _appendParentClassMethods(workspace, xmlList);
 
   return xmlList;
 }
@@ -609,7 +612,7 @@ export function staticAttrFlyoutCategory(workspace) {
 // ─────────────────────────────────────────────────────────────────────────────
 export function allAttrFlyoutCategory(workspace) {
   const attrConfig = ToolboxConfigManager.getSubcategoryConfig('Attribute');
-  const show = (name) => !attrConfig || attrConfig.get(name) !== false;
+  const show = (name) => attrConfig?.get(name) !== false;
 
   const sections = [];
 
@@ -633,7 +636,7 @@ export function allAttrFlyoutCategory(workspace) {
 // ─────────────────────────────────────────────────────────────────────────────
 export function allVariablesFlyoutCategory(workspace) {
   const varConfig = ToolboxConfigManager.getSubcategoryConfig('Variablen');
-  const show = (name) => !varConfig || varConfig.get(name) !== false;
+  const show = (name) => varConfig?.get(name) !== false;
 
   const sections = [];
 

@@ -57,7 +57,7 @@ function init() {
   // Restore a toolbox config that was applied in a previous session,
   // or apply the grade-9 default when the page is opened for the first time.
   const storedToolboxConfig = ToolboxConfigManager.loadStored();
-  ToolboxConfigManager.apply(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
+  ToolboxConfigManager.applyConfig(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
 
   // Load the initial state from storage and run the code.
   load(ws);
@@ -589,7 +589,7 @@ async function handleClone() {
     dismiss();
 
     // Apply toolbox config from the repo (resets to full toolbox when absent).
-    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+    ToolboxConfigManager.applyConfig(files.toolboxConfig, ws);
 
     // Import Java and Markdown files into the Online-IDE.
     importJavaFilesToIDE({ ...files.java, ...files.md });
@@ -674,7 +674,7 @@ async function handlePull() {
     dismiss();
 
     // Apply toolbox config from the repo (resets to full toolbox when absent).
-    ToolboxConfigManager.apply(files.toolboxConfig, ws);
+    ToolboxConfigManager.applyConfig(files.toolboxConfig, ws);
 
     importJavaFilesToIDE({ ...files.java, ...files.md });
 

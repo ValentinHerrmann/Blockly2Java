@@ -132,7 +132,7 @@ export class ToolboxConfigManager {
    */
   static isCategoryActive(categoryName) {
     if (!this.lastConfig?.categories) return true;
-    const entry = this.lastConfig.categories.find(c => c.name === categoryName);
+    const entry = this.lastConfig?.categories?.find(c => c.name === categoryName);
     return !entry || entry.active !== false;
   }
 
@@ -145,7 +145,7 @@ export class ToolboxConfigManager {
    * @param {string|Object|null} configJson – raw JSON string, already-parsed object, or null to reset
    * @param {import('blockly').WorkspaceSvg} workspace
    */
-  static apply(configJson, workspace) {
+  static applyConfig(configJson, workspace) {
     if (!workspace) return;
 
     let config = null;
@@ -212,6 +212,35 @@ export class ToolboxConfigManager {
    * @param {import('blockly').WorkspaceSvg} workspace
    * @param {Object} fallbackConfig – config to show when no custom config is active
    */
+  /**
+   * Builds a full "everything active" preset config from FULL_TOOLBOX.
+   * @param {Object|null} fallbackConfig – used to populate subcategories for dynamic categories
+   * @returns {Object} preset config object
+   */
+  static _buildPresetAlles(fallbackConfig) {
+    const categories = (FULL_TOOLBOX.contents ?? [])
+      .filter(item => item.kind?.toLowerCase() === 'category')
+      .map(cat => {
+        const entry = { name: cat.name, active: true };
+        if (cat.custom) {
+          const fbCat = (fallbackConfig?.categories ?? []).find(c => c.name === cat.name);
+          if (fbCat?.subcategories) {
+            entry.subcategories = fbCat.subcategories.map(s => ({
+              ...s,
+              active: true,
+              ...(s.blocks ? { blocks: s.blocks.map(b => ({ ...b, active: true })) } : {}),
+            }));
+          }
+        } else if (cat.contents?.length) {
+          entry.blocks = cat.contents
+            .filter(b => b.kind?.toLowerCase() === 'block')
+            .map(b => ({ type: b.type, active: true }));
+        }
+        return entry;
+      });
+    return { version: 1, description: 'Alle Blöcke aktiv', categories };
+  }
+
   static openConfigEditor(workspace, fallbackConfig) {
     // Remove any stale dialog.
     document.getElementById('b2j-config-editor-overlay')?.remove();
@@ -259,31 +288,7 @@ export class ToolboxConfigManager {
     Object.assign(presetLabel.style, { fontSize: '11px', opacity: '0.5', marginRight: '2px' });
     presetRow.appendChild(presetLabel);
 
-    const PRESET_ALLES = (() => {
-      // Build a full config from FULL_TOOLBOX with every category/block active.
-      const categories = (FULL_TOOLBOX.contents ?? [])
-        .filter(item => item.kind?.toLowerCase() === 'category')
-        .map(cat => {
-          const entry = { name: cat.name, active: true };
-          if (cat.custom) {
-            // For dynamic categories, derive subcategories from fallbackConfig if present.
-            const fbCat = (fallbackConfig?.categories ?? []).find(c => c.name === cat.name);
-            if (fbCat?.subcategories) {
-              entry.subcategories = fbCat.subcategories.map(s => ({
-                ...s,
-                active: true,
-                ...(s.blocks ? { blocks: s.blocks.map(b => ({ ...b, active: true })) } : {}),
-              }));
-            }
-          } else if (cat.contents?.length) {
-            entry.blocks = cat.contents
-              .filter(b => b.kind?.toLowerCase() === 'block')
-              .map(b => ({ type: b.type, active: true }));
-          }
-          return entry;
-        });
-      return { version: 1, description: 'Alle Blöcke aktiv', categories };
-    })();
+    const PRESET_ALLES = ToolboxConfigManager._buildPresetAlles(fallbackConfig);
 
     function makePresetBtn(label, getJson) {
       const btn = document.createElement('button');
@@ -345,7 +350,7 @@ export class ToolboxConfigManager {
     resetBtn.style.marginRight = 'auto';
     resetBtn.onclick = () => {
       if (!confirm('Toolbox-Konfiguration löschen und vollständige Standard-Toolbox wiederherstellen?')) return;
-      this.apply(null, workspace);
+      this.applyConfig(null, workspace);
       overlay.remove();
     };
 
@@ -362,7 +367,7 @@ export class ToolboxConfigManager {
         errMsg.textContent = 'Ungültiges JSON: ' + e.message;
         return;
       }
-      this.apply(parsed, workspace);
+      this.applyConfig(parsed, workspace);
       overlay.remove();
     };
 

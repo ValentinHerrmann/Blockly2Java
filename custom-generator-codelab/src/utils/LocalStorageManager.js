@@ -165,12 +165,14 @@ class LocalStorageManager {
         const store = JSON.parse(raw) || {};
         let merged = null;
         for (const calleeMap of Object.values(store)) {
-            const types = calleeMap && calleeMap[calledClass];
-            if (!types) continue;
-            if (!merged) merged = types.slice();
-            else {
-                for (let i = 0; i < types.length; i++) {
-                    if (merged[i] == null && types[i] != null) merged[i] = types[i];
+            const types = calleeMap?.[calledClass];
+            if (types) {
+                if (merged) {
+                    for (let i = 0; i < types.length; i++) {
+                        if (merged[i] == null && types[i] != null) merged[i] = types[i];
+                    }
+                } else {
+                    merged = types.slice();
                 }
             }
         }
@@ -236,10 +238,40 @@ class LocalStorageManager {
         return JSON.parse(raw) || {};
     }
 
+    /** @param {string} className */
+    static _removeCallsiteHintsForClass(className) {
+        const csRaw = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
+        if (!csRaw) return;
+        const csStore = JSON.parse(csRaw) || {};
+        let csChanged = false;
+        if (csStore[className]) { delete csStore[className]; csChanged = true; }
+        for (const calleeMap of Object.values(csStore)) {
+            if (calleeMap?.[className]) {
+                delete calleeMap[className]; csChanged = true;
+            }
+        }
+        if (csChanged) globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore));
+    }
+
+    /** @param {string} className */
+    static _removeSuperHintsForClass(className) {
+        const hintsRaw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        if (!hintsRaw) return;
+        const store = JSON.parse(hintsRaw) || {};
+        let changed = false;
+        for (const [sub, entry] of Object.entries(store)) {
+            if (sub === className || entry?.parentClass === className) {
+                delete store[sub];
+                changed = true;
+            }
+        }
+        if (changed) globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+    }
+
     static deleteClass(className) {
         let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
-        if(ctrObjs[className] != null) {
+        if (ctrObjs[className] != null) {
             delete ctrObjs[className];
             globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
         }
@@ -253,36 +285,10 @@ class LocalStorageManager {
         // Clean up stored method definitions.
         this.clearMethods(className);
         // Clean up callsite hints where this class appears as caller or callee.
-        const csRaw = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
-        if (csRaw) {
-            const csStore = JSON.parse(csRaw) || {};
-            let csChanged = false;
-            // Remove entry where className is the caller.
-            if (csStore[className]) { delete csStore[className]; csChanged = true; }
-            // Remove callee references inside other callers' entries.
-            for (const calleeMap of Object.values(csStore)) {
-                if (calleeMap && calleeMap[className]) {
-                    delete calleeMap[className]; csChanged = true;
-                }
-            }
-            if (csChanged) globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore));
-        }
+        this._removeCallsiteHintsForClass(className);
         // Clean up super-call type hints where this class appears as either
         // the sub-class key or the parentClass value.
-        const hintsRaw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
-        if (hintsRaw) {
-            const store = JSON.parse(hintsRaw) || {};
-            let changed = false;
-            for (const [sub, entry] of Object.entries(store)) {
-                if (sub === className || (entry && entry.parentClass === className)) {
-                    delete store[sub];
-                    changed = true;
-                }
-            }
-            if (changed) {
-                globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
-            }
-        }
+        this._removeSuperHintsForClass(className);
     }
 
     static renameClass(className, newClassName) {
@@ -331,7 +337,7 @@ class LocalStorageManager {
                 csChanged2 = true;
             }
             for (const calleeMap of Object.values(csStore2)) {
-                if (calleeMap && calleeMap[className] !== undefined) {
+                if (calleeMap?.[className] !== undefined) {
                     calleeMap[newClassName] = calleeMap[className];
                     delete calleeMap[className];
                     csChanged2 = true;
@@ -352,27 +358,31 @@ class LocalStorageManager {
         }
         // Migrate super-call type hints where className appears as either
         // the sub-class key or the parentClass value.
+        this._migrateSuperHints(className, newClassName);
+    }
+
+    /**
+     * Renames all super-call type hint entries that reference className.
+     * @param {string} oldName
+     * @param {string} newName
+     */
+    static _migrateSuperHints(oldName, newName) {
         const hintsRaw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
-        if (hintsRaw) {
-            const store = JSON.parse(hintsRaw) || {};
-            let changed = false;
-            // Rename sub-class key.
-            if (store[className] !== undefined) {
-                store[newClassName] = store[className];
-                delete store[className];
+        if (!hintsRaw) return;
+        const store = JSON.parse(hintsRaw) || {};
+        let changed = false;
+        if (store[oldName] !== undefined) {
+            store[newName] = store[oldName];
+            delete store[oldName];
+            changed = true;
+        }
+        for (const entry of Object.values(store)) {
+            if (entry?.parentClass === oldName) {
+                entry.parentClass = newName;
                 changed = true;
             }
-            // Rename parentClass references.
-            for (const entry of Object.values(store)) {
-                if (entry && entry.parentClass === className) {
-                    entry.parentClass = newClassName;
-                    changed = true;
-                }
-            }
-            if (changed) {
-                globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
-            }
         }
+        if (changed) globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     static createClass(className) {

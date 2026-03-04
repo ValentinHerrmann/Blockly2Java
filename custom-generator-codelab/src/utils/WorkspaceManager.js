@@ -231,7 +231,7 @@ export class WorkspaceManager {
 
     // Apply the full-active config so the blank workspace has an explicit
     // blockly-config.json (all categories on) rather than implicit defaults.
-    ToolboxConfigManager.apply(FULL_ACTIVE_CONFIG, ws);
+    ToolboxConfigManager.applyConfig(FULL_ACTIVE_CONFIG, ws);
 
     // ── 2. Disconnect git ────────────────────────────────────────────────
     GitService.clearConfig();
@@ -516,7 +516,7 @@ export class WorkspaceManager {
     }
 
     // ── Apply toolbox config (resets to full toolbox if absent) ----------
-    ToolboxConfigManager.apply(toolboxConfig, ws);
+    ToolboxConfigManager.applyConfig(toolboxConfig, ws);
 
     // ── Reload Blockly for the active file -------------------------------
     const activeFile = IdeBridge.selected_file_name;
