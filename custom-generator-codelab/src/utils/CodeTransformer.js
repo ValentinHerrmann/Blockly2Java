@@ -1,4 +1,4 @@
-import { getClassName } from "../generators/javascript/javascript_generator";
+import { getClassName, getExtendsClass } from "../generators/javascript/javascript_generator";
 
 export class CodeTransformer {
   /**
@@ -34,7 +34,8 @@ export class CodeTransformer {
 
   static defaultCodePrefix(modCode) {
     const comm = "/**\nErstelle dein Programm über Blockly und\nklicke auf 'Play', um es auszuführen!\n*/\n\n";
-    const codePrefix = 'public class ' + getClassName() + ' { \n';
+    const extendsClause = getExtendsClass() ? ' extends ' + getExtendsClass() : '';
+    const codePrefix = 'public class ' + getClassName() + extendsClause + ' { \n';
     return comm + codePrefix + modCode + '\n}';
   }
 

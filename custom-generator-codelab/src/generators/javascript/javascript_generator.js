@@ -12,6 +12,7 @@
 // Former goog.module ID: Blockly.JavaScript
 
 import * as Blockly from 'blockly/core';
+import LocalStorageManager from '../../utils/LocalStorageManager.js';
 //\import { block } from 'blockly/core/tooltip';
 //import { block } from 'blockly/core/tooltip';
 // import type {Block} from '../../core/block.js';
@@ -28,6 +29,16 @@ export function setClassName(name) {
 
 export function getClassName() {
   return className;
+}
+
+let extendsClass = '';
+
+export function setExtendsClass(name) {
+  extendsClass = name;
+}
+
+export function getExtendsClass() {
+  return extendsClass;
 }
 
 export var ctrCount = 0;
@@ -165,6 +176,98 @@ export function getType(var_type) {
 }
 
 
+/**
+ * Resolves the Java type of a block connected as an argument value.
+ *
+ * Unlike the simple `getType(block.type)`, this handles:
+ *  - callconstructor → extracts the actual class name from the dropdown
+ *  - method call return blocks → looks up the matching def block
+ *  - variable getters → delegates to getVariableType, then falls back to
+ *    cross-workspace constructor-callsite hints stored in LocalStorage
+ *
+ * Exported so other generators can use it without circular imports.
+ *
+ * @param {Blockly.Block} argBlock
+ * @param {Blockly.Workspace} workspace
+/**
+ * Resolves the class name from a callconstructor block's dropdown value.
+ * @param {Blockly.Block} argBlock
+ * @returns {string}
+ */
+function _resolveConstructorArgType(argBlock) {
+  const dv = argBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
+  const sep = dv.indexOf(':::');
+  return (sep >= 0 ? dv.slice(0, sep) : '') || TYPES.UNKNOWN;
+}
+
+/**
+ * Resolves the return type of a method-call block by scanning def blocks.
+ * @param {Blockly.Block} argBlock
+ * @param {Blockly.Workspace} workspace
+ * @returns {string}
+ */
+function _resolveMethodCallType(argBlock, workspace) {
+  const methodName = argBlock.getFieldValue('NAME');
+  const defType = argBlock.type === 'java_static_method_call_return'
+    ? 'java_static_method_return' : 'java_method_return';
+  for (const defBlock of workspace.getBlocksByType(defType, true)) {
+    if (defBlock.getFieldValue('NAME') === methodName) {
+      const returnBlock = defBlock.getInputTargetBlock('RETURN');
+      if (returnBlock) {
+        const t = resolveArgBlockType(returnBlock, workspace);
+        if (t !== TYPES.UNKNOWN) return t;
+      }
+    }
+  }
+  return TYPES.UNKNOWN;
+}
+
+/**
+ * Resolves the type of a variable-getter block, falling back to cross-workspace
+ * callsite hints stored in LocalStorage.
+ * @param {Blockly.Block} argBlock
+ * @param {Blockly.Workspace} workspace
+ * @returns {string}
+ */
+function _resolveGetterType(argBlock, workspace) {
+  const varId = argBlock.getFieldValue('VAR');
+  if (!varId) return TYPES.UNKNOWN;
+  const t = getVariableType(workspace, varId, false);
+  if (t && t !== 'var' && t !== TYPES.UNKNOWN) return t;
+  // Check callsite hints for constructor parameters from other classes.
+  const ctorBlocks = workspace.getBlocksByType('defconstructor', false);
+  for (const ctorBlock of ctorBlocks) {
+    const varModels = ctorBlock.getVarModels?.() ?? [];
+    const idx = varModels.findIndex(v => v.getId() === varId);
+    if (idx >= 0) {
+      const callsiteHints = LocalStorageManager.getConstructorCallsiteHints(getClassName());
+      if (callsiteHints?.[idx] != null) return callsiteHints[idx];
+      break;
+    }
+  }
+  return TYPES.UNKNOWN;
+}
+
+/** All block types that represent a variable read (any kind). */
+const GETTER_ARG_TYPES = new Set([
+  'variables_get', 'java_local_var_get', 'java_static_attr_get',
+  'java_normal_attr_get', 'java_param_get',
+]);
+
+/**
+ * @returns {string} Java type string, or TYPES.UNKNOWN
+ */
+export function resolveArgBlockType(argBlock, workspace) {
+  if (!argBlock) return TYPES.UNKNOWN;
+  if (argBlock.type === 'callconstructor') return _resolveConstructorArgType(argBlock);
+  if (argBlock.type === 'java_method_call_return' ||
+      argBlock.type === 'java_static_method_call_return') {
+    return _resolveMethodCallType(argBlock, workspace);
+  }
+  if (GETTER_ARG_TYPES.has(argBlock.type)) return _resolveGetterType(argBlock, workspace);
+  return getType(argBlock.type);
+}
+
 export function adjustStaticName(name) {
   if(name.startsWith('static_')) {
     return name.replace('static_', '');
@@ -172,109 +275,219 @@ export function adjustStaticName(name) {
   return name;
 }
 
-//returns variable type by searching for usage context.
-export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
-  if(recursionDeepness==10){
-    //console.log("Get Variable (try: " + (11-recursionDeepness) + "): " + varId);
+// ── Polymorphism / inheritance helpers ───────────────────────────────────────
+
+/**
+ * Returns the direct parent class name for `className` by reading:
+ *  1. The super-call type hints store (populated when a sub-class is generated).
+ *  2. The class's saved workspace JSON (looking for a java_extends block),
+ *     so the hierarchy is available even before the sub-class has been generated.
+ */
+function getClassParent(className) {
+  // 1. Super-call type hints (fastest, populated at generation time).
+  const raw = globalThis.localStorage?.getItem(LocalStorageManager.SUPER_CALL_TYPE_HINTS_KEY);
+  if (raw) {
+    const store = JSON.parse(raw) || {};
+    const entry = store[className];
+    if (entry?.parentClass) return entry.parentClass;
   }
+  // 2. Read the class's saved workspace JSON and look for a java_extends block.
+  //    This works even when the sub-class has never been "generated" yet.
+  try {
+    const workspaceRaw = LocalStorageManager.loadWorkspace(className);
+    if (workspaceRaw) {
+      const parsed = JSON.parse(workspaceRaw);
+      const topBlocks = parsed?.blocks?.blocks ?? [];
+      for (const block of topBlocks) {
+        if (block.type === 'java_extends' &&
+            block.fields?.PARENT_CLASS &&
+            block.fields.PARENT_CLASS !== 'NONE') {
+          return block.fields.PARENT_CLASS;
+        }
+      }
+    }
+  } catch (e) {
+    // Intentionally ignored — parse errors in saved workspaces should not crash
+    // the inheritance hierarchy lookup.
+    console.debug('[Blockly2Java] Could not parse workspace for parent lookup:', e);
+  }
+  return null;
+}
 
-  //let varName = CodeGenerator.getVariableName(varId);
+/**
+ * Returns the ancestor chain for a class (including itself), ordered from the
+ * class itself up to the root.
+ * e.g.  Child → ["Child", "Super"]  (if Super has no recorded parent)
+ */
+function getAncestorChain(className, maxDepth = 30) {
+  const chain = [];
+  let current = className;
+  const seen = new Set();
+  while (current && !seen.has(current) && chain.length < maxDepth) {
+    chain.push(current);
+    seen.add(current);
+    current = getClassParent(current);
+  }
+  return chain;
+}
 
-  //if the variable is used for a forLoop, it's an int
-  let blocks = workSpace.getBlocksByType('controls_for',true);
-  for (let i = 0; i < blocks.length; i++) {
-    if(blocks[i].getFieldValue('VAR') === varId) {
-      return TYPES.FORINT;
+/**
+ * Given a non-empty list of Java type strings that may represent class names,
+ * returns their lowest common ancestor (LCA) in the recorded inheritance
+ * hierarchy.  Falls back to 'Object' when no shared ancestor is found.
+ *
+ * Only meaningful when every element looks like a class name (not a Java
+ * primitive such as int/boolean/String).
+ */
+function findCommonSupertype(types) {
+  if (types.length === 0) return TYPES.UNKNOWN;
+  if (types.length === 1) return types[0];
+  if (types.every(t => t === types[0])) return types[0];
+
+  // Build ancestor chains for each type.
+  const chains = types.map(t => getAncestorChain(t));
+
+  // Search breadth-first across ALL chains (not just chains[0]) so that we
+  // find the LCA even when the first type's chain is incomplete.
+  // We iterate by depth level: at depth 0 we check each chain's direct class,
+  // at depth 1 its parent, etc.
+  const maxLen = Math.max(...chains.map(c => c.length));
+  for (let depth = 0; depth < maxLen; depth++) {
+    for (const chain of chains) {
+      if (depth < chain.length) {
+        const candidate = chain[depth];
+        if (chains.every(c => c.includes(candidate))) {
+          return candidate;
+        }
+      }
     }
   }
+  return 'Object';
+}
 
-  let varType = 'var'
-  const varsAssignedToThis = [];
-  let c = 0;
-  //search if the variable is ever set (covers all setter block kinds)
-  // All block types that represent a variable read (any kind)
-  const GETTER_BLOCK_TYPES = new Set([
-    'variables_get', 'java_local_var_get', 'java_static_attr_get',
-    'java_normal_attr_get', 'java_param_get',
-  ]);
-  const setterBlocks = [
+/** Primitive / built-in Java types that are NOT class names. */
+const PRIMITIVE_TYPES = new Set(['int', 'double', 'boolean', 'String', 'Object', 'List<Object>', 'forint', 'void']);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Hard call-budget for getVariableType.
+ *
+ * Every entry into _getVariableTypeImpl decrements this counter.
+ * It is reset to MAX_VAR_TYPE_CALLS at the start of each *fresh* (non-nested)
+ * call to getVariableType so unrelated type lookups each get a full budget,
+ * while any runaway chain of mutual variable references is capped globally.
+ *
+ * 100 calls is far more than any realistic workspace needs (a project with
+ * 20 variables each queried via 3 heuristics = ~60 calls), but small enough
+ * to stop tight cycles within a few milliseconds.
+ */
+const MAX_VAR_TYPE_CALLS = 100;
+let _varTypeBudget = MAX_VAR_TYPE_CALLS;
+let _varTypeDepth = 0;   // nesting depth – 0 means we are in an outer call
+
+//returns variable type by searching for usage context.
+export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
+  // Reset the budget once per top-level call so every fresh query gets a
+  // full allowance while still bounding any cycle reachable from it.
+  const isOuterCall = (_varTypeDepth === 0);
+  if (isOuterCall) {
+    _varTypeBudget = MAX_VAR_TYPE_CALLS;
+  }
+
+  if (_varTypeBudget <= 0) {
+    return 'var';
+  }
+
+  _varTypeBudget--;
+  _varTypeDepth++;
+  try {
+    return _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness);
+  } finally {
+    _varTypeDepth--;
+  }
+}
+
+// ─── Type-inference sub-routines ────────────────────────────────────────────
+
+/** Checks whether varId is used as a for-loop counter. */
+function _searchForLoopVar(workSpace, varId) {
+  for (const b of workSpace.getBlocksByType('controls_for', true)) {
+    if (b.getFieldValue('VAR') === varId) return TYPES.FORINT;
+  }
+  return null;
+}
+
+/**
+ * Scans all setter blocks and collects every concrete Java type assigned to
+ * varId.  Also populates varsAssignedToThis with the ids of variables whose
+ * value is copied into varId.
+ */
+function _collectSetterTypes(workSpace, varId, GETTER_TYPES, varsAssignedToThis) {
+  const types = [];
+  const blocks = [
     ...workSpace.getBlocksByType('variables_set', true),
     ...workSpace.getBlocksByType('java_normal_attr_set', true),
     ...workSpace.getBlocksByType('java_static_attr_set', true),
     ...workSpace.getBlocksByType('java_local_var_set', true),
   ];
-  blocks = setterBlocks;
-  for (let i = 0; i < blocks.length; i++) {
-    if(blocks[i].getFieldValue('VAR') === varId) {
-      if (blocks[i].getInputTargetBlock('VALUE') != null) {
-        const valueBlock = blocks[i].getInputTargetBlock('VALUE');
-        //control if it's set to another variable- if yes, use its type.
-        const GETTER_BLOCK_TYPES = new Set([
-          'variables_get', 'java_local_var_get', 'java_static_attr_get',
-          'java_normal_attr_get', 'java_param_get',
-        ]);
-        if(GETTER_BLOCK_TYPES.has(valueBlock.type)) {
-          if(valueBlock.getFieldValue('VAR') !== varId) {
-            varsAssignedToThis[c] = valueBlock.getFieldValue('VAR');
-            c++;
-          }
-        }
-        // For callconstructor, extract the actual class name from the dropdown.
-        if (valueBlock.type === 'callconstructor') {
-          const dropdownValue = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
-          const sepIdx = dropdownValue.indexOf(':::');
-          varType = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : TYPES.CLASS;
-        } else if (valueBlock.type === 'java_static_method_call_return'
-                || valueBlock.type === 'java_method_call_return') {
-          // Look up the matching method definition to determine its return type.
-          const methodName = valueBlock.getFieldValue('NAME');
-          const defType = valueBlock.type === 'java_static_method_call_return'
-            ? 'java_static_method_return' : 'java_method_return';
-          for (const defBlock of workSpace.getBlocksByType(defType, true)) {
-            if (defBlock.getFieldValue('NAME') === methodName) {
-              const returnBlock = defBlock.getInputTargetBlock('RETURN');
-              if (returnBlock) {
-                const t = getType(returnBlock.type);
-                if (t !== TYPES.UNKNOWN) { varType = t; break; }
-              }
-            }
-          }
-        } else {
-          varType = getType(valueBlock.type);
-        }
-      }
-      if(varType !== 'var') {
-        return varType;
+  for (const block of blocks) {
+    if (block.getFieldValue('VAR') !== varId) continue;
+    const valueBlock = block.getInputTargetBlock('VALUE');
+    if (!valueBlock) continue;
+    if (GETTER_TYPES.has(valueBlock.type) && valueBlock.getFieldValue('VAR') !== varId) {
+      varsAssignedToThis.push(valueBlock.getFieldValue('VAR'));
+    }
+    types.push(_resolveAssignedBlockType(workSpace, valueBlock));
+  }
+  return types.filter(t => t !== 'var');
+}
+
+/** Resolves the Java type of a value block used in an assignment. */
+function _resolveAssignedBlockType(workSpace, valueBlock) {
+  if (valueBlock.type === 'callconstructor') {
+    const dv = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
+    const si = dv.indexOf(':::');
+    return si >= 0 ? dv.slice(0, si) : TYPES.CLASS;
+  }
+  if (valueBlock.type === 'java_static_method_call_return' ||
+      valueBlock.type === 'java_method_call_return') {
+    const mn = valueBlock.getFieldValue('NAME');
+    const dt = valueBlock.type === 'java_static_method_call_return'
+      ? 'java_static_method_return' : 'java_method_return';
+    for (const def of workSpace.getBlocksByType(dt, true)) {
+      if (def.getFieldValue('NAME') === mn) {
+        const rb = def.getInputTargetBlock('RETURN');
+        if (rb) { const t = getType(rb.type); if (t !== TYPES.UNKNOWN) return t; }
       }
     }
+    return 'var';
   }
+  return getType(valueBlock.type);
+}
 
-  
-  //search if the variable is ever set
-  blocks = workSpace.getBlocksByType('math_change',true);
-  for (let i = 0; i < blocks.length; i++) {
-    //console.log(blocks[i]);
-    //console.log(blocks[i].getFieldValue('VAR'));
-
-    if(blocks[i].getFieldValue('VAR') === varId) {
-        const inputList = blocks[i].inputList;
-        let blockType = 'math_number';
-        if(inputList.length > 0) {
-          let blockType = inputList[0].connection.targetBlock().type;
-        }
-        //console.log(blockType);
-        varType = getType(blockType);
-      if(varType !== 'var') {
-        return varType;
-      }
+/** Checks math_change blocks; returns type or null. */
+function _searchMathChangeVar(workSpace, varId) {
+  for (const block of workSpace.getBlocksByType('math_change', true)) {
+    if (block.getFieldValue('VAR') === varId) {
+      const inputList = block.inputList;
+      const blockType = inputList.length > 0 ? inputList[0].connection.targetBlock().type : 'math_number';
+      const t = getType(blockType);
+      if (t !== 'var') return t;
     }
   }
+  return null;
+}
 
-
-  const varsAssignedFromThis = [];
-  c = 0;
-
-  //search if the variable is ever used (covers all getter block kinds)
+/**
+ * Searches all getter blocks for context-clues about varId's type.
+ * Populates varsAssignedFromThis when the variable is used to set another.
+ * Returns a non-'var' type string when found, otherwise 'var'.
+ */
+function _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFromThis, recursionDeepness) {
+  const SETTER_TYPES = new Set([
+    'variables_set', 'java_static_attr_set', 'java_normal_attr_set', 'java_local_var_set',
+  ]);
   const getterBlocks = [
     ...workSpace.getBlocksByType('variables_get', true),
     ...workSpace.getBlocksByType('java_static_attr_get', true),
@@ -282,99 +495,62 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
     ...workSpace.getBlocksByType('java_normal_attr_get', true),
     ...workSpace.getBlocksByType('java_param_get', true),
   ];
-  for (let i = 0; i < getterBlocks.length; i++) {
-    const gb = getterBlocks[i];
-    if(gb.getFieldValue('VAR') === varId) {
-      if (gb.getParent() != null) {
-        //logic compares need to be handled differently if they are a parent Block
-        if (gb.getParent().type === 'logic_compare') {
-          if(useCompares)
-          {
-            return compareControl(workSpace, gb.getParent(), varId)
-          }
-        }
-        //control if it is used to set a variable. if yes, use that type
-        if (gb.getParent().type === 'variables_set'
-          || gb.getParent().type === 'java_static_attr_set'
-          || gb.getParent().type === 'java_normal_attr_set'
-          || gb.getParent().type === 'java_local_var_set') {
-          if(gb.getParent().getFieldValue('VAR') !== varId) {
-            varsAssignedFromThis[c] = gb.getParent().getFieldValue('VAR');
-            c++;
-          }
-        }
-        varType = getType(gb.getParent().type);
+  let varType = 'var';
+  for (const gb of getterBlocks) {
+    if (gb.getFieldValue('VAR') !== varId) continue;
+    const parent = gb.getParent();
+    if (parent) {
+      if (parent.type === 'logic_compare' && useCompares) {
+        return compareControl(workSpace, parent, varId, recursionDeepness - 1);
       }
-      if(varType !== 'var') {
-        return varType;
+      if (SETTER_TYPES.has(parent.type) && parent.getFieldValue('VAR') !== varId) {
+        varsAssignedFromThis.push(parent.getFieldValue('VAR'));
+      }
+      varType = getType(parent.type);
+    }
+    if (varType !== 'var') return varType;
+  }
+  return varType;
+}
+
+/** Checks callconstructor inputs to see if varId is one of them. Returns type or null. */
+function _searchCallconstructorInput(workSpace, varId) {
+  for (const b of workSpace.getBlocksByType('callconstructor', true)) {
+    for (let n = 1; n < b.inputList.length; n++) {
+      if (b.inputList[n].connection != null && b.inputList[n].name === varId) {
+        const ib = b.inputList[n].connection.targetBlock();
+        if (ib != null) return getType(ib.type);
       }
     }
   }
+  return null;
+}
 
-  // Search for the variable in the callconstructor blocks
-  blocks = workSpace.getBlocksByType('callconstructor',true);
-
-  for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
-  {
-    let b = blocks[blockNr];
-
-    for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
-    {
-      if(b.inputList[inputNr].connection != null) {
-        let paramId = b.inputList[inputNr].name;
-        //console.log("ParamId: "+paramId);
-
-        if(paramId === varId) {
-          let inputBlock = b.inputList[inputNr].connection.targetBlock();
-          //console.log(inputBlock);
-          if(inputBlock != null) {
-            //console.log(inputBlock.type);
-            return getType(inputBlock.type);
-          }
+/** Checks built-in procedure call blocks. Returns type or null. */
+function _searchProcedureCallInput(workSpace, varId) {
+  const returnBlocks = workSpace.getBlocksByType('procedures_callreturn', true);
+  const noReturnBlocks = workSpace.getBlocksByType('procedures_callnoreturn', true);
+  const blocks = (returnBlocks && noReturnBlocks) ? returnBlocks.concat(noReturnBlocks)
+    : (returnBlocks || noReturnBlocks || []);
+  for (const b of blocks) {
+    for (let n = 1; n < b.inputList.length; n++) {
+      if (b.inputList[n].connection) {
+        if (b.getVarModels()[n - 1]?.getId() === varId) {
+          const ib = b.inputList[n].connection.targetBlock();
+          if (ib) return getType(ib.type);
         }
       }
     }
   }
+  return null;
+}
 
-  // Search for the variable in the callconstructor blocks
-
-  let returnBlocks = workSpace.getBlocksByType('procedures_callreturn',true);
-  let noReturnBlocks = workSpace.getBlocksByType('procedures_callnoreturn',true);
-
-  if(!noReturnBlocks) {
-    blocks = returnBlocks;
-  }
-  else if(!returnBlocks) {
-    blocks = noReturnBlocks;
-  }
-  else { 
-    blocks = returnBlocks.concat(noReturnBlocks);
-  }
-
-  for (let blockNr = 0; blockNr < blocks.length; blockNr++) 
-  {
-    let b = blocks[blockNr];
-    for (let inputNr = 1; inputNr < b.inputList.length; inputNr++) 
-    {
-      if(b.inputList[inputNr].connection) {
-        let paramId = b.getVarModels()[inputNr-1].getId()
-        if(paramId === varId) {
-          let inputBlock = b.inputList[inputNr].connection.targetBlock();
-          if(inputBlock) {
-            return getType(inputBlock.type);
-          }
-        }
-      }
-    }
-  }
-
-
-  
-
-
-
-  // Search for the variable in custom method / static-method call blocks.
-  // This allows parameter types to be inferred from call-site arguments.
+/** Checks custom method/static-method call blocks. Returns type or null. */
+function _searchMethodCallInput(workSpace, varId, useCompares, recursionDeepness) {
+  const GETTER_TYPES2 = new Set([
+    'variables_get', 'java_local_var_get', 'java_static_attr_get',
+    'java_normal_attr_get', 'java_param_get',
+  ]);
   const methodDefCallPairs = [
     ['java_method_noreturn',        'java_method_call_noreturn'],
     ['java_method_return',          'java_method_call_return'],
@@ -382,76 +558,104 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
     ['java_static_method_return',   'java_static_method_call_return'],
   ];
   for (const [defType, callType] of methodDefCallPairs) {
-    for (const defBlock of workSpace.getBlocksByType(defType, true)) {
-      const varModels = defBlock.getVarModels ? defBlock.getVarModels() : [];
-      const numParams = defBlock.arguments_ ? defBlock.arguments_.length : 0;
-      for (let argIdx = 0; argIdx < numParams; argIdx++) {
-        if (varModels[argIdx] && varModels[argIdx].getId() === varId) {
-          const methodName = defBlock.getFieldValue('NAME');
-          for (const callBlock of workSpace.getBlocksByType(callType, true)) {
-            if (callBlock.getFieldValue('NAME') === methodName) {
-              const argBlock = callBlock.getInputTargetBlock('ARG' + argIdx);
-              if (argBlock) {
-                const t = getType(argBlock.type);
-                if (t !== TYPES.UNKNOWN) return t;
-                // Recurse if the argument is itself a variable getter
-                if (recursionDeepness > 0) {
-                  const GETTER_BLOCK_TYPES2 = new Set([
-                    'variables_get', 'java_local_var_get', 'java_static_attr_get',
-                    'java_normal_attr_get', 'java_param_get',
-                  ]);
-                  if (GETTER_BLOCK_TYPES2.has(argBlock.type)) {
-                    const argVarId = argBlock.getFieldValue('VAR');
-                    if (argVarId && argVarId !== varId) {
-                      const t2 = getVariableType(workSpace, argVarId, useCompares, recursionDeepness - 1);
-                      if (t2 !== TYPES.UNKNOWN && t2 !== 'var') return t2;
-                    }
-                  }
-                }
-              }
-            }
+    const result = _searchMethodDefCallPair(workSpace, varId, defType, callType, GETTER_TYPES2, useCompares, recursionDeepness);
+    if (result) return result;
+  }
+  return null;
+}
+
+/** Helper for one def/call pair inside _searchMethodCallInput. */
+function _searchMethodDefCallPair(workSpace, varId, defType, callType, GETTER_TYPES2, useCompares, recursionDeepness) {
+  for (const defBlock of workSpace.getBlocksByType(defType, true)) {
+    const varModels = defBlock.getVarModels?.() ?? [];
+    const numParams = defBlock.arguments_?.length ?? 0;
+    for (let argIdx = 0; argIdx < numParams; argIdx++) {
+      if (varModels[argIdx]?.getId() !== varId) continue;
+      const methodName = defBlock.getFieldValue('NAME');
+      for (const callBlock of workSpace.getBlocksByType(callType, true)) {
+        if (callBlock.getFieldValue('NAME') !== methodName) continue;
+        const argBlock = callBlock.getInputTargetBlock('ARG' + argIdx);
+        if (!argBlock) continue;
+        const t = getType(argBlock.type);
+        if (t !== TYPES.UNKNOWN) return t;
+        if (recursionDeepness > 0 && GETTER_TYPES2.has(argBlock.type)) {
+          const argVarId = argBlock.getFieldValue('VAR');
+          if (argVarId && argVarId !== varId) {
+            const t2 = getVariableType(workSpace, argVarId, useCompares, recursionDeepness - 1);
+            if (t2 !== TYPES.UNKNOWN && t2 !== 'var') return t2;
           }
         }
       }
     }
   }
+  return null;
+}
 
-  if(recursionDeepness <= 0) {
-    console.log("Recursion limit reached while searching for variable type");
-    return varType;
+/** Checks assigned-variable ids recursively. Returns type string or 'var'. */
+function _resolveByAssignedVars(workSpace, vars, recursionDeepness) {
+  for (const assignedId of vars) {
+    const t = getVariableType(workSpace, assignedId, true, recursionDeepness - 1);
+    if (t === 'forint') return 'int';
+    if (t !== 'var') return t;
   }
-  for (let i = 0;i < varsAssignedToThis.length; i++)
-  {
-    varType = getVariableType(workSpace, varsAssignedToThis[i], true, recursionDeepness-1);
-    //alert(varId + '  To this: ' + varType);
-    if(varType === 'forint') {
-      return 'int';
-    }
-    if(varType !== 'var') {
-      return varType;
-    }
+  return 'var';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) {
+  const forLoopType = _searchForLoopVar(workSpace, varId);
+  if (forLoopType) return forLoopType;
+
+  const GETTER_BLOCK_TYPES = new Set([
+    'variables_get', 'java_local_var_get', 'java_static_attr_get',
+    'java_normal_attr_get', 'java_param_get',
+  ]);
+  const varsAssignedToThis = [];
+  const setterTypes = _collectSetterTypes(workSpace, varId, GETTER_BLOCK_TYPES, varsAssignedToThis);
+
+  if (setterTypes.length > 0) {
+    if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
+    if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
+    return setterTypes[0];
   }
-  for (let i = 0;i < varsAssignedFromThis.length; i++)
-  {
-    varType = getVariableType(workSpace, varsAssignedFromThis[i], true, recursionDeepness-1);
-    //alert(varId + '  From this: ' + varType);
-    if(varType === 'forint') {
-      return 'int';
-    }
-    if(varType !== 'var') {
-      return varType;
-    }
+
+  const mathType = _searchMathChangeVar(workSpace, varId);
+  if (mathType) return mathType;
+
+  const varsAssignedFromThis = [];
+  const getterType = _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFromThis, recursionDeepness);
+  if (getterType !== 'var') return getterType;
+
+  const ctrType = _searchCallconstructorInput(workSpace, varId);
+  if (ctrType) return ctrType;
+
+  const procType = _searchProcedureCallInput(workSpace, varId);
+  if (procType) return procType;
+
+  const methodType = _searchMethodCallInput(workSpace, varId, useCompares, recursionDeepness);
+  if (methodType) return methodType;
+
+  if (recursionDeepness <= 0) {
+    console.log('Recursion limit reached while searching for variable type');
+    return 'var';
   }
-  return varType;
-};
+
+  const fromAssigned = _resolveByAssignedVars(workSpace, varsAssignedToThis, recursionDeepness);
+  if (fromAssigned !== 'var') return fromAssigned;
+
+  return _resolveByAssignedVars(workSpace, varsAssignedFromThis, recursionDeepness);
+}
 
 
 //takes a logic_compare block and checks what is compared
 //only to be used by the getVarType function
-export function compareControl(workSpace, block, varId) {
+export function compareControl(workSpace, block, varId, recursionDeepness = 9) {
   if(block.type !== 'logic_compare') {
     return null;
   }
+
+  if (recursionDeepness <= 0) return 'var';
 
   let left = block.getInputTargetBlock('A');
   let right = block.getInputTargetBlock('B');
@@ -473,13 +677,13 @@ export function compareControl(workSpace, block, varId) {
 
   if(leftIsVar && left.getFieldValue('VAR') === varId) {
     if(rightIsVar) {
-      return getVariableType(workSpace, right.getFieldValue('VAR'), false);
+      return getVariableType(workSpace, right.getFieldValue('VAR'), false, recursionDeepness);
     }
     return getType(right.type);
   }
   else if(rightIsVar && right.getFieldValue('VAR') === varId) {
     if(leftIsVar) {
-      return getVariableType(workSpace, left.getFieldValue('VAR'), false);
+      return getVariableType(workSpace, left.getFieldValue('VAR'), false, recursionDeepness);
     }
     return getType(left.type);
   }
@@ -571,6 +775,9 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
     // Reset per-generation tracking for local variable first-declaration.
     this.declaredLocalVarIds_ = new Set();
+
+    // Reset extends-class so that a removed java_extends block takes effect.
+    extendsClass = '';
 
     if (!this.nameDB_) {
       this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
@@ -747,6 +954,34 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     /*if (defvars.length) {
       this.definitions_['variables'] = 'var ' + defvars.join(', ') + ';';
     }*/
+    // ── Scan callconstructor blocks → store cross-class parameter type hints ──
+    // When this workspace calls new OtherClass(arg, ...) we persist the inferred
+    // argument types so OtherClass's defconstructor can use them even though the
+    // call site lives in a different class workspace.
+    const _callerClass = getClassName();
+    if (_callerClass) {
+      const _callHintsByCallee = {};
+      for (const callBlock of workspace.getBlocksByType('callconstructor', true)) {
+        const _dv = callBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
+        const _sep = _dv.indexOf(':::');
+        if (_sep < 0) continue;
+        const _calledClass = _dv.slice(0, _sep);
+        if (!_calledClass || _calledClass === 'NONE') continue;
+        const _types = [];
+        // inputList[0] is the TOP_LINE dummy; argument inputs start at 1.
+        for (let _n = 1; _n < callBlock.inputList.length; _n++) {
+          const _conn = callBlock.inputList[_n].connection;
+          const _argBlock = _conn ? _conn.targetBlock() : null;
+          const _t = resolveArgBlockType(_argBlock, workspace);
+          _types.push(_t === TYPES.UNKNOWN ? null : _t);
+        }
+        if (_types.some(_t => _t !== null)) {
+          _callHintsByCallee[_calledClass] = _types;
+        }
+      }
+      LocalStorageManager.storeConstructorCallsiteHintsByClass(_callerClass, _callHintsByCallee);
+    }
+
     this.isInitialized = true;
   }
 

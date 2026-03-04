@@ -14,8 +14,9 @@
  * the existing getVariableType helper.
  */
 
-import {getType, getVariableType, Order, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, Order, getClassName, TYPES} from './javascript_generator.js';
 import * as Blockly from 'blockly';
+import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helper: build the full method body code.
@@ -103,6 +104,7 @@ export function java_static_method_noreturn(block, generator) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
   const code = buildMethodCode(block, generator, true);
   generator.definitions_['%static_' + funcName] = code;
+  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: true, hasReturn: false });
   return null;
 }
 
@@ -110,6 +112,7 @@ export function java_static_method_return(block, generator) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
   const code = buildMethodCode(block, generator, true);
   generator.definitions_['%static_' + funcName] = code;
+  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: true, hasReturn: true });
   return null;
 }
 
@@ -117,6 +120,7 @@ export function java_method_noreturn(block, generator) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
   const code = buildMethodCode(block, generator, false);
   generator.definitions_['%method_' + funcName] = code;
+  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: false, hasReturn: false });
   return null;
 }
 
@@ -124,6 +128,7 @@ export function java_method_return(block, generator) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
   const code = buildMethodCode(block, generator, false);
   generator.definitions_['%method_' + funcName] = code;
+  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: false, hasReturn: true });
   return null;
 }
 
@@ -142,14 +147,14 @@ function buildCallArgs(block, generator) {
 export function java_static_method_call_noreturn(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return `${name}(${args});
+  return `${getClassName()}.${name}(${args});
 `;
 }
 
 export function java_static_method_call_return(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return [`${name}(${args})`, Order.ATOMIC];
+  return [`${getClassName()}.${name}(${args})`, Order.ATOMIC];
 }
 
 export function java_method_call_noreturn(block, generator) {

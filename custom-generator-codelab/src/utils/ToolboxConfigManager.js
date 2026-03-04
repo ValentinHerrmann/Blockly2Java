@@ -21,9 +21,8 @@
  *       "name": "Variablen",    // dynamic flyout category
  *       "active": true,
  *       "subcategories": [      // controls which sections appear inside the flyout
- *         { "name": "Attribute",           "active": true  },
- *         { "name": "Lokale Variablen",    "active": true  },
- *         { "name": "Statische Attribute", "active": false }
+ *         { "name": "Lokale Variablen",  "active": true  },
+ *         { "name": "Globale Variablen", "active": false }
  *       ]
  *     },
  *     {
@@ -33,6 +32,18 @@
  *         { "name": "Objekt-Methoden",  "active": true  },
  *         { "name": "Klassen-Methoden", "active": false }
  *       ]
+ *     },
+ *     {
+ *       "name": "Attribute",    // dynamic flyout category
+ *       "active": true,
+ *       "subcategories": [
+ *         { "name": "Instanz-Attribute",  "active": true },
+ *         { "name": "Klassen-Attribute",  "active": true }
+ *       ]
+ *     },
+ *     {
+ *       "name": "Parameter",    // dynamic flyout: parameter blocks grouped by method
+ *       "active": true          // false → hide entire category
  *     }
  *   ]
  * }
@@ -44,7 +55,7 @@
  *    blocks that are themselves marked "active": true.
  *  - A category entry with a "subcategories" array controls which sections are
  *    rendered inside the flyout of dynamic (custom) categories such as
- *    "Variablen" and "Methoden". Unlisted subcategories default to active.
+ *    "Variablen", "Methoden", and "Attribute". Unlisted subcategories default to active.
  *  - Categories without an entry in the config are shown unchanged (default-on).
  *  - Dynamic categories (those with a "custom" property) support only the
  *    category-level active flag and the subcategories array.
@@ -112,6 +123,20 @@ export class ToolboxConfigManager {
   }
 
   /**
+   * Returns whether the given category is active in the current config.
+   * Defaults to true when the category has no config entry or when no config
+   * is loaded at all (= full toolbox).
+   *
+   * @param {string} categoryName
+   * @returns {boolean}
+   */
+  static isCategoryActive(categoryName) {
+    if (!this.lastConfig?.categories) return true;
+    const entry = this.lastConfig?.categories?.find(c => c.name === categoryName);
+    return !entry || entry.active !== false;
+  }
+
+  /**
    * Parses `configJson` and updates the toolbox on the given Blockly workspace.
    *
    * Passing `null` / `undefined` resets the toolbox to the full default toolbox
@@ -120,7 +145,7 @@ export class ToolboxConfigManager {
    * @param {string|Object|null} configJson – raw JSON string, already-parsed object, or null to reset
    * @param {import('blockly').WorkspaceSvg} workspace
    */
-  static apply(configJson, workspace) {
+  static applyConfig(configJson, workspace) {
     if (!workspace) return;
 
     let config = null;
@@ -178,6 +203,183 @@ export class ToolboxConfigManager {
     } catch (err) {
       console.warn('[ToolboxConfigManager] updateToolbox failed:', err);
     }
+  }
+
+  /**
+   * Opens a modal dialog that lets the user view and edit the current toolbox
+   * config JSON. On save the new config is applied immediately.
+   *
+   * @param {import('blockly').WorkspaceSvg} workspace
+   * @param {Object} fallbackConfig – config to show when no custom config is active
+   */
+  /**
+   * Builds a full "everything active" preset config from FULL_TOOLBOX.
+   * @param {Object|null} fallbackConfig – used to populate subcategories for dynamic categories
+   * @returns {Object} preset config object
+   */
+  static _buildPresetAlles(fallbackConfig) {
+    const categories = (FULL_TOOLBOX.contents ?? [])
+      .filter(item => item.kind?.toLowerCase() === 'category')
+      .map(cat => {
+        const entry = { name: cat.name, active: true };
+        if (cat.custom) {
+          const fbCat = (fallbackConfig?.categories ?? []).find(c => c.name === cat.name);
+          if (fbCat?.subcategories) {
+            entry.subcategories = fbCat.subcategories.map(s => ({
+              ...s,
+              active: true,
+              ...(s.blocks ? { blocks: s.blocks.map(b => ({ ...b, active: true })) } : {}),
+            }));
+          }
+        } else if (cat.contents?.length) {
+          entry.blocks = cat.contents
+            .filter(b => b.kind?.toLowerCase() === 'block')
+            .map(b => ({ type: b.type, active: true }));
+        }
+        return entry;
+      });
+    return { version: 1, description: 'Alle Blöcke aktiv', categories };
+  }
+
+  static openConfigEditor(workspace, fallbackConfig) {
+    // Remove any stale dialog.
+    document.getElementById('b2j-config-editor-overlay')?.remove();
+
+    const currentJson = this.lastConfig
+      ? JSON.stringify(this.lastConfig, null, 2)
+      : JSON.stringify(fallbackConfig ?? {}, null, 2);
+
+    // ── Overlay ──────────────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.id = 'b2j-config-editor-overlay';
+    Object.assign(overlay.style, {
+      position: 'fixed', inset: '0', zIndex: '9999',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.55)',
+    });
+
+    // ── Dialog box ───────────────────────────────────────────────────────
+    const box = document.createElement('div');
+    Object.assign(box.style, {
+      background: '#252526', color: '#d4d4d4',
+      border: '1px solid #3c3c3c', borderRadius: '6px',
+      padding: '14px 16px 12px', width: 'min(640px, 90vw)',
+      maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+      gap: '10px', fontFamily: 'Consolas, monospace', fontSize: '12px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+    });
+
+    const title = document.createElement('div');
+    title.textContent = 'Toolbox-Konfiguration';
+    Object.assign(title.style, {
+      font: '600 12px Roboto, sans-serif', letterSpacing: '0.05em',
+      textTransform: 'uppercase', opacity: '0.55', flexShrink: '0',
+    });
+    box.appendChild(title);
+
+    // ── Preset shortcuts ─────────────────────────────────────────────────
+    const presetRow = document.createElement('div');
+    Object.assign(presetRow.style, {
+      display: 'flex', alignItems: 'center', gap: '6px',
+      flexShrink: '0', fontFamily: 'Roboto, sans-serif',
+    });
+    const presetLabel = document.createElement('span');
+    presetLabel.textContent = 'Vorlage:';
+    Object.assign(presetLabel.style, { fontSize: '11px', opacity: '0.5', marginRight: '2px' });
+    presetRow.appendChild(presetLabel);
+
+    const PRESET_ALLES = ToolboxConfigManager._buildPresetAlles(fallbackConfig);
+
+    function makePresetBtn(label, getJson) {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      Object.assign(btn.style, {
+        padding: '3px 10px', border: '1px solid #4a4a4a',
+        borderRadius: '3px', background: '#333', color: '#bbb',
+        cursor: 'pointer', fontSize: '11px', fontFamily: 'Roboto, sans-serif',
+      });
+      btn.addEventListener('mouseenter', () => btn.style.background = '#404040');
+      btn.addEventListener('mouseleave', () => btn.style.background = '#333');
+      btn.onclick = () => { textarea.value = JSON.stringify(getJson(), null, 2); };
+      return btn;
+    }
+
+    presetRow.appendChild(makePresetBtn('Alles', () => PRESET_ALLES));
+    presetRow.appendChild(makePresetBtn('9. Klasse', () => fallbackConfig ?? PRESET_ALLES));
+    box.appendChild(presetRow);
+
+    const textarea = document.createElement('textarea');
+    textarea.value = currentJson;
+    textarea.spellcheck = false;
+    Object.assign(textarea.style, {
+      flex: '1', minHeight: '300px', maxHeight: '55vh',
+      background: '#1c1c1c', color: '#d4d4d4',
+      border: '1px solid #3c3c3c', borderRadius: '4px',
+      padding: '8px', resize: 'vertical', outline: 'none',
+      fontFamily: 'Consolas, monospace', fontSize: '12px',
+      lineHeight: '1.5', tabSize: '2',
+    });
+    box.appendChild(textarea);
+
+    const errMsg = document.createElement('div');
+    Object.assign(errMsg.style, {
+      color: '#f48771', fontSize: '11px', minHeight: '14px',
+      fontFamily: 'Roboto, sans-serif', flexShrink: '0',
+    });
+    box.appendChild(errMsg);
+
+    // ── Buttons ───────────────────────────────────────────────────────────
+    const btnRow = document.createElement('div');
+    Object.assign(btnRow.style, {
+      display: 'flex', gap: '8px', justifyContent: 'flex-end', flexShrink: '0',
+    });
+
+    function makeBtn(label, bg) {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      Object.assign(btn.style, {
+        padding: '5px 14px', border: '1px solid #555',
+        borderRadius: '4px', background: bg, color: '#d4d4d4',
+        cursor: 'pointer', fontSize: '12px', fontFamily: 'Roboto, sans-serif',
+      });
+      return btn;
+    }
+
+    const resetBtn = makeBtn('Zurücksetzen', '#3a3a3a');
+    resetBtn.title = 'Konfiguration löschen und Standard-Toolbox wiederherstellen';
+    resetBtn.style.marginRight = 'auto';
+    resetBtn.onclick = () => {
+      if (!confirm('Toolbox-Konfiguration löschen und vollständige Standard-Toolbox wiederherstellen?')) return;
+      this.applyConfig(null, workspace);
+      overlay.remove();
+    };
+
+    const cancelBtn = makeBtn('Abbrechen', '#3a3a3a');
+    cancelBtn.onclick = () => overlay.remove();
+
+    const saveBtn = makeBtn('Speichern', '#0e639c');
+    saveBtn.style.border = '1px solid #1177bb';
+    saveBtn.onclick = () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(textarea.value);
+      } catch (e) {
+        errMsg.textContent = 'Ungültiges JSON: ' + e.message;
+        return;
+      }
+      this.applyConfig(parsed, workspace);
+      overlay.remove();
+    };
+
+    btnRow.appendChild(resetBtn);
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(saveBtn);
+    box.appendChild(btnRow);
+
+    overlay.appendChild(box);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    textarea.focus();
   }
 
   /**
