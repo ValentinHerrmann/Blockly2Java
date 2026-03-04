@@ -11,6 +11,7 @@ import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
 import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import * as JAVA_METHODS from './blocks/java_method_blocks.js';
+import * as JAVA_OBJ_CALLS from './blocks/java_object_call_blocks.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 

@@ -292,6 +292,36 @@ const METHOD_GROUPS = [
       { defType: 'java_static_method_return',   callType: 'java_static_method_call_return'   },
     ],
   },
+  {
+    // Pre-filled call-on-object blocks for every method defined in THIS class,
+    // plus blank templates for calls on objects of other classes / library types.
+    label: 'Methode auf einem anderen Objekt aufrufen',
+    defs: [],
+    calls: [],
+    // objCalls: for each matching def-block, generate an obj-method-call block
+    // pre-filled with method name + args (the OBJ socket stays empty for the user).
+    objCalls: [
+      { defType: 'java_method_noreturn', callType: 'java_obj_method_call_noreturn' },
+      { defType: 'java_method_return',   callType: 'java_obj_method_call_return'   },
+    ],
+    // templates: blank blocks the user can freely configure for any object/method.
+    templates: [
+      { type: 'java_obj_method_call_noreturn' },
+      { type: 'java_obj_method_call_return'   },
+    ],
+  },
+  {
+    // Blank templates for calling static methods of other (external) classes,
+    // e.g. Math.abs(x) or MyOtherClass.doSomething().
+    label: 'Statische Methode einer anderen Klasse aufrufen',
+    defs: [],
+    calls: [],
+    objCalls: [],
+    templates: [
+      { type: 'java_ext_static_call_noreturn' },
+      { type: 'java_ext_static_call_return'   },
+    ],
+  },
 ];
 
 function makeLabel(text) {
@@ -318,6 +348,23 @@ function makeCallBlock(callType, name, argNames) {
   mutation.setAttribute('method', name);
   mutation.setAttribute('args', String(argNames.length));
   argNames.forEach((paramName, i) => mutation.setAttribute('name' + i, paramName));
+  b.appendChild(mutation);
+  return b;
+}
+
+/**
+ * Creates a flyout block for java_obj_method_call_* blocks, pre-filled with
+ * the given method name and argument list.  The OBJ value-input socket is
+ * left empty for the student to plug in the receiver object.
+ */
+function makeObjCallBlock(callType, name, argNames) {
+  const b = Blockly.utils.xml.createElement('block');
+  b.setAttribute('type', callType);
+  b.setAttribute('gap', '8');
+  const mutation = Blockly.utils.xml.createElement('mutation');
+  mutation.setAttribute('method', name);
+  mutation.setAttribute('args', String(argNames.length));
+  argNames.forEach((n, i) => mutation.setAttribute('name' + i, n));
   b.appendChild(mutation);
   return b;
 }
@@ -383,7 +430,12 @@ export function methodFlyoutCategory(workspace) {
     }
   }
 
-  const GROUP_NAMES = ['Objekt-Methoden', 'Klassen-Methoden'];
+  const GROUP_NAMES = [
+    'Objekt-Methoden',
+    'Klassen-Methoden',
+    'Methoden auf Objekten',
+    'Externe Klassen-Methoden',
+  ];
   for (let i = 0; i < METHOD_GROUPS.length; i++) {
     const groupName = GROUP_NAMES[i];
     if (!showGroup(groupName)) continue;
@@ -400,6 +452,7 @@ export function methodFlyoutCategory(workspace) {
       if (showDef(def.type)) xmlList.push(makeBlockTemplate(def.type));
     }
 
+    // ── Regular call blocks (this.method) ──────────────────────────────────
     // Call blocks – only for active def types.
     for (const { defType, callType } of group.calls) {
       if (!showDef(defType)) continue;
@@ -415,6 +468,24 @@ export function methodFlyoutCategory(workspace) {
         // Inline param-get blocks when Parameter category is hidden.
         if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
       }
+    }
+
+    // ── Object-call blocks (otherObj.method) ───────────────────────────────
+    // For each method defined in this class, generate a pre-filled
+    // java_obj_method_call_* block with the OBJ socket left open.
+    for (const { defType, callType } of (group.objCalls || [])) {
+      if (!showDef(defType)) continue;
+      for (const block of workspace.getBlocksByType(defType, true)) {
+        const name     = block.getFieldValue('NAME') || 'unbekannt';
+        const argNames = block.arguments_ || [];
+        const objCallBlock = makeObjCallBlock(callType, name, argNames);
+        xmlList.push(objCallBlock);
+      }
+    }
+
+    // ── Blank template blocks (for library/external calls) ────────────────
+    for (const { type } of (group.templates || [])) {
+      if (showDef(type)) xmlList.push(makeBlockTemplate(type));
     }
   }
 

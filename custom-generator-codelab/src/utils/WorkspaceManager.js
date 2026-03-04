@@ -182,6 +182,22 @@ export const FULL_ACTIVE_CONFIG = {
             { type: 'java_static_method_return',   active: true },
           ],
         },
+        {
+          name: 'Methoden auf Objekten',
+          active: true,
+          blocks: [
+            { type: 'java_obj_method_call_noreturn', active: true },
+            { type: 'java_obj_method_call_return',   active: true },
+          ],
+        },
+        {
+          name: 'Externe Klassen-Methoden',
+          active: true,
+          blocks: [
+            { type: 'java_ext_static_call_noreturn', active: true },
+            { type: 'java_ext_static_call_return',   active: true },
+          ],
+        },
       ],
     },
     {
