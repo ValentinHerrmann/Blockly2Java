@@ -194,12 +194,21 @@ function setupListeners(workspace) {
   });
 
   // Re-generate code after every meaningful workspace change.
+  // The listener is DEBOUNCED: we wait until the current JS task (and all
+  // synchronous workspace events it produces) finishes before running code
+  // generation.  Without this, a single block-shape mutation (which fires a
+  // burst of removeInput / appendInput / setValue events) would trigger
+  // onBlocksChange() for each individual event, and each call would swap
+  // workspaces via silentGenerateForClass → load(ws) mid-mutation, creating
+  // an endless event→generation→swap→event loop.
+  let _codeGenTimer = null;
   workspace.addChangeListener((e) => {
     if (e.isUiEvent || e.type == Blockly.Events.FINISHED_LOADING ||
       workspace.isDragging()) {
       return;
     }
-    onBlocksChange();
+    clearTimeout(_codeGenTimer);
+    _codeGenTimer = setTimeout(() => onBlocksChange(), 0);
   });
 
   // Clean up orphaned 'param' variables whenever any block is deleted.

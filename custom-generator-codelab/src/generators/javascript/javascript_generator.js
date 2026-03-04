@@ -258,11 +258,136 @@ export function adjustStaticName(name) {
   return name;
 }
 
+// ── Polymorphism / inheritance helpers ───────────────────────────────────────
+
+/**
+ * Returns the direct parent class name for `className` by reading:
+ *  1. The super-call type hints store (populated when a sub-class is generated).
+ *  2. The class's saved workspace JSON (looking for a java_extends block),
+ *     so the hierarchy is available even before the sub-class has been generated.
+ */
+function getClassParent(className) {
+  // 1. Super-call type hints (fastest, populated at generation time).
+  const raw = globalThis.localStorage?.getItem(LocalStorageManager.SUPER_CALL_TYPE_HINTS_KEY);
+  if (raw) {
+    const store = JSON.parse(raw) || {};
+    const entry = store[className];
+    if (entry && entry.parentClass) return entry.parentClass;
+  }
+  // 2. Read the class's saved workspace JSON and look for a java_extends block.
+  //    This works even when the sub-class has never been "generated" yet.
+  try {
+    const workspaceRaw = LocalStorageManager.loadWorkspace(className);
+    if (workspaceRaw) {
+      const parsed = JSON.parse(workspaceRaw);
+      const topBlocks = parsed?.blocks?.blocks ?? [];
+      for (const block of topBlocks) {
+        if (block.type === 'java_extends' &&
+            block.fields?.PARENT_CLASS &&
+            block.fields.PARENT_CLASS !== 'NONE') {
+          return block.fields.PARENT_CLASS;
+        }
+      }
+    }
+  } catch (_) { /* ignore parse errors */ }
+  return null;
+}
+
+/**
+ * Returns the ancestor chain for a class (including itself), ordered from the
+ * class itself up to the root.
+ * e.g.  Child → ["Child", "Super"]  (if Super has no recorded parent)
+ */
+function getAncestorChain(className, maxDepth = 30) {
+  const chain = [];
+  let current = className;
+  const seen = new Set();
+  while (current && !seen.has(current) && chain.length < maxDepth) {
+    chain.push(current);
+    seen.add(current);
+    current = getClassParent(current);
+  }
+  return chain;
+}
+
+/**
+ * Given a non-empty list of Java type strings that may represent class names,
+ * returns their lowest common ancestor (LCA) in the recorded inheritance
+ * hierarchy.  Falls back to 'Object' when no shared ancestor is found.
+ *
+ * Only meaningful when every element looks like a class name (not a Java
+ * primitive such as int/boolean/String).
+ */
+function findCommonSupertype(types) {
+  if (types.length === 0) return TYPES.UNKNOWN;
+  if (types.length === 1) return types[0];
+  if (types.every(t => t === types[0])) return types[0];
+
+  // Build ancestor chains for each type.
+  const chains = types.map(t => getAncestorChain(t));
+
+  // Search breadth-first across ALL chains (not just chains[0]) so that we
+  // find the LCA even when the first type's chain is incomplete.
+  // We iterate by depth level: at depth 0 we check each chain's direct class,
+  // at depth 1 its parent, etc.
+  const maxLen = Math.max(...chains.map(c => c.length));
+  for (let depth = 0; depth < maxLen; depth++) {
+    for (const chain of chains) {
+      if (depth < chain.length) {
+        const candidate = chain[depth];
+        if (chains.every(c => c.includes(candidate))) {
+          return candidate;
+        }
+      }
+    }
+  }
+  return 'Object';
+}
+
+/** Primitive / built-in Java types that are NOT class names. */
+const PRIMITIVE_TYPES = new Set(['int', 'double', 'boolean', 'String', 'Object', 'List<Object>', 'forint', 'void']);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Hard call-budget for getVariableType.
+ *
+ * Every entry into _getVariableTypeImpl decrements this counter.
+ * It is reset to MAX_VAR_TYPE_CALLS at the start of each *fresh* (non-nested)
+ * call to getVariableType so unrelated type lookups each get a full budget,
+ * while any runaway chain of mutual variable references is capped globally.
+ *
+ * 100 calls is far more than any realistic workspace needs (a project with
+ * 20 variables each queried via 3 heuristics = ~60 calls), but small enough
+ * to stop tight cycles within a few milliseconds.
+ */
+const MAX_VAR_TYPE_CALLS = 100;
+let _varTypeBudget = MAX_VAR_TYPE_CALLS;
+let _varTypeDepth = 0;   // nesting depth – 0 means we are in an outer call
+
 //returns variable type by searching for usage context.
 export function getVariableType(workSpace, varId, useCompares, recursionDeepness = 10) {
-  if(recursionDeepness==10){
-    //console.log("Get Variable (try: " + (11-recursionDeepness) + "): " + varId);
+  // Reset the budget once per top-level call so every fresh query gets a
+  // full allowance while still bounding any cycle reachable from it.
+  const isOuterCall = (_varTypeDepth === 0);
+  if (isOuterCall) {
+    _varTypeBudget = MAX_VAR_TYPE_CALLS;
   }
+
+  if (_varTypeBudget <= 0) {
+    return 'var';
+  }
+
+  _varTypeBudget--;
+  _varTypeDepth++;
+  try {
+    return _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness);
+  } finally {
+    _varTypeDepth--;
+  }
+}
+
+function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) {
 
   //let varName = CodeGenerator.getVariableName(varId);
 
@@ -290,26 +415,29 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
     ...workSpace.getBlocksByType('java_local_var_set', true),
   ];
   blocks = setterBlocks;
+  // Collect every concrete type assigned to this variable so we can
+  // determine the correct declared type even under polymorphism (e.g. when a
+  // variable is assigned both a Child and a Super instance we must declare it
+  // as Super, not just whatever the first assignment happened to be).
+  const collectedSetterTypes = [];
   for (let i = 0; i < blocks.length; i++) {
     if(blocks[i].getFieldValue('VAR') === varId) {
       if (blocks[i].getInputTargetBlock('VALUE') != null) {
         const valueBlock = blocks[i].getInputTargetBlock('VALUE');
         //control if it's set to another variable- if yes, use its type.
-        const GETTER_BLOCK_TYPES = new Set([
-          'variables_get', 'java_local_var_get', 'java_static_attr_get',
-          'java_normal_attr_get', 'java_param_get',
-        ]);
         if(GETTER_BLOCK_TYPES.has(valueBlock.type)) {
           if(valueBlock.getFieldValue('VAR') !== varId) {
             varsAssignedToThis[c] = valueBlock.getFieldValue('VAR');
             c++;
           }
         }
+        // Determine the type of the assigned value.
+        let blockVarType = 'var';
         // For callconstructor, extract the actual class name from the dropdown.
         if (valueBlock.type === 'callconstructor') {
           const dropdownValue = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
           const sepIdx = dropdownValue.indexOf(':::');
-          varType = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : TYPES.CLASS;
+          blockVarType = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : TYPES.CLASS;
         } else if (valueBlock.type === 'java_static_method_call_return'
                 || valueBlock.type === 'java_method_call_return') {
           // Look up the matching method definition to determine its return type.
@@ -321,18 +449,31 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
               const returnBlock = defBlock.getInputTargetBlock('RETURN');
               if (returnBlock) {
                 const t = getType(returnBlock.type);
-                if (t !== TYPES.UNKNOWN) { varType = t; break; }
+                if (t !== TYPES.UNKNOWN) { blockVarType = t; break; }
               }
             }
           }
         } else {
-          varType = getType(valueBlock.type);
+          blockVarType = getType(valueBlock.type);
+        }
+        if (blockVarType !== 'var') {
+          collectedSetterTypes.push(blockVarType);
         }
       }
-      if(varType !== 'var') {
-        return varType;
-      }
     }
+  }
+
+  if (collectedSetterTypes.length > 0) {
+    // Fast path: all assignments have the same type.
+    if (collectedSetterTypes.every(t => t === collectedSetterTypes[0])) {
+      return collectedSetterTypes[0];
+    }
+    // Polymorphic case: multiple distinct class types → find their LCA.
+    if (collectedSetterTypes.every(t => !PRIMITIVE_TYPES.has(t))) {
+      return findCommonSupertype(collectedSetterTypes);
+    }
+    // Mixed primitive/class types – fall back to first resolved type (legacy).
+    return collectedSetterTypes[0];
   }
 
   
@@ -376,7 +517,10 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
         if (gb.getParent().type === 'logic_compare') {
           if(useCompares)
           {
-            return compareControl(workSpace, gb.getParent(), varId)
+            // Pass recursionDeepness - 1 to prevent infinite recursion;
+            // compareControl used to call getVariableType without a depth
+            // argument which silently reset it to 10 on every call.
+            return compareControl(workSpace, gb.getParent(), varId, recursionDeepness - 1);
           }
         }
         //control if it is used to set a variable. if yes, use that type
@@ -534,10 +678,12 @@ export function getVariableType(workSpace, varId, useCompares, recursionDeepness
 
 //takes a logic_compare block and checks what is compared
 //only to be used by the getVarType function
-export function compareControl(workSpace, block, varId) {
+export function compareControl(workSpace, block, varId, recursionDeepness = 9) {
   if(block.type !== 'logic_compare') {
     return null;
   }
+
+  if (recursionDeepness <= 0) return 'var';
 
   let left = block.getInputTargetBlock('A');
   let right = block.getInputTargetBlock('B');
@@ -559,13 +705,13 @@ export function compareControl(workSpace, block, varId) {
 
   if(leftIsVar && left.getFieldValue('VAR') === varId) {
     if(rightIsVar) {
-      return getVariableType(workSpace, right.getFieldValue('VAR'), false);
+      return getVariableType(workSpace, right.getFieldValue('VAR'), false, recursionDeepness);
     }
     return getType(right.type);
   }
   else if(rightIsVar && right.getFieldValue('VAR') === varId) {
     if(leftIsVar) {
-      return getVariableType(workSpace, left.getFieldValue('VAR'), false);
+      return getVariableType(workSpace, left.getFieldValue('VAR'), false, recursionDeepness);
     }
     return getType(left.type);
   }

@@ -147,14 +147,14 @@ function buildCallArgs(block, generator) {
 export function java_static_method_call_noreturn(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return `${name}(${args});
+  return `${getClassName()}.${name}(${args});
 `;
 }
 
 export function java_static_method_call_return(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return [`${name}(${args})`, Order.ATOMIC];
+  return [`${getClassName()}.${name}(${args})`, Order.ATOMIC];
 }
 
 export function java_method_call_noreturn(block, generator) {

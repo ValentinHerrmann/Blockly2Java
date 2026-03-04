@@ -36,7 +36,10 @@ Blockly.Blocks["defconstructor"] = {
       argument.setAttribute('varid', id);
       container.appendChild(argument);
     }
-    this.updateShape_();
+    // NOTE: do NOT call updateShape_() here.
+    // mutationToDom is called during workspace serialization (save); calling
+    // updateShape_() would fire a BLOCK_CHANGE event from inside the save
+    // listener, causing an endless save → mutate → event → save cycle.
     return container;
   },
 
@@ -229,116 +232,140 @@ Blockly.Blocks['callconstructor'] = {
     }
   },
 
-  onchange: function (event) {
-    if (
-      event.type === Blockly.Events.BLOCK_CHANGE &&
-      event.blockId === this.id &&
-      event.name === 'CONSTRUCTOR_CLASS'
-    ) {
-      this.updateShape_();
-    }
-  },
-
+  /**
+   * Rebuild the block's visual shape (inputs / fields) to match the
+   * currently selected constructor.
+   *
+   * ALL Blockly events are suppressed for the entire rebuild so that
+   * removeInput / appendInput / appendField / setValue cannot fire
+   * BLOCK_CHANGE events that re-trigger the workspace change-listener,
+   * which was the root cause of the infinite loop.
+   *
+   * This is called from the dropdown VALIDATOR (synchronously, before any
+   * Blockly events fire) so that the block shape is always consistent with
+   * the field value at the time any change listener sees it.
+   *
+   * @param {string=} value  Optional explicit value; if omitted the
+   *   current CONSTRUCTOR_CLASS field value is read.
+   */
   updateShape_: function (value) {
-    // Guard against re-entrancy (FieldDropdown init triggers the validator
-    // which would call updateShape_ again).
     if (this._updatingShape_) return;
     this._updatingShape_ = true;
     try {
-      this._updateShapeInner_(value);
+      // ── Suppress every event the rebuild would otherwise emit ──
+      Blockly.Events.disable();
+      try {
+        this._updateShapeInner_(value);
+      } finally {
+        Blockly.Events.enable();
+      }
     } finally {
       this._updatingShape_ = false;
     }
   },
 
   _updateShapeInner_: function (value) {
-    // Accept value as argument (called from validator before field is committed)
-    // or fall back to reading the field (called from onchange / loadExtraState).
+    // Accept value as argument (called from loadExtraState / validator)
+    // or fall back to reading the field (called from onchange).
     if (value === undefined) {
       value = this.getFieldValue('CONSTRUCTOR_CLASS');
     }
 
-    // Save connections from existing ARG inputs.
+    // ── Save connections from existing ARG inputs ────────────────────────
     const savedConns = {};
     for (const arg of (this.arguments_ || [])) {
       const inp = this.getInput('ARG_' + arg);
       if (inp && inp.connection) savedConns[arg] = inp.connection.targetConnection;
     }
 
-    // Remove all existing ARG inputs.
+    // ── Remove all existing inputs ──────────────────────────────────────
     for (const arg of (this.arguments_ || [])) {
       if (this.getInput('ARG_' + arg)) this.removeInput('ARG_' + arg);
     }
-    // Remove TOP_LINE so we can recreate it in the right style.
     if (this.getInput('TOP_LINE')) this.removeInput('TOP_LINE');
 
+    // ── Helper: create a dropdown with a shape-update validator ──────────
+    // The validator fires synchronously BEFORE Blockly dispatches the
+    // BLOCK_CHANGE event, so the block shape is always consistent with the
+    // field value by the time any workspace change listener serializes it.
+    // The _updatingShape_ guard prevents validator → updateShape_ →
+    // make new dropdown → validator re-entrancy.
+    const block = this;
+    const makeDropdown = () => {
+      const dd = new Blockly.FieldDropdown(() => block.getConstructorOptions_());
+      dd.setValidator(function (newValue) {
+        if (!block._updatingShape_ && newValue !== block.getFieldValue('CONSTRUCTOR_CLASS')) {
+          block.updateShape_(newValue);
+        }
+        return newValue; // accept the value
+      });
+      return dd;
+    };
+
+    // ── Helper: force-set the field value ───────────────────────────────
+    // Temporarily patches getOptions so the value is accepted even if
+    // the dynamic option list hasn't been re-evaluated yet.
+    const forceSetField = (field, val, displayLabel) => {
+      if (!field) return;
+      const origGet = field.getOptions.bind(field);
+      field.getOptions = () => {
+        const opts = origGet();
+        if (!opts.find(([, v]) => v === val)) {
+          opts.push([displayLabel || val, val]);
+        }
+        return opts;
+      };
+      field.setValue(val);          // events are already disabled by the caller
+      field.getOptions = origGet;   // restore original getter
+    };
+
+    // ── NONE / empty ────────────────────────────────────────────────────
     if (!value || value === 'NONE') {
       this.arguments_ = [];
       this.setOutput(true, 'CLASS');
-      const block = this;
-      const dd = new Blockly.FieldDropdown(
-        () => block.getConstructorOptions_(),
-        function (newVal) { if (block.updateShape_) block.updateShape_(newVal); return newVal; }
-      );
-      this.appendDummyInput('TOP_LINE').appendField('new ').appendField(dd, 'CONSTRUCTOR_CLASS');
+      this.appendDummyInput('TOP_LINE')
+        .appendField('new ')
+        .appendField(makeDropdown(), 'CONSTRUCTOR_CLASS');
       return;
     }
 
-    // Value format: "ClassName:::arg1,arg2"
+    // ── Parse "ClassName:::arg1,arg2" ───────────────────────────────────
     const sepIdx = value.indexOf(':::');
     const className = sepIdx >= 0 ? value.slice(0, sepIdx) : value;
-    const argsStr = sepIdx >= 0 ? value.slice(sepIdx + 3) : '';
+    const argsStr  = sepIdx >= 0 ? value.slice(sepIdx + 3) : '';
     this.arguments_ = argsStr ? argsStr.split(',').filter(a => a) : [];
 
     this.setOutput(true, className);
 
-    const block = this;
-    const makeDropdown = () => {
-      const dd = new Blockly.FieldDropdown(
-        () => block.getConstructorOptions_(),
-        function (newVal) { if (block.updateShape_) block.updateShape_(newVal); return newVal; }
-      );
-      return dd;
-    };
+    const displayLabel = className + '(' + this.arguments_.join(', ') + ')';
 
     if (this.arguments_.length === 0) {
-      const dd = makeDropdown();
-      this.appendDummyInput('TOP_LINE').appendField('new ').appendField(dd, 'CONSTRUCTOR_CLASS');
-      // Force the field to the correct value after appending.
-      const field = this.getField('CONSTRUCTOR_CLASS');
-      if (field && value) {
-        const origOpts = field.getOptions.bind(field);
-        field.getOptions = () => { const opts = origOpts(); if (!opts.find(([, v]) => v === value)) opts.push([className + '()', value]); return opts; };
-        field.setValue(value);
-        field.getOptions = origOpts;
-      }
+      // ── No-arg constructor ────────────────────────────────────────────
+      this.appendDummyInput('TOP_LINE')
+        .appendField('new ')
+        .appendField(makeDropdown(), 'CONSTRUCTOR_CLASS');
+      forceSetField(this.getField('CONSTRUCTOR_CLASS'), value, displayLabel);
     } else {
-      // First arg connector on the same row as 'new ClassName('.
+      // ── Constructor with args ─────────────────────────────────────────
       const firstArg = this.arguments_[0];
-      const dd = makeDropdown();
       this.appendValueInput('ARG_' + firstArg)
         .appendField('new ')
-        .appendField(dd, 'CONSTRUCTOR_CLASS')
+        .appendField(makeDropdown(), 'CONSTRUCTOR_CLASS')
         .appendField('( ' + firstArg + (this.arguments_.length > 1 ? ' ,' : ' )'));
-      // Force the field to the correct value.
-      const field = this.getField('CONSTRUCTOR_CLASS');
-      if (field && value) {
-        const origOpts = field.getOptions.bind(field);
-        field.getOptions = () => { const opts = origOpts(); if (!opts.find(([, v]) => v === value)) opts.push([className + '(' + this.arguments_.join(', ') + ')', value]); return opts; };
-        field.setValue(value);
-        field.getOptions = origOpts;
-      }
+      forceSetField(this.getField('CONSTRUCTOR_CLASS'), value, displayLabel);
+
       // Restore first-arg connection.
-      if (savedConns[firstArg] && savedConns[firstArg].getSourceBlock && savedConns[firstArg].getSourceBlock().workspace) {
+      if (savedConns[firstArg]?.getSourceBlock?.()?.workspace) {
         this.getInput('ARG_' + firstArg).connection.connect(savedConns[firstArg]);
       }
+
       // Remaining args below, right-aligned.
       for (let j = 1; j < this.arguments_.length; j++) {
         const arg = this.arguments_[j];
         this.appendValueInput('ARG_' + arg)
           .setAlign(Blockly.inputs.Align.RIGHT)
           .appendField(arg + (j + 1 === this.arguments_.length ? ' )' : ' ,'));
-        if (savedConns[arg] && savedConns[arg].getSourceBlock && savedConns[arg].getSourceBlock().workspace) {
+        if (savedConns[arg]?.getSourceBlock?.()?.workspace) {
           this.getInput('ARG_' + arg).connection.connect(savedConns[arg]);
         }
       }
