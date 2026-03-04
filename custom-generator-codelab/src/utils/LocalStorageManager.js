@@ -339,6 +339,17 @@ class LocalStorageManager {
             }
             if (csChanged2) globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore2));
         }
+
+        // Migrate method definitions keyed by class name.
+        const methodDefsRaw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        if (methodDefsRaw) {
+            const methodDefsStore = JSON.parse(methodDefsRaw) || {};
+            if (methodDefsStore[className] !== undefined) {
+                methodDefsStore[newClassName] = methodDefsStore[className];
+                delete methodDefsStore[className];
+                globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(methodDefsStore));
+            }
+        }
         // Migrate super-call type hints where className appears as either
         // the sub-class key or the parentClass value.
         const hintsRaw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
