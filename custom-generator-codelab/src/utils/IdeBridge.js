@@ -40,10 +40,11 @@ export class IdeBridge {
     const ideAccess = globalThis.online_ide_access.getIDE('Java');
     const files = ideAccess.getFiles();
     const selectedFileName = this.selected_file_name;
+    if (!selectedFileName) return;
 
     for (const element of files) {
       const file = element;
-      if (file.getName() === selectedFileName || selectedFileName === '') {
+      if (file.getName() === selectedFileName) {
         //console.log('Name: ' + file.getName());
         file.setText(modCode);
       }
@@ -143,8 +144,8 @@ export class IdeBridge {
 
     // If the deleted file was currently active, clear the Blockly workspace.
     if (this.selected_file_name === fileName) {
-      Blockly.getMainWorkspace()?.clear();
       this.selected_file_name = '';
+      Blockly.getMainWorkspace()?.clear();
       this.syncClassNameFromIDE();
     }
   }

@@ -265,6 +265,7 @@ export function onBlocksChange() {
   // Do not overwrite manually edited Java code.  This guard covers every call
   // site: Blockly events, post-import, post-clone/pull, etc.
   const className = IdeBridge.selected_file_name.replace('.java', '');
+  if (!className) return;
   if (className && LocalStorageManager.isJavaModified(className)) {
     BlocklyOverlayManager.show();
     return;
@@ -442,13 +443,16 @@ function setupWorkspaceActions() {
       const confirmed = await GitDialog.showClearConfirm();
       if (!confirmed) return;
 
-      WorkspaceManager.clearWorkspace(ws);
+      for(var i = 0; i < 2; i++) {
+          WorkspaceManager.clearWorkspace(ws);
 
-      // Push freshly generated code (empty template) into the new Main.java.
-      onBlocksChange();
+        // Push freshly generated code (empty template) into the new Main.java.
+        onBlocksChange();
 
-      // After clearing, update git button states (clone becomes available again).
-      updateGitButtonStates();
+        // After clearing, update git button states (clone becomes available again).
+        updateGitButtonStates();
+
+      }
     });
   }
 
