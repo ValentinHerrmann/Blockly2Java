@@ -9,7 +9,7 @@ import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
-import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory } from './blocks/java_variable_blocks.js';
+import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import * as JAVA_METHODS from './blocks/java_method_blocks.js';
 import {getClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
@@ -93,6 +93,7 @@ function setupBlockly(theme) {
   workspace.registerToolboxCategoryCallback('JAVA_STATIC_ATTR', staticAttrFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_PARAM', paramFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_VARIABLES_ALL', allVariablesFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_ATTR', allAttrFlyoutCategory);
 
   // Button callbacks: open the built-in dialog but create a typed variable.
   workspace.registerButtonCallback('CREATE_JAVA_NORMAL_ATTR',
@@ -101,7 +102,10 @@ function setupBlockly(theme) {
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'local'));
   workspace.registerButtonCallback('CREATE_JAVA_STATIC_ATTR',
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'static'));
-
+  // Toolbox config editor button.
+  document.getElementById('toolboxConfigBtn')?.addEventListener('click', () => {
+    ToolboxConfigManager.openConfigEditor(ws, FULL_ACTIVE_CONFIG);
+  });
   return workspace;
 }
 

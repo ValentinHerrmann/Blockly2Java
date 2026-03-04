@@ -147,10 +147,20 @@ export const FULL_ACTIVE_CONFIG = {
       name: 'Variablen',
       active: true,
       subcategories: [
-        { name: 'Lokale Variablen',    active: true },
-        { name: 'Attribute',           active: true },
-        { name: 'Statische Attribute', active: true },
+        { name: 'Lokale Variablen', active: true },
       ],
+    },
+    {
+      name: 'Attribute',
+      active: true,
+      subcategories: [
+        { name: 'Instanz-Attribute', active: true },
+        { name: 'Klassen-Attribute', active: true },
+      ],
+    },
+    {
+      name: 'Parameter',
+      active: true,
     },
     {
       name: 'Methoden',

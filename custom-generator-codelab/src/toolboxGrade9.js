@@ -582,8 +582,20 @@ export const toolbox = {
         {
             'kind': 'category',
             'name': 'Variablen',
-            'categorystyle': 'variable_category',
+            'colour': '#55AA55',
             'custom': 'JAVA_VARIABLES_ALL',
+        },
+        {
+            'kind': 'category',
+            'name': 'Attribute',
+            'categorystyle': 'variable_category',
+            'custom': 'JAVA_ATTR',
+        },
+        {
+            'kind': 'category',
+            'name': 'Parameter',
+            'colour': '#CC8800',
+            'custom': 'JAVA_PARAM',
         },
         {
             'kind': 'sep',

@@ -323,19 +323,20 @@ function makeCallBlock(callType, name, argNames) {
 }
 
 export function methodFlyoutCategory(workspace) {
-  const methodConfig    = ToolboxConfigManager.getSubcategoryConfig('Methoden');
+  const methodConfig = ToolboxConfigManager.getSubcategoryConfig('Methoden');
   const showGroup = (name) => !methodConfig || methodConfig.get(name) !== false;
+  // When the dedicated Parameter category is hidden, show params inline here.
+  const showParamsInline = !ToolboxConfigManager.isCategoryActive('Parameter');
 
   const xmlList = [];
 
-  // ── Constructor parameters ──────────────────────────────────────────────
-  // Scan all defconstructor blocks and add param-get blocks so students can
-  // read constructor parameters inside their method bodies.
-  const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
-  for (const ctrBlock of ctrBlocks) {
-    const argNames = ctrBlock.arguments_ || [];
-    if (argNames.length > 0) {
-      xmlList.push(makeLabel('Konstruktor-Parameter'));
+  // ── Constructor parameters (inline fallback) ───────────────────────────
+  if (showParamsInline) {
+    const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
+    for (const ctrBlock of ctrBlocks) {
+      const argNames = ctrBlock.arguments_ || [];
+      if (argNames.length === 0) continue;
+      xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
       for (let pi = 0; pi < argNames.length; pi++) {
         const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
         if (paramVar) {
@@ -366,28 +367,29 @@ export function methodFlyoutCategory(workspace) {
       if (showDef(def.type)) xmlList.push(makeBlockTemplate(def.type));
     }
 
-    // Call blocks + param-get blocks – only for active def types.
+    // Call blocks – only for active def types.
     for (const { defType, callType } of group.calls) {
       if (!showDef(defType)) continue;
       for (const block of workspace.getBlocksByType(defType, true)) {
         const name = block.getFieldValue('NAME') || 'unbekannt';
         const argNames = block.arguments_ || [];
 
-        // Call block — small gap so params feel attached.
+        // Call block.
         const callBlock = makeCallBlock(callType, name, argNames);
-        callBlock.setAttribute('gap', argNames.length > 0 ? '4' : '16');
+        callBlock.setAttribute('gap', showParamsInline && argNames.length > 0 ? '4' : '16');
         xmlList.push(callBlock);
 
-        // Param-get blocks directly below — tight gap between them,
-        // larger gap after the last one to separate from the next method.
-        for (let pi = 0; pi < argNames.length; pi++) {
-          const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
-          if (paramVar) {
-            const getBlock = Blockly.utils.xml.createElement('block');
-            getBlock.setAttribute('type', 'java_param_get');
-            getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
-            getBlock.appendChild(varField(paramVar));
-            xmlList.push(getBlock);
+        // Inline param-get blocks when Parameter category is hidden.
+        if (showParamsInline) {
+          for (let pi = 0; pi < argNames.length; pi++) {
+            const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
+            if (paramVar) {
+              const getBlock = Blockly.utils.xml.createElement('block');
+              getBlock.setAttribute('type', 'java_param_get');
+              getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
+              getBlock.appendChild(varField(paramVar));
+              xmlList.push(getBlock);
+            }
           }
         }
       }
@@ -465,13 +467,58 @@ export function normalAttrFlyoutCategory(workspace) {
 export function paramFlyoutCategory(workspace) {
   const xmlList = [];
   // No create-button: params are created via the method block mutator.
-  for (const variable of workspace.getVariablesOfType(VAR_TYPE_PARAM)) {
+  // Group param blocks by their source method/constructor with a heading label.
+
+  // Helper to push a label
+  function pushLabel(text, gap = '8') {
+    const lbl = Blockly.utils.xml.createElement('label');
+    lbl.setAttribute('text', text);
+    lbl.setAttribute('gap', gap);
+    xmlList.push(lbl);
+  }
+
+  // Helper to push a param-get block for a variable
+  function pushParamBlock(variable, isLast) {
     const getBlock = Blockly.utils.xml.createElement('block');
     getBlock.setAttribute('type', 'java_param_get');
-    getBlock.setAttribute('gap', '8');
+    getBlock.setAttribute('gap', isLast ? '16' : '4');
     getBlock.appendChild(varField(variable));
     xmlList.push(getBlock);
   }
+
+  // ── Constructor parameters ──────────────────────────────────────────────
+  const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
+  for (const ctrBlock of ctrBlocks) {
+    const argNames = ctrBlock.arguments_ || [];
+    if (argNames.length === 0) continue;
+    pushLabel('Konstruktor(' + argNames.join(', ') + ')');
+    for (let i = 0; i < argNames.length; i++) {
+      const paramVar = workspace.getVariable(argNames[i], VAR_TYPE_PARAM);
+      if (paramVar) pushParamBlock(paramVar, i === argNames.length - 1);
+    }
+  }
+
+  // ── Method parameters ───────────────────────────────────────────────────
+  const METHOD_BLOCK_TYPES = [
+    'java_method_noreturn',
+    'java_method_return',
+    'java_static_method_noreturn',
+    'java_static_method_return',
+  ];
+
+  for (const blockType of METHOD_BLOCK_TYPES) {
+    for (const methodBlock of workspace.getBlocksByType(blockType, true)) {
+      const argNames = methodBlock.arguments_ || [];
+      if (argNames.length === 0) continue;
+      const methodName = methodBlock.getFieldValue('NAME') || 'unbekannt';
+      pushLabel(methodName + '(' + argNames.join(', ') + ')');
+      for (let i = 0; i < argNames.length; i++) {
+        const paramVar = workspace.getVariable(argNames[i], VAR_TYPE_PARAM);
+        if (paramVar) pushParamBlock(paramVar, i === argNames.length - 1);
+      }
+    }
+  }
+
   return xmlList;
 }
 
@@ -558,41 +605,41 @@ export function staticAttrFlyoutCategory(workspace) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Combined flyout: Attribute + Stat. Attribute + Lok. Variablen in one panel
+// Combined flyout: Instanz-Attribute + Klassen-Attribute in one panel
+// ─────────────────────────────────────────────────────────────────────────────
+export function allAttrFlyoutCategory(workspace) {
+  const attrConfig = ToolboxConfigManager.getSubcategoryConfig('Attribute');
+  const show = (name) => !attrConfig || attrConfig.get(name) !== false;
+
+  const sections = [];
+
+  if (show('Instanz-Attribute')) {
+    sections.push(
+      ...normalAttrFlyoutCategory(workspace),
+    );
+  }
+
+  if (show('Klassen-Attribute')) {
+    sections.push(
+      ...staticAttrFlyoutCategory(workspace),
+    );
+  }
+
+  return sections;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Combined flyout: Lok. Variablen only (attributes moved to own category)
 // ─────────────────────────────────────────────────────────────────────────────
 export function allVariablesFlyoutCategory(workspace) {
   const varConfig = ToolboxConfigManager.getSubcategoryConfig('Variablen');
   const show = (name) => !varConfig || varConfig.get(name) !== false;
 
-  function sectionLabel(text, gap = '8') {
-    const lbl = Blockly.utils.xml.createElement('label');
-    lbl.setAttribute('text', text);
-    lbl.setAttribute('gap', gap);
-    return lbl;
-  }
-
   const sections = [];
 
   if (show('Lokale Variablen')) {
     sections.push(
-      sectionLabel('Lokale Variable'),
       ...localVarFlyoutCategory(workspace),
-    );
-  }
-
-  if (show('Attribute')) {
-    sections.push(
-      sectionLabel('Instanz-Attribute'),
-      sectionLabel('(1 Wert pro Objekt)'),
-      ...normalAttrFlyoutCategory(workspace),
-    );
-  }
-
-  if (show('Statische Attribute')) {
-    sections.push(
-      sectionLabel('Klassen-Attribute'),
-      sectionLabel('(1 Wert pro Klasse)'),
-      ...staticAttrFlyoutCategory(workspace),
     );
   }
 
