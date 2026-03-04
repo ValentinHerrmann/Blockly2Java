@@ -104,15 +104,17 @@ export function callconstructor(block, generator) {
   const funcName = sepIdx >= 0 ? dropdownValue.slice(0, sepIdx) : getClassName();
 
   const args = [];
-  // inputList[0] is the TOP_LINE dummy input; argument inputs start at index 1.
-  for (let inputNr = 1; inputNr < block.inputList.length; inputNr++) {
+  // Iterate all inputs that have a value connection (ARG inputs).
+  // The TOP_LINE input may be a DummyInput or a ValueInput (when the first arg
+  // is inlined on the same row as the dropdown), so we check by connection.
+  for (let inputNr = 0; inputNr < block.inputList.length; inputNr++) {
     if (block.inputList[inputNr].connection != null) {
       const paramId = block.inputList[inputNr].name;
       const inputBlock = block.inputList[inputNr].connection.targetBlock();
       if (inputBlock != null) {
-        args[inputNr - 1] = generator.valueToCode(block, paramId, Order.NONE);
+        args.push(generator.valueToCode(block, paramId, Order.NONE));
       } else {
-        args[inputNr - 1] = 'null';
+        args.push('null');
       }
     }
   }

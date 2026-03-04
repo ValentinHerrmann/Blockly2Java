@@ -175,31 +175,15 @@ Blockly.Blocks['argument_input'] = {
 /// Neuer Block für den Aufruf des benutzerdefinierten Blocks
 Blockly.Blocks['callconstructor'] = {
   init: function () {
-    const block = this;
-    this.appendDummyInput('TOP_LINE')
-      .appendField("new ")
-      .appendField(
-        new Blockly.FieldDropdown(
-          () => block.getConstructorOptions_(),
-          function (newValue) {
-            // Validator fires synchronously when the field value is set,
-            // including during JSON deserialization — before connections are
-            // restored. Create the ARG_ inputs here so they exist in time.
-            if (block.updateShape_) {
-              block.updateShape_(newValue);
-            }
-            return newValue;
-          }
-        ),
-        'CONSTRUCTOR_CLASS'
-      );
+    this.arguments_ = [];
+    this._updatingShape_ = false;
     this.setPreviousStatement(false, null);
     this.setNextStatement(false, null);
     this.setOutput(true, 'CLASS');
     this.setColour(230);
     this.setTooltip('');
     this.setHelpUrl('');
-    this.arguments_ = [];
+    // updateShape_ builds TOP_LINE (with the dropdown) and any ARG inputs.
     this.updateShape_();
   },
 
@@ -256,23 +240,47 @@ Blockly.Blocks['callconstructor'] = {
   },
 
   updateShape_: function (value) {
+    // Guard against re-entrancy (FieldDropdown init triggers the validator
+    // which would call updateShape_ again).
+    if (this._updatingShape_) return;
+    this._updatingShape_ = true;
+    try {
+      this._updateShapeInner_(value);
+    } finally {
+      this._updatingShape_ = false;
+    }
+  },
+
+  _updateShapeInner_: function (value) {
     // Accept value as argument (called from validator before field is committed)
     // or fall back to reading the field (called from onchange / loadExtraState).
     if (value === undefined) {
       value = this.getFieldValue('CONSTRUCTOR_CLASS');
     }
 
-    // Remove inputs created for previous argument list.
-    for (const arg of this.arguments_) {
-      const inputId = 'ARG_' + arg;
-      if (this.getInput(inputId)) {
-        this.removeInput(inputId);
-      }
+    // Save connections from existing ARG inputs.
+    const savedConns = {};
+    for (const arg of (this.arguments_ || [])) {
+      const inp = this.getInput('ARG_' + arg);
+      if (inp && inp.connection) savedConns[arg] = inp.connection.targetConnection;
     }
+
+    // Remove all existing ARG inputs.
+    for (const arg of (this.arguments_ || [])) {
+      if (this.getInput('ARG_' + arg)) this.removeInput('ARG_' + arg);
+    }
+    // Remove TOP_LINE so we can recreate it in the right style.
+    if (this.getInput('TOP_LINE')) this.removeInput('TOP_LINE');
 
     if (!value || value === 'NONE') {
       this.arguments_ = [];
       this.setOutput(true, 'CLASS');
+      const block = this;
+      const dd = new Blockly.FieldDropdown(
+        () => block.getConstructorOptions_(),
+        function (newVal) { if (block.updateShape_) block.updateShape_(newVal); return newVal; }
+      );
+      this.appendDummyInput('TOP_LINE').appendField('new ').appendField(dd, 'CONSTRUCTOR_CLASS');
       return;
     }
 
@@ -284,12 +292,55 @@ Blockly.Blocks['callconstructor'] = {
 
     this.setOutput(true, className);
 
-    for (const arg of this.arguments_) {
-      const inputId = 'ARG_' + arg;
-      if (!this.getInput(inputId)) {
-        this.appendValueInput(inputId)
-          .setCheck(null)
-          .appendField(arg);
+    const block = this;
+    const makeDropdown = () => {
+      const dd = new Blockly.FieldDropdown(
+        () => block.getConstructorOptions_(),
+        function (newVal) { if (block.updateShape_) block.updateShape_(newVal); return newVal; }
+      );
+      return dd;
+    };
+
+    if (this.arguments_.length === 0) {
+      const dd = makeDropdown();
+      this.appendDummyInput('TOP_LINE').appendField('new ').appendField(dd, 'CONSTRUCTOR_CLASS');
+      // Force the field to the correct value after appending.
+      const field = this.getField('CONSTRUCTOR_CLASS');
+      if (field && value) {
+        const origOpts = field.getOptions.bind(field);
+        field.getOptions = () => { const opts = origOpts(); if (!opts.find(([, v]) => v === value)) opts.push([className + '()', value]); return opts; };
+        field.setValue(value);
+        field.getOptions = origOpts;
+      }
+    } else {
+      // First arg connector on the same row as 'new ClassName('.
+      const firstArg = this.arguments_[0];
+      const dd = makeDropdown();
+      this.appendValueInput('ARG_' + firstArg)
+        .appendField('new ')
+        .appendField(dd, 'CONSTRUCTOR_CLASS')
+        .appendField('( ' + firstArg + (this.arguments_.length > 1 ? ' ,' : ' )'));
+      // Force the field to the correct value.
+      const field = this.getField('CONSTRUCTOR_CLASS');
+      if (field && value) {
+        const origOpts = field.getOptions.bind(field);
+        field.getOptions = () => { const opts = origOpts(); if (!opts.find(([, v]) => v === value)) opts.push([className + '(' + this.arguments_.join(', ') + ')', value]); return opts; };
+        field.setValue(value);
+        field.getOptions = origOpts;
+      }
+      // Restore first-arg connection.
+      if (savedConns[firstArg] && savedConns[firstArg].getSourceBlock && savedConns[firstArg].getSourceBlock().workspace) {
+        this.getInput('ARG_' + firstArg).connection.connect(savedConns[firstArg]);
+      }
+      // Remaining args below, right-aligned.
+      for (let j = 1; j < this.arguments_.length; j++) {
+        const arg = this.arguments_[j];
+        this.appendValueInput('ARG_' + arg)
+          .setAlign(Blockly.inputs.Align.RIGHT)
+          .appendField(arg + (j + 1 === this.arguments_.length ? ' )' : ' ,'));
+        if (savedConns[arg] && savedConns[arg].getSourceBlock && savedConns[arg].getSourceBlock().workspace) {
+          this.getInput('ARG_' + arg).connection.connect(savedConns[arg]);
+        }
       }
     }
   }
@@ -410,6 +461,8 @@ Blockly.Blocks['java_super_call'] = {
 
   /**
    * Rebuilds value inputs ARG0..ARGn from argNames.
+   * The first arg connector sits on the same row as the 'super(' label,
+   * matching the visual style of normal method-call blocks.
    * Existing connections are preserved if the arg count doesn't shrink.
    */
   updateShape_: function (argNames) {
@@ -426,21 +479,29 @@ Blockly.Blocks['java_super_call'] = {
 
     this.argNames_ = argNames || [];
 
-    // Update the TOP_LINE label.
-    const label = this.argNames_.length
-      ? 'super(' + this.argNames_.join(', ') + ')'
-      : 'super()';
-    this.setFieldValue(label, 'SUPER_LABEL');
+    // Rebuild TOP_LINE and arg inputs.
+    if (this.getInput('TOP_LINE')) { this.removeInput('TOP_LINE'); }
 
-    // Recreate value inputs with proper type-check.
-    for (let j = 0; j < this.argNames_.length; j++) {
-      this.appendValueInput('ARG' + j)
-        .setCheck(null)
-        .setAlign(Blockly.inputs.Align.RIGHT)
-        .appendField(this.argNames_[j]);
-      // Restore previous connection if still alive.
-      if (saved[j] && saved[j].getSourceBlock().workspace) {
-        this.getInput('ARG' + j).connection.connect(saved[j]);
+    if (this.argNames_.length === 0) {
+      // No args: plain dummy with 'super()' label.
+      this.appendDummyInput('TOP_LINE').appendField('super()', 'SUPER_LABEL');
+    } else {
+      // First arg connector on the same row as the 'super(' label.
+      const label0 = this.argNames_[0];
+      this.appendValueInput('ARG0')
+        .appendField('super( ' + label0 + (this.argNames_.length > 1 ? ' ,' : ' )'));
+      if (saved[0] && saved[0].getSourceBlock().workspace) {
+        this.getInput('ARG0').connection.connect(saved[0]);
+      }
+      // Remaining args below, right-aligned.
+      for (let j = 1; j < this.argNames_.length; j++) {
+        const label = this.argNames_[j];
+        this.appendValueInput('ARG' + j)
+          .setAlign(Blockly.inputs.Align.RIGHT)
+          .appendField(label + (j + 1 === this.argNames_.length ? ' )' : ' ,'));
+        if (saved[j] && saved[j].getSourceBlock().workspace) {
+          this.getInput('ARG' + j).connection.connect(saved[j]);
+        }
       }
     }
   },
