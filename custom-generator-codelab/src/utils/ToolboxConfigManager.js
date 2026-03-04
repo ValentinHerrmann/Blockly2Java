@@ -21,9 +21,8 @@
  *       "name": "Variablen",    // dynamic flyout category
  *       "active": true,
  *       "subcategories": [      // controls which sections appear inside the flyout
- *         { "name": "Attribute",           "active": true  },
- *         { "name": "Lokale Variablen",    "active": true  },
- *         { "name": "Statische Attribute", "active": false }
+ *         { "name": "Lokale Variablen",  "active": true  },
+ *         { "name": "Globale Variablen", "active": false }
  *       ]
  *     },
  *     {
@@ -35,7 +34,7 @@
  *       ]
  *     },
  *     {
- *       "name": "Attribute",   // dynamic flyout: normal + static attributes
+ *       "name": "Attribute",    // dynamic flyout category
  *       "active": true,
  *       "subcategories": [
  *         { "name": "Instanz-Attribute",  "active": true },
@@ -43,8 +42,8 @@
  *       ]
  *     },
  *     {
- *       "name": "Parameter",   // dynamic flyout: param blocks grouped by method
- *       "active": true         // false → hide entire category
+ *       "name": "Parameter",    // dynamic flyout: parameter blocks grouped by method
+ *       "active": true          // false → hide entire category
  *     }
  *   ]
  * }
@@ -56,7 +55,7 @@
  *    blocks that are themselves marked "active": true.
  *  - A category entry with a "subcategories" array controls which sections are
  *    rendered inside the flyout of dynamic (custom) categories such as
- *    "Variablen" and "Methoden". Unlisted subcategories default to active.
+ *    "Variablen", "Methoden", and "Attribute". Unlisted subcategories default to active.
  *  - Categories without an entry in the config are shown unchanged (default-on).
  *  - Dynamic categories (those with a "custom" property) support only the
  *    category-level active flag and the subcategories array.
