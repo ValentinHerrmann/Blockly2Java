@@ -12,6 +12,7 @@
 // Former goog.module ID: Blockly.JavaScript
 
 import * as Blockly from 'blockly/core';
+import LocalStorageManager from '../../utils/LocalStorageManager.js';
 //\import { block } from 'blockly/core/tooltip';
 //import { block } from 'blockly/core/tooltip';
 // import type {Block} from '../../core/block.js';
@@ -174,6 +175,81 @@ export function getType(var_type) {
   return TYPES.UNKNOWN;
 }
 
+
+/**
+ * Resolves the Java type of a block connected as an argument value.
+ *
+ * Unlike the simple `getType(block.type)`, this handles:
+ *  - callconstructor → extracts the actual class name from the dropdown
+ *  - method call return blocks → looks up the matching def block
+ *  - variable getters → delegates to getVariableType, then falls back to
+ *    cross-workspace constructor-callsite hints stored in LocalStorage
+ *
+ * Exported so other generators can use it without circular imports.
+ *
+ * @param {Blockly.Block} argBlock
+ * @param {Blockly.Workspace} workspace
+ * @returns {string} Java type string, or TYPES.UNKNOWN
+ */
+export function resolveArgBlockType(argBlock, workspace) {
+  if (!argBlock) return TYPES.UNKNOWN;
+
+  // callconstructor – extract actual class name from the dropdown
+  if (argBlock.type === 'callconstructor') {
+    const dv = argBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
+    const sep = dv.indexOf(':::');
+    return (sep >= 0 ? dv.slice(0, sep) : '') || TYPES.UNKNOWN;
+  }
+
+  // method call with return value – look up matching def block's return type
+  if (argBlock.type === 'java_method_call_return' ||
+      argBlock.type === 'java_static_method_call_return') {
+    const methodName = argBlock.getFieldValue('NAME');
+    const defType = argBlock.type === 'java_static_method_call_return'
+      ? 'java_static_method_return' : 'java_method_return';
+    for (const defBlock of workspace.getBlocksByType(defType, true)) {
+      if (defBlock.getFieldValue('NAME') === methodName) {
+        const returnBlock = defBlock.getInputTargetBlock('RETURN');
+        if (returnBlock) {
+          const t = resolveArgBlockType(returnBlock, workspace);
+          if (t !== TYPES.UNKNOWN) return t;
+        }
+      }
+    }
+    return TYPES.UNKNOWN;
+  }
+
+  // variable getter – try getVariableType first, then callsite hints
+  const GETTER_TYPES = new Set([
+    'variables_get', 'java_local_var_get', 'java_static_attr_get',
+    'java_normal_attr_get', 'java_param_get',
+  ]);
+  if (GETTER_TYPES.has(argBlock.type)) {
+    const varId = argBlock.getFieldValue('VAR');
+    if (varId) {
+      const t = getVariableType(workspace, varId, false);
+      if (t && t !== 'var' && t !== TYPES.UNKNOWN) return t;
+
+      // Type is unknown in the local workspace (e.g. the variable is a
+      // constructor parameter whose call site is in another class's workspace).
+      // Check callsite hints stored during that other class's generation.
+      const ctorBlocks = workspace.getBlocksByType('defconstructor', false);
+      for (const ctorBlock of ctorBlocks) {
+        const varModels = ctorBlock.getVarModels ? ctorBlock.getVarModels() : [];
+        const idx = varModels.findIndex(v => v.getId() === varId);
+        if (idx >= 0) {
+          const callsiteHints = LocalStorageManager.getConstructorCallsiteHints(getClassName());
+          if (callsiteHints && callsiteHints[idx] != null) return callsiteHints[idx];
+          break;
+        }
+      }
+    }
+    return TYPES.UNKNOWN;
+  }
+
+  // literal / math / boolean / etc.
+  return getType(argBlock.type);
+}
 
 export function adjustStaticName(name) {
   if(name.startsWith('static_')) {
@@ -760,6 +836,34 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     /*if (defvars.length) {
       this.definitions_['variables'] = 'var ' + defvars.join(', ') + ';';
     }*/
+    // ── Scan callconstructor blocks → store cross-class parameter type hints ──
+    // When this workspace calls new OtherClass(arg, ...) we persist the inferred
+    // argument types so OtherClass's defconstructor can use them even though the
+    // call site lives in a different class workspace.
+    const _callerClass = getClassName();
+    if (_callerClass) {
+      const _callHintsByCallee = {};
+      for (const callBlock of workspace.getBlocksByType('callconstructor', true)) {
+        const _dv = callBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
+        const _sep = _dv.indexOf(':::');
+        if (_sep < 0) continue;
+        const _calledClass = _dv.slice(0, _sep);
+        if (!_calledClass || _calledClass === 'NONE') continue;
+        const _types = [];
+        // inputList[0] is the TOP_LINE dummy; argument inputs start at 1.
+        for (let _n = 1; _n < callBlock.inputList.length; _n++) {
+          const _conn = callBlock.inputList[_n].connection;
+          const _argBlock = _conn ? _conn.targetBlock() : null;
+          const _t = resolveArgBlockType(_argBlock, workspace);
+          _types.push(_t !== TYPES.UNKNOWN ? _t : null);
+        }
+        if (_types.some(_t => _t !== null)) {
+          _callHintsByCallee[_calledClass] = _types;
+        }
+      }
+      LocalStorageManager.storeConstructorCallsiteHintsByClass(_callerClass, _callHintsByCallee);
+    }
+
     this.isInitialized = true;
   }
 

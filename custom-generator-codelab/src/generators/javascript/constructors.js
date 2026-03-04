@@ -11,7 +11,7 @@
 // Former goog.module ID: Blockly.JavaScript.procedures
 
 import { javascriptGenerator } from 'blockly/javascript.js';
-import {getType, getVariableType, Order, getClassName, setExtendsClass, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, resolveArgBlockType, Order, getClassName, setExtendsClass, TYPES} from './javascript_generator.js';
 import * as Blockly from "blockly";
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
@@ -59,12 +59,23 @@ export function defconstructor(block, generator) {
   if(variables !== null) {
     let vars = block.getVarModels();
     let paramTypes = [];
+    // Fetch any super-call type hints stored by sub-class workspaces.
+    const superHints = LocalStorageManager.getSuperCallTypeHints(className);
     for(let j = 0; j < vars.length; j++)
     {
       paramTypes[j] = getVariableType(ws, vars[j].getId(), true);
       if(paramTypes[j] === 'var')
       {
-        paramTypes[j] = 'Object';
+        // 1. Try callsite hints stored when another class called new ClassName(...).
+        const callsiteHints = LocalStorageManager.getConstructorCallsiteHints(className);
+        if (callsiteHints && callsiteHints[j] != null) {
+          paramTypes[j] = callsiteHints[j];
+        // 2. Try super-call hints left by sub-class java_super_call generators.
+        } else if (superHints && variables[j] && superHints[variables[j]]) {
+          paramTypes[j] = superHints[variables[j]];
+        } else {
+          paramTypes[j] = 'Object';
+        }
       }
     }
     console.log("variables: " + variables);
@@ -123,6 +134,32 @@ export function java_extends(block, generator) {
 export function java_super_call(block, generator) {
   const args = [];
   const argNames = block.argNames_ || [];
+
+  // ── Collect type hints for the super-class constructor parameters ─────
+  // Hints are stored keyed by the *sub-class* name so they are replaced on
+  // every regeneration (clearConstructors clears them before generateCode).
+  const ws = Blockly.getMainWorkspace();
+  const extendsBlocks = ws ? ws.getBlocksByType('java_extends', false) : [];
+  const parentClass = extendsBlocks.length > 0
+    ? extendsBlocks[0].getFieldValue('PARENT_CLASS')
+    : null;
+  if (parentClass && parentClass !== 'NONE') {
+    const subClass = getClassName();
+    const typeHints = {};
+    for (let i = 0; i < argNames.length; i++) {
+      const inp = block.getInput('ARG' + i);
+      if (inp && inp.connection && inp.connection.targetBlock()) {
+        const argBlock = inp.connection.targetBlock();
+        const t = resolveArgBlockType(argBlock, ws);
+        if (t && t !== TYPES.UNKNOWN) {
+          typeHints[argNames[i]] = t;
+        }
+      }
+    }
+    // Always write (even if empty) so a previously non-empty entry is cleared.
+    LocalStorageManager.storeSuperCallTypeHints(subClass, parentClass, typeHints);
+  }
+
   for (let i = 0; i < argNames.length; i++) {
     const inp = block.getInput('ARG' + i);
     if (inp && inp.connection && inp.connection.targetBlock()) {

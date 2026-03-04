@@ -64,6 +64,32 @@ export class IdeBridge {
   }
 
   /**
+   * Pushes generated code to the IDE file for a specific class without
+   * affecting the overlay or the currently selected file name.
+   * Intended for background (batch) re-generation passes.
+   * @param {string} className  Class name (without .java extension)
+   * @param {string} modCode    Transformed Java code to write
+   */
+  static pushCodeToIDEForClass(className, modCode) {
+    if (!globalThis.online_ide_access) return;
+    const ideAccess = globalThis.online_ide_access.getIDE?.('Java');
+    if (!ideAccess) return;
+
+    const fileName = className + '.java';
+    for (const file of ideAccess.getFiles()) {
+      if (file.getName() === fileName) {
+        file.setText(modCode);
+        break;
+      }
+    }
+
+    // Persist baseline and clear the java-modified flag so later polls
+    // don't misidentify Blockly's own output as a manual edit.
+    LocalStorageManager.saveLastGeneratedCode(className, modCode);
+    LocalStorageManager.setJavaModified(className, false);
+  }
+
+  /**
    * Returns the current text content of the selected file as shown in the IDE
    * editor, or null if the IDE is not ready / no file is selected.
    * Used by BlocklyOverlayManager to detect manual edits.

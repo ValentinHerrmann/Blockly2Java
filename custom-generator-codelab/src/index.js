@@ -11,7 +11,7 @@ import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
 import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import * as JAVA_METHODS from './blocks/java_method_blocks.js';
-import {getClassName} from "./generators/javascript/javascript_generator";
+import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
 import './styles/stylesheet.css';
@@ -30,6 +30,10 @@ import { BlocklyOverlayManager } from './utils/BlocklyOverlayManager';
 
 // Module-level state
 export let ws;
+
+/** Guard: prevents the workspace change listener from re-entering onBlocksChange
+ *  while a background multi-pass generation is in progress. */
+let _batchGenerating = false;
 
 // Instantiate managers
 // Passing onXmlLoaded as callback for REST response
@@ -241,6 +245,9 @@ function setupListeners(workspace) {
  * the last active Java file first.
  */
 export function onBlocksChange() {
+  // Do not re-enter while a background multi-pass generation is in progress.
+  if (_batchGenerating) return;
+
   // If the IDE is showing a .md file, switch it back to the Java file.
   IdeBridge.ensureJavaFileActive();
 
@@ -254,13 +261,57 @@ export function onBlocksChange() {
     return;
   }
 
+  // ── Pass 0: generate the currently active class ─────────────────────────
+  // This populates its callsite hints (e.g. new Child(42)) in localStorage
+  // so the background passes below can read them for downstream classes.
   LocalStorageManager.clearConstructors(getClassName());
   LocalStorageManager.clearMethods(getClassName());
 
   const rawCode = generateCode();
   const modCode = CodeTransformer.transformCode(rawCode);
   IdeBridge.pushCodeToIDE(modCode);
+
+  // ── Background multi-pass: propagate type hints across all other classes ─
+  // Pass 1: each other class reads hints written by pass 0 (or older state).
+  // Pass 2: classes further down the inheritance chain (e.g. Super) pick up
+  //         the super-call hints written by pass 1 (e.g. in Child).
+  // After both passes the active class is re-generated so IT benefits too
+  // from any hints that were updated during the background passes.
+  _batchGenerating = true;
+  try {
+    const activeClass = getClassName();
+    const allConstructors = LocalStorageManager.getAllConstructors() ?? {};
+    const otherClasses = Object.keys(allConstructors).filter(
+      c => c && c !== activeClass && !LocalStorageManager.isJavaModified(c)
+    );
+
+    if (otherClasses.length > 0) {
+      // Pass 1 — propagate from active class outward.
+      for (const cls of otherClasses) {
+        silentGenerateForClass(cls);
+      }
+      // Pass 2 — handle indirect chains (A→B→C: B must be done before C).
+      for (const cls of otherClasses) {
+        silentGenerateForClass(cls);
+      }
+
+      // Restore the active class workspace so the user still sees their class.
+      IdeBridge.selected_file_name = activeClass + '.java';
+      setClassName(activeClass);
+      load(ws);
+
+      // Re-generate the active class now that all downstream hints are fresh.
+      LocalStorageManager.clearConstructors(activeClass);
+      LocalStorageManager.clearMethods(activeClass);
+      const rawCode2 = generateCode();
+      const modCode2 = CodeTransformer.transformCode(rawCode2);
+      IdeBridge.pushCodeToIDE(modCode2);
+    }
+  } finally {
+    _batchGenerating = false;
+  }
 }
+
 
 
 // ---------------------------------------------------------------------------
@@ -298,6 +349,51 @@ function onXmlLoaded(xhttp) {
 function generateCode() {
   return javaGenerator.workspaceToCode(ws);
 }
+
+// ---------------------------------------------------------------------------
+// Background silent generation helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Silently loads, generates, transforms, and pushes code for an arbitrary
+ * class without disturbing the currently visible workspace.
+ *
+ * The workspace is swapped in with events disabled so no UI repaint or
+ * spurious onBlocksChange() calls occur.  selected_file_name is temporarily
+ * overwritten so that load() and pushCodeToIDEForClass() target the right
+ * storage keys, then restored before returning.
+ *
+ * @param {string} className  Name of the class to (re)generate (no .java).
+ */
+function silentGenerateForClass(className) {
+  if (!className) return;
+  if (LocalStorageManager.isJavaModified(className)) return;
+
+  // Bail out if there is no saved workspace for this class.
+  const data = LocalStorageManager.loadWorkspace(className);
+  if (!data) return;
+
+  // Redirect load/save to the target class.
+  const prevFileName = IdeBridge.selected_file_name;
+  IdeBridge.selected_file_name = className + '.java';
+
+  setClassName(className);
+  LocalStorageManager.clearConstructors(className);
+  LocalStorageManager.clearMethods(className);
+
+  // load() internally calls Blockly.Events.disable/enable, so the workspace
+  // change listener won't fire and trigger a recursive onBlocksChange().
+  load(ws);
+
+  const rawCode = generateCode();
+  const modCode = CodeTransformer.transformCode(rawCode);
+  IdeBridge.pushCodeToIDEForClass(className, modCode);
+
+  // Restore the previously selected file name so subsequent calls and the
+  // final restore in onBlocksChange() operate on the right class.
+  IdeBridge.selected_file_name = prevFileName;
+}
+
 
 
 // ---------------------------------------------------------------------------
