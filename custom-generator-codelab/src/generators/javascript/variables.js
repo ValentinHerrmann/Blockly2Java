@@ -60,16 +60,16 @@ export function java_normal_attr_set(block, generator) {
 
 export function java_static_attr_get(block, generator) {
   const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
-  return [getClassName() + '.' + name, Order.MEMBER];
+  return [name, Order.MEMBER];
 };
 
 export function java_static_attr_set(block, generator) {
   const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   const value = generator.valueToCode(block, 'VALUE', Order.ASSIGNMENT) || '';
   if (value === '') {
-    return '// ' + getClassName() + '.' + name + ' = ;    // Wert fehlt\n';
+    return '// ' + name + ' = ;    // Wert fehlt\n';
   }
-  return getClassName() + '.' + name + ' = ' + value + ';\n';
+  return name + ' = ' + value + ';\n';
 };
 
 // ─── PARAMETER GET ────────────────────────────────────────────────────────────
