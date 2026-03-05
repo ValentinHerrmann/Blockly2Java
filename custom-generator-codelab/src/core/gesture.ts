@@ -482,6 +482,16 @@ export class Gesture {
     // flyout.
     this.startWorkspace_.hideChaff(!!this.flyout);
 
+    // If hideChaff caused a text-field blur that synchronously triggered a
+    // workspace reload (via onBlocksChange → load(ws)), the targetBlock may
+    // already be disposed. Continuing would bind event handlers on a zombie
+    // gesture whose block references are stale, leaving the block permanently
+    // "grabbed". Detect this by checking whether the target block is dead.
+    if (this.targetBlock?.isDeadOrDying()) {
+      this.cancel();
+      return;
+    }
+
     this.startWorkspace_.markFocused();
     this.mostRecentEvent = e;
 

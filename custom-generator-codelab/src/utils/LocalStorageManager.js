@@ -5,6 +5,7 @@ class LocalStorageManager {
     static METHODS_STORAGE_KEY = 'methodDefinitions';
     static SUPER_CALL_TYPE_HINTS_KEY = 'superCallTypeHints';
     static CONSTRUCTOR_CALLSITE_HINTS_KEY = 'constructorCallsiteHints';
+    static OBJ_CALL_TYPE_HINTS_KEY = 'objCallTypeHints';
     static JAVA_MODIFIED_KEY_PREFIX  = 'javaModified_';
     static JAVA_GENERATED_KEY_PREFIX = 'javaGenerated_';
     
@@ -193,6 +194,78 @@ class LocalStorageManager {
         return found ? merged : null;
     }
 
+    // ── Object-method-call parameter type hints ───────────────────────────────
+    //
+    // When class B calls `obj.someMethod(arg0, arg1)` (java_obj_method_call_*)
+    // or `ClassName.staticMethod(arg0)` (java_ext_static_call_*), the inferred
+    // argument types are stored here keyed by callerClass.
+    //
+    // Storage format:
+    //   {
+    //     "CallerClass": {
+    //       "methodName":            ["int", "String", null],  // instance call
+    //       "TargetClass::method":   ["double"]                // static call
+    //     }, …
+    //   }
+
+    /**
+     * Stores/replaces method-call type hints written by callerClass.
+     * hints maps method key → array of Java types indexed by param position.
+     * Key format: "methodName" for instance calls, "TargetClass::methodName" for static.
+     *
+     * @param {string} callerClass
+     * @param {Object.<string, Array<string|null>>} hints
+     */
+    static storeObjCallTypeHints(callerClass, hints) {
+        if (!callerClass || !hints || Object.keys(hints).length === 0) return;
+        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const store = JSON.parse(raw) || {};
+        store[callerClass] = hints;
+        globalThis.localStorage?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+    }
+
+    /**
+     * Returns the merged param type array for the given method key across all callers.
+     * First non-null value at each index wins.
+     *
+     * @param {string} methodKey  "methodName" or "TargetClass::methodName"
+     * @returns {Array<string|null>|null}
+     */
+    static getObjCallTypeHints(methodKey) {
+        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const store = JSON.parse(raw) || {};
+        let merged = null;
+        for (const calleeMap of Object.values(store)) {
+            const types = calleeMap?.[methodKey];
+            if (types) {
+                if (merged) {
+                    for (let i = 0; i < types.length; i++) {
+                        if (merged[i] == null && types[i] != null) merged[i] = types[i];
+                    }
+                } else {
+                    merged = types.slice();
+                }
+            }
+        }
+        return merged;
+    }
+
+    /**
+     * Clears all method-call type hints stored by callerClass.
+     * Called before each code-generation pass so stale data is replaced.
+     *
+     * @param {string} callerClass
+     */
+    static clearObjCallTypeHintsByCaller(callerClass) {
+        if (!callerClass) return;
+        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const store = JSON.parse(raw) || {};
+        if (store[callerClass]) {
+            delete store[callerClass];
+            globalThis.localStorage?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+        }
+    }
+
     // ── Method-definition storage ─────────────────────────────────────────────
 
     /**
@@ -206,6 +279,9 @@ class LocalStorageManager {
         const store = JSON.parse(raw) || {};
         store[className] = [];
         globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
+        // Clear method-call type hints stored by this class as a caller so they
+        // are rebuilt fresh during the next code-generation pass.
+        this.clearObjCallTypeHintsByCaller(className);
     }
 
     /**
@@ -289,6 +365,27 @@ class LocalStorageManager {
         // Clean up super-call type hints where this class appears as either
         // the sub-class key or the parentClass value.
         this._removeSuperHintsForClass(className);
+        // Clean up object-call type hints where this class appears as caller
+        // or as the target prefix in a static-method key ("ClassName::method").
+        this._removeObjCallHintsForClass(className);
+    }
+
+    /** @param {string} className */
+    static _removeObjCallHintsForClass(className) {
+        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        if (!raw) return;
+        const store = JSON.parse(raw) || {};
+        let changed = false;
+        // Remove entry where this class is the caller.
+        if (store[className]) { delete store[className]; changed = true; }
+        // Remove static-method keys prefixed with "className::" from all callers.
+        const prefix = className + '::';
+        for (const calleeMap of Object.values(store)) {
+            for (const key of Object.keys(calleeMap)) {
+                if (key.startsWith(prefix)) { delete calleeMap[key]; changed = true; }
+            }
+        }
+        if (changed) globalThis.localStorage?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     static renameClass(className, newClassName) {

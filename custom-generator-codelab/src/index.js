@@ -9,8 +9,9 @@ import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
-import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
+import { normalMethodFlyoutCategory, staticMethodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import * as JAVA_METHODS from './blocks/java_method_blocks.js';
+import * as JAVA_OBJ_CALLS from './blocks/java_object_call_blocks.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
@@ -91,7 +92,8 @@ function setupBlockly(theme) {
   });
 
   // Dynamic flyout categories.
-  workspace.registerToolboxCategoryCallback('JAVA_METHOD', methodFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_METHOD_NORMAL', normalMethodFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_METHOD_STATIC', staticMethodFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_NORMAL_ATTR', normalAttrFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_LOCAL_VAR', localVarFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_STATIC_ATTR', staticAttrFlyoutCategory);
@@ -208,7 +210,28 @@ function setupListeners(workspace) {
       return;
     }
     clearTimeout(_codeGenTimer);
-    _codeGenTimer = setTimeout(() => onBlocksChange(), 0);
+    _codeGenTimer = setTimeout(() => {
+      // If a Blockly FieldTextInput editor is currently active (user is typing
+      // inside a block's text field), running onBlocksChange() would call
+      // load(ws) which rebuilds the workspace DOM and destroys the focused
+      // <input>, causing focus loss after every character.
+      // Instead, defer code generation until the field editor is dismissed.
+      const active = document.activeElement;
+      if (active && active.tagName === 'INPUT' && active.closest?.('.blocklyWidgetDiv')) {
+        active.addEventListener('blur', () => {
+          // If the user clicked elsewhere to dismiss the editor, a gesture may
+          // already be starting (pointerdown fired before blur). Cancel it so
+          // that load(ws) inside onBlocksChange() doesn't operate on stale
+          // block references while the gesture's handlers are still bound.
+          if (ws.currentGesture_) {
+            ws.currentGesture_.cancel();
+          }
+          onBlocksChange();
+        }, { once: true });
+        return;
+      }
+      onBlocksChange();
+    }, 0);
   });
 
   // Clean up orphaned 'param' variables whenever any block is deleted.

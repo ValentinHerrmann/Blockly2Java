@@ -34,9 +34,10 @@ import { load } from '../serialization.js';
  * is a fully-explicit, editable template rather than relying on implicit defaults.
  *
  * Block types mirror the contents of toolboxGrade9.js.
- * Methoden subcategory blocks are the def-block types controlled by the flyout:
- *   Objekt-Methoden  → java_method_noreturn, java_method_return
- *   Klassen-Methoden → java_static_method_noreturn, java_static_method_return
+ * Methoden/Klassen-Methoden subcategory blocks are the def-block types
+ * controlled by the flyout:
+ *   Objekt-Methoden            → java_method_noreturn, java_method_return
+ *   Klassen-Methoden (statisch)→ java_static_method_noreturn, java_static_method_return
  */
 /**
  * Default config matching the old grade-9 instruction set.
@@ -175,11 +176,33 @@ export const FULL_ACTIVE_CONFIG = {
           ],
         },
         {
-          name: 'Klassen-Methoden',
+          name: 'Methoden auf Objekten',
+          active: true,
+          blocks: [
+            { type: 'java_obj_method_call_noreturn', active: true },
+            { type: 'java_obj_method_call_return',   active: true },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'K-Methoden',
+      active: true,
+      subcategories: [
+        {
+          name: 'K-Methoden',
           active: true,
           blocks: [
             { type: 'java_static_method_noreturn', active: true },
             { type: 'java_static_method_return',   active: true },
+          ],
+        },
+        {
+          name: 'Externe Klassen-Methoden',
+          active: true,
+          blocks: [
+            { type: 'java_ext_static_call_noreturn', active: true },
+            { type: 'java_ext_static_call_return',   active: true },
           ],
         },
       ],

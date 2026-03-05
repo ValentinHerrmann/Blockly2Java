@@ -463,6 +463,46 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
     }
     return 'var';
   }
+  // External static class method call (java_ext_static_call_return)
+  if (valueBlock.type === 'java_ext_static_call_return') {
+    const cls = valueBlock.getFieldValue('CLASS');
+    const mn  = valueBlock.getFieldValue('METHOD');
+    if (cls && mn) {
+      // Check stored return type from LocalStorageManager (other classes).
+      const allMethods = LocalStorageManager.getAllMethods();
+      const classMethods = allMethods[cls] || [];
+      const stored = classMethods.find(m => m.isStatic && m.name === mn && m.returnType);
+      if (stored?.returnType) return stored.returnType;
+      // Fall back: look in current workspace static-method def blocks.
+      for (const def of workSpace.getBlocksByType('java_static_method_return', true)) {
+        if (def.getFieldValue('NAME') === mn) {
+          const rb = def.getInputTargetBlock('RETURN');
+          if (rb) { const t = getType(rb.type); if (t !== TYPES.UNKNOWN) return t; }
+        }
+      }
+    }
+    return 'var';
+  }
+  // Instance method call on another object (java_obj_method_call_return)
+  if (valueBlock.type === 'java_obj_method_call_return') {
+    const mn = valueBlock.getFieldValue('METHOD');
+    if (mn) {
+      // Check current workspace instance method def blocks.
+      for (const def of workSpace.getBlocksByType('java_method_return', true)) {
+        if (def.getFieldValue('NAME') === mn) {
+          const rb = def.getInputTargetBlock('RETURN');
+          if (rb) { const t = getType(rb.type); if (t !== TYPES.UNKNOWN) return t; }
+        }
+      }
+      // Check stored return type from LocalStorageManager (other classes).
+      const allMethods = LocalStorageManager.getAllMethods();
+      for (const classMethods of Object.values(allMethods)) {
+        const stored = classMethods.find(m => !m.isStatic && m.name === mn && m.returnType);
+        if (stored?.returnType) return stored.returnType;
+      }
+    }
+    return 'var';
+  }
   return getType(valueBlock.type);
 }
 
@@ -980,6 +1020,68 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         }
       }
       LocalStorageManager.storeConstructorCallsiteHintsByClass(_callerClass, _callHintsByCallee);
+    }
+
+    // ── Scan java_obj_method_call_* and java_ext_static_call_* blocks ─────────
+    // Collect the inferred argument types so that the called class's method
+    // definition (generated in a separate pass) can resolve parameter types even
+    // when the call originates from a different class workspace.
+    // Instance-method key: "methodName"
+    // Static-method key:   "TargetClass::methodName"
+    if (_callerClass) {
+      const _objCallHints = {};
+      const _collectArgTypes = (callBlock) => {
+        const _types = [];
+        for (let _n = 0; callBlock.getInput('ARG' + _n); _n++) {
+          const _argBlock = callBlock.getInput('ARG' + _n)?.connection?.targetBlock();
+          const _t = resolveArgBlockType(_argBlock, workspace);
+          _types.push(_t === TYPES.UNKNOWN ? null : _t);
+        }
+        return _types;
+      };
+      for (const _bType of ['java_obj_method_call_noreturn', 'java_obj_method_call_return']) {
+        for (const _cb of workspace.getBlocksByType(_bType, true)) {
+          const _mName = _cb.getFieldValue('METHOD');
+          if (!_mName || _mName === '__none__') continue;
+          const _types = _collectArgTypes(_cb);
+          if (_types.some(_t => _t !== null)) {
+            // Merge with any already collected hints for the same method name.
+            if (_objCallHints[_mName]) {
+              for (let _i = 0; _i < _types.length; _i++) {
+                if (_objCallHints[_mName][_i] == null && _types[_i] != null) {
+                  _objCallHints[_mName][_i] = _types[_i];
+                }
+              }
+            } else {
+              _objCallHints[_mName] = _types;
+            }
+          }
+        }
+      }
+      for (const _bType of ['java_ext_static_call_noreturn', 'java_ext_static_call_return']) {
+        for (const _cb of workspace.getBlocksByType(_bType, true)) {
+          const _cls   = _cb.getFieldValue('CLASS');
+          const _mName = _cb.getFieldValue('METHOD');
+          if (!_cls || !_mName) continue;
+          const _key   = `${_cls}::${_mName}`;
+          const _types = _collectArgTypes(_cb);
+          if (_types.some(_t => _t !== null)) {
+            if (_objCallHints[_key]) {
+              for (let _i = 0; _i < _types.length; _i++) {
+                if (_objCallHints[_key][_i] == null && _types[_i] != null) {
+                  _objCallHints[_key][_i] = _types[_i];
+                }
+              }
+            } else {
+              _objCallHints[_key] = _types;
+            }
+          }
+        }
+      }
+      // Always replace the previously stored hints for this caller class so
+      // stale data from a prior generation never survives.  (clearMethods has
+      // already wiped them, but storeObjCallTypeHints replaces anyway.)
+      LocalStorageManager.storeObjCallTypeHints(_callerClass, _objCallHints);
     }
 
     this.isInitialized = true;

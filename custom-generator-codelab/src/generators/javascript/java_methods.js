@@ -19,6 +19,26 @@ import * as Blockly from 'blockly';
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shared helper: compute the Java return type of a method block.
+// Returns the type string (e.g. 'int', 'String', 'MyClass') or 'void'.
+// ─────────────────────────────────────────────────────────────────────────────
+function _computeReturnType(block) {
+  const retBlock = block.getInputTargetBlock('RETURN');
+  if (!retBlock) return 'void';
+  let returnType = getType(retBlock.type);
+  if (returnType === 'var') {
+    const id = retBlock.getFieldValue('VAR');
+    if (id) {
+      returnType = getVariableType(Blockly.getMainWorkspace(), id, true);
+      if (returnType === 'var') returnType = 'Object';
+    } else {
+      returnType = 'Object';
+    }
+  }
+  return returnType;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Shared helper: build the full method body code.
 // Returns the complete "public [static] [returnType] name(params) { … }" string.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,12 +97,23 @@ function buildMethodCode(block, generator, isStatic) {
   const args = [];
   if (block.arguments_ && block.arguments_.length) {
     const varModels = block.getVarModels ? block.getVarModels() : [];
+    // Retrieve any cross-class call-site type hints stored by other classes
+    // that called this method via java_obj_method_call_* / java_ext_static_call_*.
+    // Key: "methodName" for instance methods, "ClassName::methodName" for static.
+    const _hintKey = isStatic ? (getClassName() + '::' + funcName) : funcName;
+    const _crossClassHints = LocalStorageManager.getObjCallTypeHints(_hintKey);
     for (let i = 0; i < block.arguments_.length; i++) {
       let paramType = varModels[i]
         ? getVariableType(ws, varModels[i].getId(), true)
         : 'Object';
       if (paramType === 'var' || !paramType) paramType = 'Object';
       if (paramType === 'forint') paramType = 'int';
+      // Fall back to cross-class call-site hints when the workspace-internal
+      // inference couldn't determine a concrete type.
+      if (paramType === 'Object' && _crossClassHints) {
+        const _hint = _crossClassHints[i];
+        if (_hint && _hint !== 'var') paramType = _hint;
+      }
       // Keep the leading '_' prefix consistent with the defconstructor convention
       // so that variables_get/set inside the body reference the same name.
       const paramName = block.arguments_[i];
@@ -110,9 +141,10 @@ export function java_static_method_noreturn(block, generator) {
 
 export function java_static_method_return(block, generator) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
+  const returnType = _computeReturnType(block);
   const code = buildMethodCode(block, generator, true);
   generator.definitions_['%static_' + funcName] = code;
-  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: true, hasReturn: true });
+  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: true, hasReturn: true, returnType });
   return null;
 }
 
@@ -126,9 +158,10 @@ export function java_method_noreturn(block, generator) {
 
 export function java_method_return(block, generator) {
   const funcName = block.getFieldValue('NAME') || 'unbekannt';
+  const returnType = _computeReturnType(block);
   const code = buildMethodCode(block, generator, false);
   generator.definitions_['%method_' + funcName] = code;
-  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: false, hasReturn: true });
+  LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: false, hasReturn: true, returnType });
   return null;
 }
 
@@ -147,25 +180,25 @@ function buildCallArgs(block, generator) {
 export function java_static_method_call_noreturn(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return `${getClassName()}.${name}(${args});
+  return `${name}(${args});
 `;
 }
 
 export function java_static_method_call_return(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return [`${getClassName()}.${name}(${args})`, Order.ATOMIC];
+  return [`${name}(${args})`, Order.ATOMIC];
 }
 
 export function java_method_call_noreturn(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return `this.${name}(${args});
+  return `${name}(${args});
 `;
 }
 
 export function java_method_call_return(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return [`this.${name}(${args})`, Order.ATOMIC];
+  return [`${name}(${args})`, Order.ATOMIC];
 }

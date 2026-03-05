@@ -42,16 +42,16 @@ export function variables_set(block, generator) {
 
 export function java_normal_attr_get(block, generator) {
   const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
-  return ['this.' + name, Order.MEMBER];
+  return [name, Order.MEMBER];
 };
 
 export function java_normal_attr_set(block, generator) {
   const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   const argument0 = generator.valueToCode(block, 'VALUE', Order.ASSIGNMENT) || '';
   if (argument0 === '') {
-    return '// this.' + name + ' = ;    // Wert fehlt\n';
+    return '// ' + name + ' = ;    // Wert fehlt\n';
   }
-  return 'this.' + name + ' = ' + argument0 + ';\n';
+  return name + ' = ' + argument0 + ';\n';
 };
 
 // ─── STATIC ATTRIBUTE ────────────────────────────────────────────────────────
@@ -60,16 +60,16 @@ export function java_normal_attr_set(block, generator) {
 
 export function java_static_attr_get(block, generator) {
   const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
-  return [getClassName() + '.' + name, Order.MEMBER];
+  return [name, Order.MEMBER];
 };
 
 export function java_static_attr_set(block, generator) {
   const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
   const value = generator.valueToCode(block, 'VALUE', Order.ASSIGNMENT) || '';
   if (value === '') {
-    return '// ' + getClassName() + '.' + name + ' = ;    // Wert fehlt\n';
+    return '// ' + name + ' = ;    // Wert fehlt\n';
   }
-  return getClassName() + '.' + name + ' = ' + value + ';\n';
+  return name + ' = ' + value + ';\n';
 };
 
 // ─── PARAMETER GET ────────────────────────────────────────────────────────────
