@@ -97,12 +97,23 @@ function buildMethodCode(block, generator, isStatic) {
   const args = [];
   if (block.arguments_ && block.arguments_.length) {
     const varModels = block.getVarModels ? block.getVarModels() : [];
+    // Retrieve any cross-class call-site type hints stored by other classes
+    // that called this method via java_obj_method_call_* / java_ext_static_call_*.
+    // Key: "methodName" for instance methods, "ClassName::methodName" for static.
+    const _hintKey = isStatic ? (getClassName() + '::' + funcName) : funcName;
+    const _crossClassHints = LocalStorageManager.getObjCallTypeHints(_hintKey);
     for (let i = 0; i < block.arguments_.length; i++) {
       let paramType = varModels[i]
         ? getVariableType(ws, varModels[i].getId(), true)
         : 'Object';
       if (paramType === 'var' || !paramType) paramType = 'Object';
       if (paramType === 'forint') paramType = 'int';
+      // Fall back to cross-class call-site hints when the workspace-internal
+      // inference couldn't determine a concrete type.
+      if (paramType === 'Object' && _crossClassHints) {
+        const _hint = _crossClassHints[i];
+        if (_hint && _hint !== 'var') paramType = _hint;
+      }
       // Keep the leading '_' prefix consistent with the defconstructor convention
       // so that variables_get/set inside the body reference the same name.
       const paramName = block.arguments_[i];

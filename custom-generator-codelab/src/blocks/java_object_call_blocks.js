@@ -389,11 +389,34 @@ const objCallMixin = {
    */
   _autoApplyMethod(methodName) {
     const ws = Blockly.getMainWorkspace();
-    if (!ws) return;
-    for (const type of ['java_method_noreturn', 'java_method_return']) {
-      for (const block of ws.getBlocksByType(type, true)) {
-        if (block.getFieldValue('NAME') === methodName) {
-          const argNames = block.arguments_ || [];
+
+    // 1. Search current workspace def-blocks first.
+    if (ws) {
+      for (const type of ['java_method_noreturn', 'java_method_return']) {
+        for (const block of ws.getBlocksByType(type, true)) {
+          if (block.getFieldValue('NAME') === methodName) {
+            const argNames = block.arguments_ || [];
+            // Skip rebuild when the shape is already correct.
+            if (this.argCount_ === argNames.length &&
+                argNames.every((n, i) => this.argNames_[i] === n)) {
+              return;
+            }
+            this.argCount_ = argNames.length;
+            this.argNames_ = argNames.slice();
+            this._updateCallLine(methodName);
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Fall back to LocalStorageManager (methods from previously generated classes).
+    const allMethods = LocalStorageManager.getAllMethods();
+    for (const methods of Object.values(allMethods)) {
+      for (const m of methods) {
+        const name = normalizeDropdownToken(m?.name);
+        if (!m?.isStatic && name === methodName) {
+          const argNames = normalizeArgumentNames(m?.arguments);
           // Skip rebuild when the shape is already correct.
           if (this.argCount_ === argNames.length &&
               argNames.every((n, i) => this.argNames_[i] === n)) {
@@ -406,7 +429,8 @@ const objCallMixin = {
         }
       }
     }
-    // Method not found in workspace (could be a library method) — keep shape.
+
+    // Method not found anywhere — keep current shape.
   },
 
   // ── Change listener ─────────────────────────────────────────────────────
