@@ -282,7 +282,7 @@ const METHOD_GROUPS = [
     ],
   },
   {
-    label: 'Klassen-Methoden k\xf6nnen ohne Objekt ausgef\xfchrt werden.',
+    label: 'K\xf6nnen ohne Objekt ausgef\xfchrt werden.',
     defs: [
       { type: 'java_static_method_noreturn' },
       { type: 'java_static_method_return'   },
@@ -381,7 +381,7 @@ function makeObjCallBlock(callType, name, argNames) {
  * Appends call blocks for every method defined by the parent class into xmlList.
  * Only called when a java_extends block is present in the workspace.
  */
-function _appendParentClassMethods(workspace, xmlList) {
+function _appendParentClassMethods(workspace, xmlList, includeStaticMethods = true) {
   const extendsBlocks = workspace.getBlocksByType('java_extends', false);
   if (!extendsBlocks.length) return;
   const parentClass = extendsBlocks[0].getFieldValue('PARENT_CLASS');
@@ -393,8 +393,10 @@ function _appendParentClassMethods(workspace, xmlList) {
   for (const method of parentMethods) {
     let callType;
     if (method.isStatic) {
+      if (!includeStaticMethods) continue;
       callType = method.hasReturn ? 'java_static_method_call_return' : 'java_static_method_call_noreturn';
     } else {
+      if (includeStaticMethods) continue;
       callType = method.hasReturn ? 'java_method_call_return' : 'java_method_call_noreturn';
     }
     const callBlock = makeCallBlock(callType, method.name, method.arguments || []);
@@ -440,9 +442,9 @@ export function methodFlyoutCategory(workspace) {
 
   const GROUP_NAMES = [
     'Objekt-Methoden',
-    'Klassen-Methoden',
+    'K-Methoden',
     'Methoden auf Objekten',
-    'Externe Klassen-Methoden',
+    'Externe K-Methoden',
   ];
   for (let i = 0; i < METHOD_GROUPS.length; i++) {
     const groupName = GROUP_NAMES[i];
@@ -503,6 +505,91 @@ export function methodFlyoutCategory(workspace) {
   _appendParentClassMethods(workspace, xmlList);
 
   return xmlList;
+}
+
+function _methodFlyoutCategoryFor(workspace, categoryName, groups, includeStaticParentMethods) {
+  const methodConfig = ToolboxConfigManager.getSubcategoryConfig(categoryName);
+  const showGroup = (name) => !methodConfig || methodConfig.get(name) !== false;
+  const showParamsInline = !ToolboxConfigManager.isCategoryActive('Parameter');
+
+  const xmlList = [];
+
+  if (showParamsInline) {
+    const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
+    for (const ctrBlock of ctrBlocks) {
+      const argNames = ctrBlock.arguments_ || [];
+      if (argNames.length === 0) continue;
+      xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
+      _appendInlineParams(workspace, xmlList, argNames);
+    }
+  }
+
+  for (const { name: groupName, group } of groups) {
+    if (!showGroup(groupName)) continue;
+
+    const blockFilter = ToolboxConfigManager.getSubcategoryBlockConfig(categoryName, groupName);
+    const showDef = (type) => !blockFilter || blockFilter.get(type) !== false;
+
+    xmlList.push(makeLabel(group.label));
+
+    for (const def of group.defs) {
+      if (showDef(def.type)) xmlList.push(makeBlockTemplate(def.type));
+    }
+
+    for (const { defType, callType } of group.calls) {
+      if (!showDef(defType)) continue;
+      for (const block of workspace.getBlocksByType(defType, true)) {
+        const name = block.getFieldValue('NAME') || 'unbekannt';
+        const argNames = block.arguments_ || [];
+        const callBlock = makeCallBlock(callType, name, argNames);
+        callBlock.setAttribute('gap', showParamsInline && argNames.length > 0 ? '4' : '16');
+        xmlList.push(callBlock);
+        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
+      }
+    }
+
+    for (const { defType, callType } of (group.objCalls || [])) {
+      if (!showDef(defType)) continue;
+      for (const block of workspace.getBlocksByType(defType, true)) {
+        const name = block.getFieldValue('NAME') || 'unbekannt';
+        const argNames = block.arguments_ || [];
+        const objCallBlock = makeObjCallBlock(callType, name, argNames);
+        xmlList.push(objCallBlock);
+      }
+    }
+
+    for (const { type } of (group.templates || [])) {
+      if (showDef(type)) xmlList.push(makeBlockTemplate(type));
+    }
+  }
+
+  _appendParentClassMethods(workspace, xmlList, includeStaticParentMethods);
+
+  return xmlList;
+}
+
+export function normalMethodFlyoutCategory(workspace) {
+  return _methodFlyoutCategoryFor(
+    workspace,
+    'Methoden',
+    [
+      { name: 'Objekt-Methoden', group: METHOD_GROUPS[0] },
+      { name: 'Methoden auf Objekten', group: METHOD_GROUPS[2] },
+    ],
+    false,
+  );
+}
+
+export function staticMethodFlyoutCategory(workspace) {
+  return _methodFlyoutCategoryFor(
+    workspace,
+    'K-Methoden',
+    [
+      { name: 'K-Methoden', group: METHOD_GROUPS[1] },
+      { name: 'Externe K-Methoden', group: METHOD_GROUPS[3] },
+    ],
+    true,
+  );
 }
 
 export function normalAttrFlyoutCategory(workspace) {

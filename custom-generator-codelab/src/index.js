@@ -9,7 +9,7 @@ import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
 import {toolbox} from './toolboxGrade9';
 import * as CTR from './blocks/constructor.js';
-import { methodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
+import { normalMethodFlyoutCategory, staticMethodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import * as JAVA_METHODS from './blocks/java_method_blocks.js';
 import * as JAVA_OBJ_CALLS from './blocks/java_object_call_blocks.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
@@ -92,7 +92,8 @@ function setupBlockly(theme) {
   });
 
   // Dynamic flyout categories.
-  workspace.registerToolboxCategoryCallback('JAVA_METHOD', methodFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_METHOD_NORMAL', normalMethodFlyoutCategory);
+  workspace.registerToolboxCategoryCallback('JAVA_METHOD_STATIC', staticMethodFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_NORMAL_ATTR', normalAttrFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_LOCAL_VAR', localVarFlyoutCategory);
   workspace.registerToolboxCategoryCallback('JAVA_STATIC_ATTR', staticAttrFlyoutCategory);

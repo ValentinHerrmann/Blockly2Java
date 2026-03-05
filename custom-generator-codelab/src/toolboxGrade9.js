@@ -604,7 +604,13 @@ export const toolbox = {
             'kind': 'category',
             'name': 'Methoden',
             'colour': '#995599',
-            'custom': 'JAVA_METHOD',
+            'custom': 'JAVA_METHOD_NORMAL',
+        },
+        {
+            'kind': 'category',
+            'name': 'K-Methoden',
+            'colour': '#bf4040',
+            'custom': 'JAVA_METHOD_STATIC',
         },
         {
             kind: "category",

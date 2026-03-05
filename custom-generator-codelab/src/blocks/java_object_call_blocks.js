@@ -29,8 +29,8 @@ import LocalStorageManager from '../utils/LocalStorageManager.js';
 import { getClassName } from '../generators/javascript/javascript_generator.js';
 
 // ─── Colour constants ─────────────────────────────────────────────────────────
-const OBJ_CALL_COLOUR = '#b43cb4';   // teal-blue  – method call on an object
-const EXT_STA_COLOUR  = '#c63939';   // amber/gold – static method of another class
+const OBJ_CALL_COLOUR = '#ae42ae';   // teal-blue  – method call on an object
+const EXT_STA_COLOUR  = '#b94646';   // amber/gold – static method of another class
 
 function normalizeDropdownToken(value) {
   if (typeof value !== 'string') return null;
@@ -381,6 +381,10 @@ const objCallMixin = {
   /**
    * Looks up methodName in workspace def-blocks, then updates argCount_/
    * argNames_ and rebuilds the shape when found.
+   *
+   * Skips the rebuild when the current shape already matches the method's
+   * argument list — this prevents tearing down (and thus disconnecting) value
+   * blocks that the user has already plugged into ARG inputs.
    * @param {string} methodName
    */
   _autoApplyMethod(methodName) {
@@ -390,6 +394,11 @@ const objCallMixin = {
       for (const block of ws.getBlocksByType(type, true)) {
         if (block.getFieldValue('NAME') === methodName) {
           const argNames = block.arguments_ || [];
+          // Skip rebuild when the shape is already correct.
+          if (this.argCount_ === argNames.length &&
+              argNames.every((n, i) => this.argNames_[i] === n)) {
+            return;
+          }
           this.argCount_ = argNames.length;
           this.argNames_ = argNames.slice();
           this._updateCallLine(methodName);
@@ -573,6 +582,10 @@ const extStaticCallMixin = {
   /**
    * Looks up methodName among static methods of className, then updates
    * argCount_/argNames_ and rebuilds the shape when found.
+   *
+   * Skips the rebuild when the current shape already matches the method's
+   * argument list — this prevents tearing down (and thus disconnecting) value
+   * blocks that the user has already plugged into ARG inputs.
    * @param {string} className
    * @param {string} methodName
    */
@@ -580,8 +593,14 @@ const extStaticCallMixin = {
     const methods = getStaticMethodsForClass(className, null);
     const method  = methods.find(m => m.name === methodName);
     if (!method) return;
-    this.argCount_ = (method.arguments || []).length;
-    this.argNames_ = (method.arguments || []).slice();
+    const newArgNames = (method.arguments || []);
+    // Skip rebuild when the shape is already correct.
+    if (this.argCount_ === newArgNames.length &&
+        newArgNames.every((n, i) => this.argNames_[i] === n)) {
+      return;
+    }
+    this.argCount_ = newArgNames.length;
+    this.argNames_ = newArgNames.slice();
     this._updateCallLine(className, methodName);
   },
 

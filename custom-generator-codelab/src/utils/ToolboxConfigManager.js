@@ -30,7 +30,15 @@
  *       "active": true,
  *       "subcategories": [
  *         { "name": "Objekt-Methoden",  "active": true  },
- *         { "name": "Klassen-Methoden", "active": false }
+ *         { "name": "Methoden auf Objekten", "active": true }
+ *       ]
+ *     },
+ *     {
+ *       "name": "K-Methoden", // dynamic flyout category for static methods
+ *       "active": true,
+ *       "subcategories": [
+ *         { "name": "K-Methoden", "active": true  },
+ *         { "name": "Externe Klassen-Methoden", "active": true }
  *       ]
  *     },
  *     {
@@ -55,7 +63,8 @@
  *    blocks that are themselves marked "active": true.
  *  - A category entry with a "subcategories" array controls which sections are
  *    rendered inside the flyout of dynamic (custom) categories such as
- *    "Variablen", "Methoden", and "Attribute". Unlisted subcategories default to active.
+ *    "Variablen", "Methoden", "Klassen-Methoden", and "Attribute".
+ *    Unlisted subcategories default to active.
  *  - Categories without an entry in the config are shown unchanged (default-on).
  *  - Dynamic categories (those with a "custom" property) support only the
  *    category-level active flag and the subcategories array.

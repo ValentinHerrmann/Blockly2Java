@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Toolbox-Konfiguration für diese Übung. Setze 'active' auf false, um eine Kategorie oder einen Block auszublenden. Nutze 'subcategories' um Ordner-Kategorien (Variablen, Methoden) auf Unterebene zu steuern. Diese Datei enthält immer alle verfügbaren Kategorien und Blöcke – die Standardwerte entsprechen dem vollständigen Toolbox-Umfang.",
+  "description": "Toolbox-Konfiguration für diese Übung. Setze 'active' auf false, um eine Kategorie oder einen Block auszublenden. Nutze 'subcategories' um Ordner-Kategorien (Variablen, Methoden, Klassen-Methoden) auf Unterebene zu steuern. Diese Datei enthält immer alle verfügbaren Kategorien und Blöcke – die Standardwerte entsprechen dem vollständigen Toolbox-Umfang.",
   "categories": [
     {
       "name": "Logik",
@@ -79,19 +79,25 @@
           ]
         },
         {
-          "name": "Klassen-Methoden",
-          "active": false,
-          "blocks": [
-            { "type": "java_static_method_noreturn", "active": true  },
-            { "type": "java_static_method_return",   "active": true  }
-          ]
-        },
-        {
           "name": "Methoden auf Objekten",
           "active": true,
           "blocks": [
             { "type": "java_obj_method_call_noreturn", "active": true },
             { "type": "java_obj_method_call_return",   "active": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "K-Methoden",
+      "active": true,
+      "subcategories": [
+        {
+          "name": "K-Methoden",
+          "active": true,
+          "blocks": [
+            { "type": "java_static_method_noreturn", "active": true },
+            { "type": "java_static_method_return",   "active": true }
           ]
         },
         {
