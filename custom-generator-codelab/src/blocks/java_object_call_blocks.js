@@ -194,6 +194,36 @@ function getStaticMethodOptions(className, ws) {
   return opts.length > 0 ? opts : [['methode', 'methode']];
 }
 
+/**
+ * Returns [[name, name], …] for void (no-return) static methods of className.
+ */
+function getStaticMethodOptionsVoid(className, ws) {
+  const methods = getStaticMethodsForClass(className, ws);
+  const opts = methods
+    .filter(m => !m.hasReturn)
+    .map((m) => {
+      const methodName = normalizeDropdownToken(m?.name);
+      return methodName ? [methodName, methodName] : null;
+    })
+    .filter(Boolean);
+  return opts.length > 0 ? opts : [['methode', 'methode']];
+}
+
+/**
+ * Returns [[name, name], …] for static methods with a return value of className.
+ */
+function getStaticMethodOptionsWithReturn(className, ws) {
+  const methods = getStaticMethodsForClass(className, ws);
+  const opts = methods
+    .filter(m => m.hasReturn)
+    .map((m) => {
+      const methodName = normalizeDropdownToken(m?.name);
+      return methodName ? [methodName, methodName] : null;
+    })
+    .filter(Boolean);
+  return opts.length > 0 ? opts : [['methode', 'methode']];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared utility: read a <field name="…"> text value from a <block> XML node.
 // Returns null when the element is absent (e.g. during fresh block creation).
@@ -454,7 +484,9 @@ const extStaticCallMixin = {
         if (!block._inUpdate_) {
           setTimeout(() => {
             if (block._inUpdate_) return;
-            const methods = getStaticMethodsForClass(newValue, null);
+            const wantsReturn = block.type === 'java_ext_static_call_return';
+            const allMethods  = getStaticMethodsForClass(newValue, null);
+            const methods     = allMethods.filter(m => wantsReturn ? m.hasReturn : !m.hasReturn);
             if (methods.length > 0) {
               const first = methods[0];
               block.argCount_ = (first.arguments || []).length;
@@ -475,7 +507,10 @@ const extStaticCallMixin = {
         const selectedCls = block.getField?.('CLASS')
           ? block.getFieldValue('CLASS')
           : (cls || 'Klasse');
-        const opts = getStaticMethodOptions(selectedCls, null);
+        const wantsReturn = block.type === 'java_ext_static_call_return';
+        const opts = wantsReturn
+          ? getStaticMethodOptionsWithReturn(selectedCls, null)
+          : getStaticMethodOptionsVoid(selectedCls, null);
         // Guarantee the captured method value is always present so
         // getTextContent() never returns null during intermediate renders
         // (e.g. when Blockly sets CLASS before it sets METHOD).
@@ -643,7 +678,7 @@ Blockly.Blocks['java_ext_static_call_noreturn'] = {
       if (!block._inUpdate_) {
         setTimeout(() => {
           if (block._inUpdate_) return;
-          const methods = getStaticMethodsForClass(newValue, null);
+          const methods = getStaticMethodsForClass(newValue, null).filter(m => !m.hasReturn);
           if (methods.length > 0) {
             const first = methods[0];
             block.argCount_ = (first.arguments || []).length;
@@ -660,7 +695,7 @@ Blockly.Blocks['java_ext_static_call_noreturn'] = {
     });
     const methodField = new Blockly.FieldDropdown(() => {
       const cls = block.getField?.('CLASS') ? block.getFieldValue('CLASS') : 'Klasse';
-      return getStaticMethodOptions(cls, null);
+      return getStaticMethodOptionsVoid(cls, null);
     });
     methodField.setValidator(function(newValue) {
       if (!block._inUpdate_) {
@@ -707,7 +742,7 @@ Blockly.Blocks['java_ext_static_call_return'] = {
       if (!block._inUpdate_) {
         setTimeout(() => {
           if (block._inUpdate_) return;
-          const methods = getStaticMethodsForClass(newValue, null);
+          const methods = getStaticMethodsForClass(newValue, null).filter(m => m.hasReturn);
           if (methods.length > 0) {
             const first = methods[0];
             block.argCount_ = (first.arguments || []).length;
@@ -724,7 +759,7 @@ Blockly.Blocks['java_ext_static_call_return'] = {
     });
     const methodField = new Blockly.FieldDropdown(() => {
       const cls = block.getField?.('CLASS') ? block.getFieldValue('CLASS') : 'Klasse';
-      return getStaticMethodOptions(cls, null);
+      return getStaticMethodOptionsWithReturn(cls, null);
     });
     methodField.setValidator(function(newValue) {
       if (!block._inUpdate_) {
