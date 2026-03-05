@@ -217,7 +217,16 @@ function setupListeners(workspace) {
       // Instead, defer code generation until the field editor is dismissed.
       const active = document.activeElement;
       if (active && active.tagName === 'INPUT' && active.closest?.('.blocklyWidgetDiv')) {
-        active.addEventListener('blur', () => onBlocksChange(), { once: true });
+        active.addEventListener('blur', () => {
+          // If the user clicked elsewhere to dismiss the editor, a gesture may
+          // already be starting (pointerdown fired before blur). Cancel it so
+          // that load(ws) inside onBlocksChange() doesn't operate on stale
+          // block references while the gesture's handlers are still bound.
+          if (ws.currentGesture_) {
+            ws.currentGesture_.cancel();
+          }
+          onBlocksChange();
+        }, { once: true });
         return;
       }
       onBlocksChange();

@@ -32,6 +32,19 @@ import { getClassName } from '../generators/javascript/javascript_generator.js';
 const OBJ_CALL_COLOUR = '#2288AA';   // teal-blue  – method call on an object
 const EXT_STA_COLOUR  = '#AA8822';   // amber/gold – static method of another class
 
+function normalizeDropdownToken(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeArgumentNames(args) {
+  if (!Array.isArray(args)) return [];
+  return args
+    .map((name) => normalizeDropdownToken(name))
+    .filter((name) => name !== null);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Option generators (called by FieldDropdown at open-time — always fresh)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,9 +63,10 @@ function getInstanceMethodOptions() {
   const allMethods = LocalStorageManager.getAllMethods();
   for (const methods of Object.values(allMethods)) {
     for (const m of methods) {
-      if (!m.isStatic && !seen.has(m.name)) {
-        opts.push([m.name, m.name]);
-        seen.add(m.name);
+      const methodName = normalizeDropdownToken(m?.name);
+      if (!m?.isStatic && methodName && !seen.has(methodName)) {
+        opts.push([methodName, methodName]);
+        seen.add(methodName);
       }
     }
   }
@@ -62,7 +76,7 @@ function getInstanceMethodOptions() {
   if (workspace) {
     for (const type of ['java_method_noreturn', 'java_method_return']) {
       for (const blk of workspace.getBlocksByType(type, true)) {
-        const name = blk.getFieldValue('NAME') || '';
+        const name = normalizeDropdownToken(blk.getFieldValue('NAME'));
         if (name && !seen.has(name)) {
           opts.push([name, name]);
           seen.add(name);
@@ -88,7 +102,11 @@ function getStaticClassOptions(_ws) {
   // Classes stored from previous code generations.
   const allMethods = LocalStorageManager.getAllMethods();
   for (const [cls, methods] of Object.entries(allMethods)) {
-    if (methods.some(m => m.isStatic)) classNames.add(cls);
+    const className = normalizeDropdownToken(cls);
+    if (!className) continue;
+    if ((methods || []).some((m) => m?.isStatic && normalizeDropdownToken(m?.name))) {
+      classNames.add(className);
+    }
   }
 
   // Current workspace class if it has static method def-blocks.
@@ -98,7 +116,7 @@ function getStaticClassOptions(_ws) {
     const staticBlocks = ['java_static_method_noreturn', 'java_static_method_return']
       .flatMap(t => workspace.getBlocksByType(t, true));
     if (staticBlocks.length > 0) {
-      const cls = getClassName();
+      const cls = normalizeDropdownToken(getClassName());
       if (cls) classNames.add(cls);
     }
   }
@@ -115,32 +133,38 @@ function getStaticClassOptions(_ws) {
  * @returns {Array<{name:string, arguments:string[], isStatic:boolean, hasReturn:boolean}>}
  */
 function getStaticMethodsForClass(className, _ws) {
-  if (!className || className === 'Klasse') return [];
+  const normalizedClassName = normalizeDropdownToken(className);
+  if (!normalizedClassName || normalizedClassName === 'Klasse') return [];
   const workspace = Blockly.getMainWorkspace();
   const methods   = [];
   const seen      = new Set();
 
   // From LocalStorageManager (methods stored during previous code generations).
   const allMethods = LocalStorageManager.getAllMethods();
-  for (const m of (allMethods[className] || [])) {
-    if (m.isStatic && !seen.has(m.name)) {
-      methods.push(m);
-      seen.add(m.name);
+  for (const m of (allMethods[normalizedClassName] || [])) {
+    const methodName = normalizeDropdownToken(m?.name);
+    if (m?.isStatic && methodName && !seen.has(methodName)) {
+      methods.push({
+        ...m,
+        name: methodName,
+        arguments: normalizeArgumentNames(m?.arguments),
+      });
+      seen.add(methodName);
     }
   }
 
   // From workspace def-blocks.
   // Include when className matches the currently open class OR when getClassName()
   // hasn't been set yet (code not yet generated for this class).
-  const currentClass = getClassName();
-  if (workspace && (className === currentClass || !currentClass)) {
+  const currentClass = normalizeDropdownToken(getClassName());
+  if (workspace && (normalizedClassName === currentClass || !currentClass)) {
     for (const type of ['java_static_method_noreturn', 'java_static_method_return']) {
       for (const blk of workspace.getBlocksByType(type, true)) {
-        const name = blk.getFieldValue('NAME') || '';
+        const name = normalizeDropdownToken(blk.getFieldValue('NAME'));
         if (name && !seen.has(name)) {
           methods.push({
             name,
-            arguments: blk.arguments_ || [],
+            arguments: normalizeArgumentNames(blk.arguments_),
             isStatic:  true,
             hasReturn: type === 'java_static_method_return',
           });
@@ -161,9 +185,13 @@ function getStaticMethodsForClass(className, _ws) {
  */
 function getStaticMethodOptions(className, ws) {
   const methods = getStaticMethodsForClass(className, ws);
-  return methods.length > 0
-    ? methods.map(m => [m.name, m.name])
-    : [['methode', 'methode']];
+  const opts = methods
+    .map((m) => {
+      const methodName = normalizeDropdownToken(m?.name);
+      return methodName ? [methodName, methodName] : null;
+    })
+    .filter(Boolean);
+  return opts.length > 0 ? opts : [['methode', 'methode']];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -302,6 +330,17 @@ const objCallMixin = {
       }
 
       _restoreFieldValue(this, 'METHOD', method);
+
+      // Ensure newly created FieldDropdowns have their SVG elements
+      // initialised.  When _updateCallLine runs from a deferred
+      // setTimeout callback the block has already been through
+      // initSvg() but block.rendered is still false (set only by
+      // renderEfficiently), so insertFieldAt skips field.init().
+      // Re-calling initSvg() is safe because field.init() is
+      // idempotent (guarded by fieldGroup_).
+      if (this.workspace?.rendered && this.initSvg) {
+        try { this.initSvg(); } catch (_) { /* headless / disposed */ }
+      }
     } finally {
       this._inUpdate_ = false;
     }
@@ -483,6 +522,12 @@ const extStaticCallMixin = {
       // Restore CLASS first so the METHOD options function has the right class.
       _restoreFieldValue(this, 'CLASS',  cls);
       _restoreFieldValue(this, 'METHOD', method);
+
+      // Ensure newly created FieldDropdowns have their SVG elements
+      // initialised (see objCallMixin._updateCallLine for full explanation).
+      if (this.workspace?.rendered && this.initSvg) {
+        try { this.initSvg(); } catch (_) { /* headless / disposed */ }
+      }
     } finally {
       this._inUpdate_ = false;
     }
