@@ -520,6 +520,22 @@ const extStaticCallMixin = {
             const wantsReturn = block.type === 'java_ext_static_call_return';
             const allMethods  = getStaticMethodsForClass(newValue, null);
             const methods     = allMethods.filter(m => wantsReturn ? m.hasReturn : !m.hasReturn);
+            // Skip rebuild when the currently selected method is still valid
+            // for this class and the shape already matches its arg list.
+            // This prevents tearing out connected value blocks when the
+            // validator fires after workspace restore (load) without the user
+            // having actually changed the class.
+            const currentMethod = block.getField?.('METHOD') ? block.getFieldValue('METHOD') : null;
+            if (currentMethod) {
+              const currentMethodData = methods.find(m => m.name === currentMethod);
+              if (currentMethodData) {
+                const newArgNames = currentMethodData.arguments || [];
+                if (block.argCount_ === newArgNames.length &&
+                    newArgNames.every((n, i) => block.argNames_[i] === n)) {
+                  return; // shape already correct, skip rebuild
+                }
+              }
+            }
             if (methods.length > 0) {
               const first = methods[0];
               block.argCount_ = (first.arguments || []).length;
@@ -722,6 +738,17 @@ Blockly.Blocks['java_ext_static_call_noreturn'] = {
         setTimeout(() => {
           if (block._inUpdate_) return;
           const methods = getStaticMethodsForClass(newValue, null).filter(m => !m.hasReturn);
+          const currentMethod = block.getField?.('METHOD') ? block.getFieldValue('METHOD') : null;
+          if (currentMethod) {
+            const currentMethodData = methods.find(m => m.name === currentMethod);
+            if (currentMethodData) {
+              const newArgNames = currentMethodData.arguments || [];
+              if (block.argCount_ === newArgNames.length &&
+                  newArgNames.every((n, i) => block.argNames_[i] === n)) {
+                return;
+              }
+            }
+          }
           if (methods.length > 0) {
             const first = methods[0];
             block.argCount_ = (first.arguments || []).length;
@@ -786,6 +813,17 @@ Blockly.Blocks['java_ext_static_call_return'] = {
         setTimeout(() => {
           if (block._inUpdate_) return;
           const methods = getStaticMethodsForClass(newValue, null).filter(m => m.hasReturn);
+          const currentMethod = block.getField?.('METHOD') ? block.getFieldValue('METHOD') : null;
+          if (currentMethod) {
+            const currentMethodData = methods.find(m => m.name === currentMethod);
+            if (currentMethodData) {
+              const newArgNames = currentMethodData.arguments || [];
+              if (block.argCount_ === newArgNames.length &&
+                  newArgNames.every((n, i) => block.argNames_[i] === n)) {
+                return;
+              }
+            }
+          }
           if (methods.length > 0) {
             const first = methods[0];
             block.argCount_ = (first.arguments || []).length;
