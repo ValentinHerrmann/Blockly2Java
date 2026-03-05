@@ -463,6 +463,46 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
     }
     return 'var';
   }
+  // External static class method call (java_ext_static_call_return)
+  if (valueBlock.type === 'java_ext_static_call_return') {
+    const cls = valueBlock.getFieldValue('CLASS');
+    const mn  = valueBlock.getFieldValue('METHOD');
+    if (cls && mn) {
+      // Check stored return type from LocalStorageManager (other classes).
+      const allMethods = LocalStorageManager.getAllMethods();
+      const classMethods = allMethods[cls] || [];
+      const stored = classMethods.find(m => m.isStatic && m.name === mn && m.returnType);
+      if (stored?.returnType) return stored.returnType;
+      // Fall back: look in current workspace static-method def blocks.
+      for (const def of workSpace.getBlocksByType('java_static_method_return', true)) {
+        if (def.getFieldValue('NAME') === mn) {
+          const rb = def.getInputTargetBlock('RETURN');
+          if (rb) { const t = getType(rb.type); if (t !== TYPES.UNKNOWN) return t; }
+        }
+      }
+    }
+    return 'var';
+  }
+  // Instance method call on another object (java_obj_method_call_return)
+  if (valueBlock.type === 'java_obj_method_call_return') {
+    const mn = valueBlock.getFieldValue('METHOD');
+    if (mn) {
+      // Check current workspace instance method def blocks.
+      for (const def of workSpace.getBlocksByType('java_method_return', true)) {
+        if (def.getFieldValue('NAME') === mn) {
+          const rb = def.getInputTargetBlock('RETURN');
+          if (rb) { const t = getType(rb.type); if (t !== TYPES.UNKNOWN) return t; }
+        }
+      }
+      // Check stored return type from LocalStorageManager (other classes).
+      const allMethods = LocalStorageManager.getAllMethods();
+      for (const classMethods of Object.values(allMethods)) {
+        const stored = classMethods.find(m => !m.isStatic && m.name === mn && m.returnType);
+        if (stored?.returnType) return stored.returnType;
+      }
+    }
+    return 'var';
+  }
   return getType(valueBlock.type);
 }
 
