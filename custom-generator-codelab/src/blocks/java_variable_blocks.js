@@ -356,16 +356,24 @@ function makeCallBlock(callType, name, argNames) {
  * Creates a flyout block for java_obj_method_call_* blocks, pre-filled with
  * the given method name and argument list.  The OBJ value-input socket is
  * left empty for the student to plug in the receiver object.
+ *
+ * METHOD is a FieldDropdown now, so its value is serialised via a <field>
+ * element (not the mutation).  The mutation only carries arg count + names.
  */
 function makeObjCallBlock(callType, name, argNames) {
   const b = Blockly.utils.xml.createElement('block');
   b.setAttribute('type', callType);
   b.setAttribute('gap', '8');
+  // Mutation: shape restoration (arg count + param names).
   const mutation = Blockly.utils.xml.createElement('mutation');
-  mutation.setAttribute('method', name);
   mutation.setAttribute('args', String(argNames.length));
   argNames.forEach((n, i) => mutation.setAttribute('name' + i, n));
   b.appendChild(mutation);
+  // Field: pre-select the method in the FieldDropdown.
+  const methodField = Blockly.utils.xml.createElement('field');
+  methodField.setAttribute('name', 'METHOD');
+  methodField.appendChild(document.createTextNode(name));
+  b.appendChild(methodField);
   return b;
 }
 

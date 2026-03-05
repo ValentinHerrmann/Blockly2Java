@@ -209,7 +209,19 @@ function setupListeners(workspace) {
       return;
     }
     clearTimeout(_codeGenTimer);
-    _codeGenTimer = setTimeout(() => onBlocksChange(), 0);
+    _codeGenTimer = setTimeout(() => {
+      // If a Blockly FieldTextInput editor is currently active (user is typing
+      // inside a block's text field), running onBlocksChange() would call
+      // load(ws) which rebuilds the workspace DOM and destroys the focused
+      // <input>, causing focus loss after every character.
+      // Instead, defer code generation until the field editor is dismissed.
+      const active = document.activeElement;
+      if (active && active.tagName === 'INPUT' && active.closest?.('.blocklyWidgetDiv')) {
+        active.addEventListener('blur', () => onBlocksChange(), { once: true });
+        return;
+      }
+      onBlocksChange();
+    }, 0);
   });
 
   // Clean up orphaned 'param' variables whenever any block is deleted.

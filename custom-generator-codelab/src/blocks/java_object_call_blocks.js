@@ -7,42 +7,218 @@
  *  - java_ext_static_call_noreturn  → ClassName.method(args);
  *  - java_ext_static_call_return    → ClassName.method(args) [value block]
  *
- * All four blocks share the callArgMixin mutator helper blocks
- * (call_arg_container / call_arg_input) that are already defined in
- * java_method_blocks.js.
+ * METHOD and CLASS fields use FieldDropdown:
+ *  - java_obj_method_call_*  : METHOD dropdown lists all instance methods
+ *    currently defined in the workspace (java_method_noreturn / java_method_return).
+ *    Selecting a method auto-populates the correct argument slots.
  *
- * "Object call" blocks have a VALUE input OBJ (any expression can be plugged in)
- * plus a text field METHOD – so the user can call methods of the same class on
- * another instance OR call library methods (e.g. string.length()).
+ *  - java_ext_static_call_*  : CLASS dropdown lists all classes that have
+ *    known static methods (from LocalStorageManager or current workspace static
+ *    method blocks).  METHOD dropdown filters to static methods of the chosen
+ *    class.  Selecting a method auto-populates argument slots.
  *
- * "External static" blocks have two text fields: CLASS and METHOD.
+ * Serialisation:
+ *   - CLASS / METHOD field values are serialized by Blockly's standard field
+ *     mechanism (no need to duplicate them in mutation).
+ *   - argCount_ and argNames_ are stored in <mutation> so the block shape can
+ *     be restored without re-running the auto-detection.
  */
 
 import * as Blockly from 'blockly/core';
+import LocalStorageManager from '../utils/LocalStorageManager.js';
+import { getClassName } from '../generators/javascript/javascript_generator.js';
 
 // ─── Colour constants ─────────────────────────────────────────────────────────
 const OBJ_CALL_COLOUR = '#2288AA';   // teal-blue  – method call on an object
 const EXT_STA_COLOUR  = '#AA8822';   // amber/gold – static method of another class
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared mixin for "call on object" blocks (java_obj_method_call_*)
+// Option generators (called by FieldDropdown at open-time — always fresh)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns [[displayName, value], …] for all instance methods defined in ws.
+ * Falls back to a placeholder when no methods have been defined yet.
+ * @param {Blockly.Workspace|null} ws
+ * @returns {Array<[string,string]>}
+ */
+function getInstanceMethodOptions() {
+  const seen = new Set();
+  const opts = [];
+
+  // 1. Methods from previously generated / saved classes (LocalStorageManager).
+  const allMethods = LocalStorageManager.getAllMethods();
+  for (const methods of Object.values(allMethods)) {
+    for (const m of methods) {
+      if (!m.isStatic && !seen.has(m.name)) {
+        opts.push([m.name, m.name]);
+        seen.add(m.name);
+      }
+    }
+  }
+
+  // 2. Methods defined in the currently open workspace.
+  const workspace = Blockly.getMainWorkspace();
+  if (workspace) {
+    for (const type of ['java_method_noreturn', 'java_method_return']) {
+      for (const blk of workspace.getBlocksByType(type, true)) {
+        const name = blk.getFieldValue('NAME') || '';
+        if (name && !seen.has(name)) {
+          opts.push([name, name]);
+          seen.add(name);
+        }
+      }
+    }
+  }
+
+  return opts.length > 0 ? opts : [['(keine Methoden)', '__none__']];
+}
+
+/**
+ * Returns [[className, className], …] for all classes with known static methods.
+ * Sources: LocalStorageManager (previously generated classes) and the current
+ * workspace's static def-blocks.
+ * @param {Blockly.Workspace|null} ws
+ * @returns {Array<[string,string]>}
+ */
+function getStaticClassOptions(_ws) {
+  const workspace  = Blockly.getMainWorkspace();
+  const classNames = new Set();
+
+  // Classes stored from previous code generations.
+  const allMethods = LocalStorageManager.getAllMethods();
+  for (const [cls, methods] of Object.entries(allMethods)) {
+    if (methods.some(m => m.isStatic)) classNames.add(cls);
+  }
+
+  // Current workspace class if it has static method def-blocks.
+  // Use getClassName() when available; if not set yet, try to add the class
+  // anyway by checking for the presence of static def-blocks.
+  if (workspace) {
+    const staticBlocks = ['java_static_method_noreturn', 'java_static_method_return']
+      .flatMap(t => workspace.getBlocksByType(t, true));
+    if (staticBlocks.length > 0) {
+      const cls = getClassName();
+      if (cls) classNames.add(cls);
+    }
+  }
+
+  const opts = [...classNames].map(c => [c, c]);
+  return opts.length > 0 ? opts : [['Klasse', 'Klasse']];
+}
+
+/**
+ * Returns metadata for all static methods of className.
+ * Merges LocalStorageManager data with workspace def-blocks (for the current class).
+ * @param {string}                 className
+ * @param {Blockly.Workspace|null} ws
+ * @returns {Array<{name:string, arguments:string[], isStatic:boolean, hasReturn:boolean}>}
+ */
+function getStaticMethodsForClass(className, _ws) {
+  if (!className || className === 'Klasse') return [];
+  const workspace = Blockly.getMainWorkspace();
+  const methods   = [];
+  const seen      = new Set();
+
+  // From LocalStorageManager (methods stored during previous code generations).
+  const allMethods = LocalStorageManager.getAllMethods();
+  for (const m of (allMethods[className] || [])) {
+    if (m.isStatic && !seen.has(m.name)) {
+      methods.push(m);
+      seen.add(m.name);
+    }
+  }
+
+  // From workspace def-blocks.
+  // Include when className matches the currently open class OR when getClassName()
+  // hasn't been set yet (code not yet generated for this class).
+  const currentClass = getClassName();
+  if (workspace && (className === currentClass || !currentClass)) {
+    for (const type of ['java_static_method_noreturn', 'java_static_method_return']) {
+      for (const blk of workspace.getBlocksByType(type, true)) {
+        const name = blk.getFieldValue('NAME') || '';
+        if (name && !seen.has(name)) {
+          methods.push({
+            name,
+            arguments: blk.arguments_ || [],
+            isStatic:  true,
+            hasReturn: type === 'java_static_method_return',
+          });
+          seen.add(name);
+        }
+      }
+    }
+  }
+
+  return methods;
+}
+
+/**
+ * Returns [[name, name], …] for static methods of className.
+ * @param {string}                 className
+ * @param {Blockly.Workspace|null} ws
+ * @returns {Array<[string,string]>}
+ */
+function getStaticMethodOptions(className, ws) {
+  const methods = getStaticMethodsForClass(className, ws);
+  return methods.length > 0
+    ? methods.map(m => [m.name, m.name])
+    : [['methode', 'methode']];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared utility: read a <field name="…"> text value from a <block> XML node.
+// Returns null when the element is absent (e.g. during fresh block creation).
+// Used by domToMutation to pre-read field values before Blockly applies them,
+// so FieldDropdown instances start with valid values and don't crash renders.
+// ─────────────────────────────────────────────────────────────────────────────
+function _readXmlField(blockEl, fieldName) {
+  if (!blockEl) return null;
+  for (const child of blockEl.children) {
+    if (child.tagName?.toLowerCase() === 'field' &&
+        child.getAttribute('name') === fieldName) {
+      return child.textContent ?? null;
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared utility: silently restore a FieldDropdown value after a rebuild.
+// Events are disabled so the change doesn't re-trigger onchange.
+// Skips the call when value is null or not in the current option list.
+// ─────────────────────────────────────────────────────────────────────────────
+function _restoreFieldValue(block, fieldName, value) {
+  if (value == null) return;
+  const field = block.getField(fieldName);
+  if (!field) return;
+  if (typeof field.getOptions === 'function') {
+    const opts = field.getOptions();
+    if (opts && !opts.find(o => o[1] === value)) return;
+  }
+  Blockly.Events.disable();
+  try { field.setValue(value); } catch (_) { /* ignore */ }
+  finally { Blockly.Events.enable(); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mixin: "call on object"   (java_obj_method_call_*)
 //
-// Layout:
-//   Row 0  (value input OBJ)  : "Methode auf  [OBJ ←]"
-//   Row 1+ (managed by mutator):
-//     0 args  →  dummy    ".methode()"
-//     n args  →  value    ".methode( arg1 , [ARG0 ←]"
-//                value    "         arg2 ) [ARG1 ←]"
-//                ...
+// Layout
+//   VALUE  "Methode auf  [OBJ ←]"
+//   DUMMY  "." [METHOD ▾] "()"          ← 0 args
+//   VALUE  "." [METHOD ▾] "( arg1 ,"    ← 1+ args (first row)
+//   VALUE  "  argN … )"                 ← subsequent args (right-aligned)
 // ─────────────────────────────────────────────────────────────────────────────
 const objCallMixin = {
-  argCount_: 0,
-  argNames_: [],
+  argCount_:  0,
+  argNames_:  [],
+  _inUpdate_: false,
+
+  // ── Serialisation ────────────────────────────────────────────────────────
 
   mutationToDom() {
     const container = document.createElement('mutation');
-    const method = (this.getField('METHOD') ? this.getFieldValue('METHOD') : null) || 'methode';
-    container.setAttribute('method', method);
     container.setAttribute('args', this.argCount_);
     (this.argNames_ || []).forEach((n, i) => container.setAttribute('name' + i, n));
     return container;
@@ -54,115 +230,132 @@ const objCallMixin = {
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || 'arg ' + (i + 1));
     }
-    const method = xmlElement.getAttribute('method') || 'methode';
+    // Pre-read METHOD from the sibling <field> elements on the parent <block>
+    // node. Blockly applies these values AFTER domToMutation returns, but
+    // _updateCallLine creates a fresh FieldDropdown whose initial value must
+    // already be valid — otherwise an intermediate render triggered when
+    // Blockly later calls setFieldValue('METHOD') will find the value absent
+    // from the options list and getTextContent() returns null (crash).
+    const blockEl = xmlElement.parentNode;
+    const method  = _readXmlField(blockEl, 'METHOD');
     this._updateCallLine(method);
   },
 
-  decompose(workspace) {
-    const container = workspace.newBlock('call_arg_container');
-    container.initSvg();
-    let conn = container.getInput('STACK').connection;
-    for (let i = 0; i < this.argCount_; i++) {
-      const argBlock = workspace.newBlock('call_arg_input');
-      argBlock.initSvg();
-      conn.connect(argBlock.previousConnection);
-      conn = argBlock.nextConnection;
-    }
-    return container;
-  },
-
-  compose(containerBlock) {
-    // Save existing arg connections so plugged blocks survive a mutator change.
-    const savedConns = [];
-    for (let i = 0; i < this.argCount_; i++) {
-      const inp = this.getInput('ARG' + i);
-      savedConns[i] = inp && inp.connection && inp.connection.targetConnection;
-    }
-
-    let newCount = 0;
-    let itemBlock = containerBlock.getInputTargetBlock('STACK');
-    while (itemBlock) {
-      newCount++;
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
-    }
-
-    // Extend or trim argNames_ to match the new count so labels and
-    // serialization always stay in sync with the actual arg count.
-    this.argNames_ = this.argNames_ || [];
-    while (this.argNames_.length < newCount) {
-      this.argNames_.push('arg ' + (this.argNames_.length + 1));
-    }
-    this.argNames_ = this.argNames_.slice(0, newCount);
-
-    this.argCount_ = newCount;
-    this._updateCallLine();
-
-    for (let i = 0; i < savedConns.length && i < this.argCount_; i++) {
-      if (savedConns[i] && savedConns[i].getSourceBlock().workspace) {
-        this.getInput('ARG' + i).connection.connect(savedConns[i]);
-      }
-    }
-  },
+  // ── Shape builder ────────────────────────────────────────────────────────
 
   /**
-   * Rebuild the CALL_LINE / ARG* inputs that sit below the OBJ value input.
-   * @param {string} [defaultMethod] – fall-back method name when the field
-   *   does not yet exist (first call from domToMutation).
+   * Rebuilds CALL_LINE (and ARG* inputs) to match current argCount_/argNames_.
+   * A fresh FieldDropdown for METHOD is created each time; its previous value
+   * is restored silently after the inputs are re-attached.
+   *
+   * @param {string|null} [methodOverride] – value to restore; when null the
+   *   current field value is snapshotted before inputs are removed.
    */
-  _updateCallLine(defaultMethod) {
-    // Preserve the method name the user typed, or use the supplied default.
-    const method =
-      (this.getField('METHOD') ? this.getFieldValue('METHOD') : null) ||
-      defaultMethod ||
-      'methode';
+  _updateCallLine(methodOverride) {
+    if (this._inUpdate_) return;
+    this._inUpdate_ = true;
+    try {
+      const method = methodOverride != null
+        ? methodOverride
+        : (this.getField('METHOD') ? this.getFieldValue('METHOD') : null);
 
-    // Remove stale ARG inputs.
-    let i = 0;
-    while (this.getInput('ARG' + i)) this.removeInput('ARG' + i++);
-    // Remove the old call-line dummy (or old ARG0 that carried the method label).
-    if (this.getInput('CALL_LINE')) this.removeInput('CALL_LINE');
+      // Remove stale inputs.
+      let i = 0;
+      while (this.getInput('ARG' + i)) this.removeInput('ARG' + i++);
+      if (this.getInput('CALL_LINE')) this.removeInput('CALL_LINE');
 
-    if (this.argCount_ === 0) {
-      this.appendDummyInput('CALL_LINE')
-        .appendField('.')
-        .appendField(new Blockly.FieldTextInput(method), 'METHOD')
-        .appendField('()');
-    } else {
-      const label0 = (this.argNames_ && this.argNames_[0]) || 'arg 1';
-      const suffix0 = this.argCount_ > 1 ? ' ,' : ' )';
-      this.appendValueInput('ARG0')
-        .appendField('.')
-        .appendField(new Blockly.FieldTextInput(method), 'METHOD')
-        .appendField('( ' + label0 + suffix0);
-      for (let j = 1; j < this.argCount_; j++) {
-        const label = (this.argNames_ && this.argNames_[j]) || 'arg ' + (j + 1);
-        const suffix = j + 1 < this.argCount_ ? ' ,' : ' )';
-        this.appendValueInput('ARG' + j)
-          .setAlign(Blockly.inputs.Align.RIGHT)
-          .appendField(label + suffix);
+      const block       = this;
+      const methodField = new Blockly.FieldDropdown(() => {
+        const opts = getInstanceMethodOptions();
+        // If the captured method value is not in the live options (e.g. during
+        // an intermediate render before METHOD is formally restored), add it so
+        // getTextContent() never returns null and crashes the renderer.
+        if (method && !opts.find(o => o[1] === method)) opts.unshift([method, method]);
+        return opts;
+      });
+      methodField.setValidator(function(newValue) {
+        if (!block._inUpdate_ && newValue !== '__none__') {
+          setTimeout(() => { if (!block._inUpdate_) block._autoApplyMethod(newValue); }, 0);
+        }
+        return newValue;
+      });
+
+      if (this.argCount_ === 0) {
+        this.appendDummyInput('CALL_LINE')
+          .appendField('.')
+          .appendField(methodField, 'METHOD')
+          .appendField('()');
+      } else {
+        const label0  = this.argNames_[0] || 'arg 1';
+        const suffix0 = this.argCount_ > 1 ? ' ,' : ' )';
+        this.appendValueInput('ARG0')
+          .appendField('.')
+          .appendField(methodField, 'METHOD')
+          .appendField('( ' + label0 + suffix0);
+        for (let j = 1; j < this.argCount_; j++) {
+          const label  = this.argNames_[j] || 'arg ' + (j + 1);
+          const suffix = j + 1 < this.argCount_ ? ' ,' : ' )';
+          this.appendValueInput('ARG' + j)
+            .setAlign(Blockly.inputs.Align.RIGHT)
+            .appendField(label + suffix);
+        }
       }
+
+      _restoreFieldValue(this, 'METHOD', method);
+    } finally {
+      this._inUpdate_ = false;
     }
   },
+
+  // ── Auto-detection ──────────────────────────────────────────────────────
+
+  /**
+   * Looks up methodName in workspace def-blocks, then updates argCount_/
+   * argNames_ and rebuilds the shape when found.
+   * @param {string} methodName
+   */
+  _autoApplyMethod(methodName) {
+    const ws = Blockly.getMainWorkspace();
+    if (!ws) return;
+    for (const type of ['java_method_noreturn', 'java_method_return']) {
+      for (const block of ws.getBlocksByType(type, true)) {
+        if (block.getFieldValue('NAME') === methodName) {
+          const argNames = block.arguments_ || [];
+          this.argCount_ = argNames.length;
+          this.argNames_ = argNames.slice();
+          this._updateCallLine(methodName);
+          return;
+        }
+      }
+    }
+    // Method not found in workspace (could be a library method) — keep shape.
+  },
+
+  // ── Change listener ─────────────────────────────────────────────────────
+  // onchange is intentionally omitted: shape updates are driven by field
+  // validators set on the METHOD FieldDropdown inside _updateCallLine/init.
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared mixin for "external static class" blocks (java_ext_static_call_*)
+// Mixin: "external static class"   (java_ext_static_call_*)
 //
-// Layout:
-//   0 args  →  dummy   "Klasse.methode()"
-//   n args  →  value   "Klasse.methode( arg1 , [ARG0 ←]"
-//               value  "                arg2 ) [ARG1 ←]"
+// Layout
+//   DUMMY  "[CLASS ▾] . [METHOD ▾] ()"          ← 0 args
+//   VALUE  "[CLASS ▾] . [METHOD ▾] ( arg1 ,"    ← 1+ args (first row)
+//   VALUE  "                         argN … )"  ← subsequent args (right-aligned)
+//
+// Linked dropdowns: selecting CLASS → resets METHOD to first available + auto-applies args.
+//                   selecting METHOD → auto-applies args for current CLASS.
 // ─────────────────────────────────────────────────────────────────────────────
 const extStaticCallMixin = {
-  argCount_: 0,
-  argNames_: [],
+  argCount_:  0,
+  argNames_:  [],
+  _inUpdate_: false,
+
+  // ── Serialisation ────────────────────────────────────────────────────────
 
   mutationToDom() {
     const container = document.createElement('mutation');
-    const cls     = (this.getField('CLASS')  ? this.getFieldValue('CLASS')  : null) || 'Klasse';
-    const method  = (this.getField('METHOD') ? this.getFieldValue('METHOD') : null) || 'methode';
-    container.setAttribute('class',  cls);
-    container.setAttribute('method', method);
     container.setAttribute('args', this.argCount_);
     (this.argNames_ || []).forEach((n, i) => container.setAttribute('name' + i, n));
     return container;
@@ -174,89 +367,147 @@ const extStaticCallMixin = {
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || 'arg ' + (i + 1));
     }
-    const cls    = xmlElement.getAttribute('class')  || 'Klasse';
-    const method = xmlElement.getAttribute('method') || 'methode';
+    // Pre-read CLASS + METHOD from sibling <field> elements (see objCallMixin
+    // domToMutation for the full explanation). Passing them here ensures the
+    // dropdowns already hold valid values before Blockly applies them via its
+    // own field deserialization, preventing intermediate-render crashes.
+    const blockEl = xmlElement.parentNode;
+    const cls    = _readXmlField(blockEl, 'CLASS');
+    const method = _readXmlField(blockEl, 'METHOD');
     this._updateCallLine(cls, method);
   },
 
-  decompose(workspace) {
-    const container = workspace.newBlock('call_arg_container');
-    container.initSvg();
-    let conn = container.getInput('STACK').connection;
-    for (let i = 0; i < this.argCount_; i++) {
-      const argBlock = workspace.newBlock('call_arg_input');
-      argBlock.initSvg();
-      conn.connect(argBlock.previousConnection);
-      conn = argBlock.nextConnection;
-    }
-    return container;
-  },
-
-  compose(containerBlock) {
-    const savedConns = [];
-    for (let i = 0; i < this.argCount_; i++) {
-      const inp = this.getInput('ARG' + i);
-      savedConns[i] = inp && inp.connection && inp.connection.targetConnection;
-    }
-
-    let newCount = 0;
-    let itemBlock = containerBlock.getInputTargetBlock('STACK');
-    while (itemBlock) {
-      newCount++;
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
-    }
-
-    this.argNames_ = this.argNames_ || [];
-    while (this.argNames_.length < newCount) {
-      this.argNames_.push('arg ' + (this.argNames_.length + 1));
-    }
-    this.argNames_ = this.argNames_.slice(0, newCount);
-
-    this.argCount_ = newCount;
-    this._updateCallLine();
-
-    for (let i = 0; i < savedConns.length && i < this.argCount_; i++) {
-      if (savedConns[i] && savedConns[i].getSourceBlock().workspace) {
-        this.getInput('ARG' + i).connection.connect(savedConns[i]);
-      }
-    }
-  },
+  // ── Shape builder ────────────────────────────────────────────────────────
 
   /**
-   * @param {string} [defaultClass]
-   * @param {string} [defaultMethod]
+   * Rebuilds CALL_LINE (and ARG* inputs).
+   * Fresh CLASS and METHOD FieldDropdown instances are created per-rebuild.
+   * METHOD options are evaluated lazily via a closure that reads the current
+   * CLASS field value at dropdown-open time.
+   *
+   * @param {string|null} [classOverride]
+   * @param {string|null} [methodOverride]
    */
-  _updateCallLine(defaultClass, defaultMethod) {
-    const cls    = (this.getField('CLASS')  ? this.getFieldValue('CLASS')  : null) || defaultClass  || 'Klasse';
-    const method = (this.getField('METHOD') ? this.getFieldValue('METHOD') : null) || defaultMethod || 'methode';
+  _updateCallLine(classOverride, methodOverride) {
+    if (this._inUpdate_) return;
+    this._inUpdate_ = true;
+    try {
+      const cls    = classOverride  != null ? classOverride
+                   : (this.getField('CLASS')  ? this.getFieldValue('CLASS')  : null);
+      const method = methodOverride != null ? methodOverride
+                   : (this.getField('METHOD') ? this.getFieldValue('METHOD') : null);
 
-    let i = 0;
-    while (this.getInput('ARG' + i)) this.removeInput('ARG' + i++);
-    if (this.getInput('CALL_LINE')) this.removeInput('CALL_LINE');
+      // Remove stale inputs.
+      let i = 0;
+      while (this.getInput('ARG' + i)) this.removeInput('ARG' + i++);
+      if (this.getInput('CALL_LINE')) this.removeInput('CALL_LINE');
 
-    if (this.argCount_ === 0) {
-      this.appendDummyInput('CALL_LINE')
-        .appendField(new Blockly.FieldTextInput(cls),    'CLASS')
-        .appendField('.')
-        .appendField(new Blockly.FieldTextInput(method), 'METHOD')
-        .appendField('()');
-    } else {
-      const label0 = (this.argNames_ && this.argNames_[0]) || 'arg 1';
-      const suffix0 = this.argCount_ > 1 ? ' ,' : ' )';
-      this.appendValueInput('ARG0')
-        .appendField(new Blockly.FieldTextInput(cls),    'CLASS')
-        .appendField('.')
-        .appendField(new Blockly.FieldTextInput(method), 'METHOD')
-        .appendField('( ' + label0 + suffix0);
-      for (let j = 1; j < this.argCount_; j++) {
-        const label  = (this.argNames_ && this.argNames_[j]) || 'arg ' + (j + 1);
-        const suffix = j + 1 < this.argCount_ ? ' ,' : ' )';
-        this.appendValueInput('ARG' + j)
-          .setAlign(Blockly.inputs.Align.RIGHT)
-          .appendField(label + suffix);
+      const block      = this;
+      const classField = new Blockly.FieldDropdown(() => {
+        const opts = getStaticClassOptions();
+        // If the captured cls value is not in the live options (e.g. during an
+        // intermediate render before CLASS is formally restored), add it so
+        // getTextContent() never returns null and crashes the renderer.
+        if (cls && !opts.find(o => o[1] === cls)) opts.unshift([cls, cls]);
+        return opts;
+      });
+      classField.setValidator(function(newValue) {
+        if (!block._inUpdate_) {
+          setTimeout(() => {
+            if (block._inUpdate_) return;
+            const methods = getStaticMethodsForClass(newValue, null);
+            if (methods.length > 0) {
+              const first = methods[0];
+              block.argCount_ = (first.arguments || []).length;
+              block.argNames_ = (first.arguments || []).slice();
+              block._updateCallLine(newValue, first.name);
+            } else {
+              block.argCount_ = 0;
+              block.argNames_ = [];
+              block._updateCallLine(newValue, null);
+            }
+          }, 0);
+        }
+        return newValue;
+      });
+
+      // METHOD options depend on CLASS — evaluated at dropdown-open time.
+      const methodField = new Blockly.FieldDropdown(() => {
+        const selectedCls = block.getField?.('CLASS')
+          ? block.getFieldValue('CLASS')
+          : (cls || 'Klasse');
+        const opts = getStaticMethodOptions(selectedCls, null);
+        // Guarantee the captured method value is always present so
+        // getTextContent() never returns null during intermediate renders
+        // (e.g. when Blockly sets CLASS before it sets METHOD).
+        if (method && !opts.find(o => o[1] === method)) opts.unshift([method, method]);
+        return opts;
+      });
+      methodField.setValidator(function(newValue) {
+        if (!block._inUpdate_) {
+          setTimeout(() => {
+            if (!block._inUpdate_) {
+              const selectedCls = block.getField?.('CLASS')
+                ? block.getFieldValue('CLASS')
+                : (cls || 'Klasse');
+              block._autoApplyStaticMethod(selectedCls, newValue);
+            }
+          }, 0);
+        }
+        return newValue;
+      });
+
+      if (this.argCount_ === 0) {
+        this.appendDummyInput('CALL_LINE')
+          .appendField(classField,  'CLASS')
+          .appendField('.')
+          .appendField(methodField, 'METHOD')
+          .appendField('()');
+      } else {
+        const label0  = this.argNames_[0] || 'arg 1';
+        const suffix0 = this.argCount_ > 1 ? ' ,' : ' )';
+        this.appendValueInput('ARG0')
+          .appendField(classField,  'CLASS')
+          .appendField('.')
+          .appendField(methodField, 'METHOD')
+          .appendField('( ' + label0 + suffix0);
+        for (let j = 1; j < this.argCount_; j++) {
+          const label  = this.argNames_[j] || 'arg ' + (j + 1);
+          const suffix = j + 1 < this.argCount_ ? ' ,' : ' )';
+          this.appendValueInput('ARG' + j)
+            .setAlign(Blockly.inputs.Align.RIGHT)
+            .appendField(label + suffix);
+        }
       }
+
+      // Restore CLASS first so the METHOD options function has the right class.
+      _restoreFieldValue(this, 'CLASS',  cls);
+      _restoreFieldValue(this, 'METHOD', method);
+    } finally {
+      this._inUpdate_ = false;
     }
   },
+
+  // ── Auto-detection ──────────────────────────────────────────────────────
+
+  /**
+   * Looks up methodName among static methods of className, then updates
+   * argCount_/argNames_ and rebuilds the shape when found.
+   * @param {string} className
+   * @param {string} methodName
+   */
+  _autoApplyStaticMethod(className, methodName) {
+    const methods = getStaticMethodsForClass(className, null);
+    const method  = methods.find(m => m.name === methodName);
+    if (!method) return;
+    this.argCount_ = (method.arguments || []).length;
+    this.argNames_ = (method.arguments || []).slice();
+    this._updateCallLine(className, methodName);
+  },
+
+  // ── Change listener ─────────────────────────────────────────────────────
+  // onchange is intentionally omitted: shape updates are driven by validators
+  // set on CLASS and METHOD FieldDropdown instances inside _updateCallLine/init.
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -264,22 +515,35 @@ const extStaticCallMixin = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_obj_method_call_noreturn'] = {
   init() {
-    this.argCount_ = 0;
-    this.argNames_ = [];
-    // Row 0: constant value input for the receiver object.
-    this.appendValueInput('OBJ')
-      .appendField('Methode auf');
-    // Row 1+: managed by mutator (starts with no-arg dummy).
+    this.argCount_  = 0;
+    this.argNames_  = [];
+    this._inUpdate_ = false;
+
+    // Fixed receiver row.
+    this.appendValueInput('OBJ').appendField('Methode auf');
+
+    // Initial 0-arg CALL_LINE.
+    const block       = this;
+    const methodField = new Blockly.FieldDropdown(getInstanceMethodOptions);
+    methodField.setValidator(function(newValue) {
+      if (!block._inUpdate_ && newValue !== '__none__') {
+        setTimeout(() => { if (!block._inUpdate_) block._autoApplyMethod(newValue); }, 0);
+      }
+      return newValue;
+    });
     this.appendDummyInput('CALL_LINE')
       .appendField('.')
-      .appendField(new Blockly.FieldTextInput('methode'), 'METHOD')
+      .appendField(methodField, 'METHOD')
       .appendField('()');
+
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(OBJ_CALL_COLOUR);
-    this.setTooltip('Ruft eine Methode auf einem Objekt auf (kein Rückgabewert).');
+    this.setTooltip(
+      'Ruft eine Methode auf einem Objekt auf (kein Rückgabewert). ' +
+      'Wähle die Methode im Dropdown – Argumente werden automatisch angelegt.',
+    );
     this.setHelpUrl('');
-    this.setMutator(new Blockly.icons.MutatorIcon(['call_arg_input'], this));
   },
   ...objCallMixin,
 };
@@ -289,19 +553,32 @@ Blockly.Blocks['java_obj_method_call_noreturn'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_obj_method_call_return'] = {
   init() {
-    this.argCount_ = 0;
-    this.argNames_ = [];
-    this.appendValueInput('OBJ')
-      .appendField('Methode auf');
+    this.argCount_  = 0;
+    this.argNames_  = [];
+    this._inUpdate_ = false;
+
+    this.appendValueInput('OBJ').appendField('Methode auf');
+
+    const block       = this;
+    const methodField = new Blockly.FieldDropdown(getInstanceMethodOptions);
+    methodField.setValidator(function(newValue) {
+      if (!block._inUpdate_ && newValue !== '__none__') {
+        setTimeout(() => { if (!block._inUpdate_) block._autoApplyMethod(newValue); }, 0);
+      }
+      return newValue;
+    });
     this.appendDummyInput('CALL_LINE')
       .appendField('.')
-      .appendField(new Blockly.FieldTextInput('methode'), 'METHOD')
+      .appendField(methodField, 'METHOD')
       .appendField('()');
+
     this.setOutput(true, null);
     this.setColour(OBJ_CALL_COLOUR);
-    this.setTooltip('Ruft eine Methode auf einem Objekt auf und gibt den Rückgabewert zurück.');
+    this.setTooltip(
+      'Ruft eine Methode auf einem Objekt auf und gibt den Rückgabewert zurück. ' +
+      'Wähle die Methode im Dropdown – Argumente werden automatisch angelegt.',
+    );
     this.setHelpUrl('');
-    this.setMutator(new Blockly.icons.MutatorIcon(['call_arg_input'], this));
   },
   ...objCallMixin,
 };
@@ -311,19 +588,61 @@ Blockly.Blocks['java_obj_method_call_return'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_ext_static_call_noreturn'] = {
   init() {
-    this.argCount_ = 0;
-    this.argNames_ = [];
+    this.argCount_  = 0;
+    this.argNames_  = [];
+    this._inUpdate_ = false;
+
+    const block      = this;
+    const classField = new Blockly.FieldDropdown(getStaticClassOptions);
+    classField.setValidator(function(newValue) {
+      if (!block._inUpdate_) {
+        setTimeout(() => {
+          if (block._inUpdate_) return;
+          const methods = getStaticMethodsForClass(newValue, null);
+          if (methods.length > 0) {
+            const first = methods[0];
+            block.argCount_ = (first.arguments || []).length;
+            block.argNames_ = (first.arguments || []).slice();
+            block._updateCallLine(newValue, first.name);
+          } else {
+            block.argCount_ = 0;
+            block.argNames_ = [];
+            block._updateCallLine(newValue, null);
+          }
+        }, 0);
+      }
+      return newValue;
+    });
+    const methodField = new Blockly.FieldDropdown(() => {
+      const cls = block.getField?.('CLASS') ? block.getFieldValue('CLASS') : 'Klasse';
+      return getStaticMethodOptions(cls, null);
+    });
+    methodField.setValidator(function(newValue) {
+      if (!block._inUpdate_) {
+        setTimeout(() => {
+          if (!block._inUpdate_) {
+            const cls = block.getField?.('CLASS') ? block.getFieldValue('CLASS') : 'Klasse';
+            block._autoApplyStaticMethod(cls, newValue);
+          }
+        }, 0);
+      }
+      return newValue;
+    });
+
     this.appendDummyInput('CALL_LINE')
-      .appendField(new Blockly.FieldTextInput('Klasse'),   'CLASS')
+      .appendField(classField,  'CLASS')
       .appendField('.')
-      .appendField(new Blockly.FieldTextInput('methode'),  'METHOD')
+      .appendField(methodField, 'METHOD')
       .appendField('()');
+
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(EXT_STA_COLOUR);
-    this.setTooltip('Ruft eine statische Methode einer anderen Klasse auf (kein Rückgabewert).');
+    this.setTooltip(
+      'Ruft eine statische Methode einer anderen Klasse auf (kein Rückgabewert). ' +
+      'Klasse wählen → Methode wählen – Argumente werden automatisch angelegt.',
+    );
     this.setHelpUrl('');
-    this.setMutator(new Blockly.icons.MutatorIcon(['call_arg_input'], this));
   },
   ...extStaticCallMixin,
 };
@@ -333,18 +652,60 @@ Blockly.Blocks['java_ext_static_call_noreturn'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_ext_static_call_return'] = {
   init() {
-    this.argCount_ = 0;
-    this.argNames_ = [];
+    this.argCount_  = 0;
+    this.argNames_  = [];
+    this._inUpdate_ = false;
+
+    const block      = this;
+    const classField = new Blockly.FieldDropdown(getStaticClassOptions);
+    classField.setValidator(function(newValue) {
+      if (!block._inUpdate_) {
+        setTimeout(() => {
+          if (block._inUpdate_) return;
+          const methods = getStaticMethodsForClass(newValue, null);
+          if (methods.length > 0) {
+            const first = methods[0];
+            block.argCount_ = (first.arguments || []).length;
+            block.argNames_ = (first.arguments || []).slice();
+            block._updateCallLine(newValue, first.name);
+          } else {
+            block.argCount_ = 0;
+            block.argNames_ = [];
+            block._updateCallLine(newValue, null);
+          }
+        }, 0);
+      }
+      return newValue;
+    });
+    const methodField = new Blockly.FieldDropdown(() => {
+      const cls = block.getField?.('CLASS') ? block.getFieldValue('CLASS') : 'Klasse';
+      return getStaticMethodOptions(cls, null);
+    });
+    methodField.setValidator(function(newValue) {
+      if (!block._inUpdate_) {
+        setTimeout(() => {
+          if (!block._inUpdate_) {
+            const cls = block.getField?.('CLASS') ? block.getFieldValue('CLASS') : 'Klasse';
+            block._autoApplyStaticMethod(cls, newValue);
+          }
+        }, 0);
+      }
+      return newValue;
+    });
+
     this.appendDummyInput('CALL_LINE')
-      .appendField(new Blockly.FieldTextInput('Klasse'),   'CLASS')
+      .appendField(classField,  'CLASS')
       .appendField('.')
-      .appendField(new Blockly.FieldTextInput('methode'),  'METHOD')
+      .appendField(methodField, 'METHOD')
       .appendField('()');
+
     this.setOutput(true, null);
     this.setColour(EXT_STA_COLOUR);
-    this.setTooltip('Ruft eine statische Methode einer anderen Klasse auf und gibt den Rückgabewert zurück.');
+    this.setTooltip(
+      'Ruft eine statische Methode einer anderen Klasse auf und gibt den Rückgabewert zurück. ' +
+      'Klasse wählen → Methode wählen – Argumente werden automatisch angelegt.',
+    );
     this.setHelpUrl('');
-    this.setMutator(new Blockly.icons.MutatorIcon(['call_arg_input'], this));
   },
   ...extStaticCallMixin,
 };
