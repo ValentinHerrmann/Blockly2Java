@@ -29,8 +29,8 @@ import LocalStorageManager from '../utils/LocalStorageManager.js';
 import { getClassName } from '../generators/javascript/javascript_generator.js';
 
 // ─── Colour constants ─────────────────────────────────────────────────────────
-const OBJ_CALL_COLOUR = '#2288AA';   // teal-blue  – method call on an object
-const EXT_STA_COLOUR  = '#AA8822';   // amber/gold – static method of another class
+const OBJ_CALL_COLOUR = '#b43cb4';   // teal-blue  – method call on an object
+const EXT_STA_COLOUR  = '#c63939';   // amber/gold – static method of another class
 
 function normalizeDropdownToken(value) {
   if (typeof value !== 'string') return null;
@@ -600,7 +600,7 @@ Blockly.Blocks['java_obj_method_call_noreturn'] = {
     this._inUpdate_ = false;
 
     // Fixed receiver row.
-    this.appendValueInput('OBJ').appendField('Methode auf');
+    this.appendValueInput('OBJ').appendField('Objekt');
 
     // Initial 0-arg CALL_LINE.
     const block       = this;
@@ -637,7 +637,7 @@ Blockly.Blocks['java_obj_method_call_return'] = {
     this.argNames_  = [];
     this._inUpdate_ = false;
 
-    this.appendValueInput('OBJ').appendField('Methode auf');
+    this.appendValueInput('OBJ').appendField('Objekt');
 
     const block       = this;
     const methodField = new Blockly.FieldDropdown(getInstanceMethodOptions);

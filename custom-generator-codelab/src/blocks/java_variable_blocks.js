@@ -295,7 +295,7 @@ const METHOD_GROUPS = [
   {
     // Pre-filled call-on-object blocks for every method defined in THIS class,
     // plus blank templates for calls on objects of other classes / library types.
-    label: 'Methode auf einem anderen Objekt aufrufen',
+    label: 'Methode eines anderen Objekts aufrufen',
     defs: [],
     calls: [],
     // objCalls: for each matching def-block, generate an obj-method-call block
@@ -313,7 +313,7 @@ const METHOD_GROUPS = [
   {
     // Blank templates for calling static methods of other (external) classes,
     // e.g. Math.abs(x) or MyOtherClass.doSomething().
-    label: 'Statische Methode einer anderen Klasse aufrufen',
+    label: 'Klassen-Methode einer anderen Klasse',
     defs: [],
     calls: [],
     objCalls: [],
