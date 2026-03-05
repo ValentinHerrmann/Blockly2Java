@@ -193,12 +193,12 @@ export function java_static_method_call_return(block, generator) {
 export function java_method_call_noreturn(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return `this.${name}(${args});
+  return `${name}(${args});
 `;
 }
 
 export function java_method_call_return(block, generator) {
   const name = block.getFieldValue('NAME');
   const args = buildCallArgs(block, generator);
-  return [`this.${name}(${args})`, Order.ATOMIC];
+  return [`${name}(${args})`, Order.ATOMIC];
 }
