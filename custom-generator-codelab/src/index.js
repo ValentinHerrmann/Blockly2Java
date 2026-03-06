@@ -61,6 +61,19 @@ function init() {
   ToolboxConfigManager.applyConfig(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
 
   // Load the initial state from storage and run the code.
+  // Restore previously selected IDE file (if any) so a refresh keeps selection.
+  try {
+    const stored = globalThis.localStorage?.getItem('b2j.selected_file_name');
+    const lastJava = globalThis.localStorage?.getItem('b2j.last_java_file_name');
+    if (stored) {
+      IdeBridge.selected_file_name = stored;
+      if (stored.endsWith('.java')) IdeBridge.last_java_file_name = stored;
+    } else if (lastJava) {
+      IdeBridge.last_java_file_name = lastJava;
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
   load(ws);
   //onBlocksChange();
 
@@ -137,10 +150,31 @@ function setupListeners(workspace) {
       this._online_ide_access = value;
       const ideAccess = value?.getIDE?.('Java');
       if (ideAccess) {
+        // Store a direct reference on IdeBridge so it can drive IDE selection.
+        IdeBridge.ideAccess = ideAccess;
+
         ideAccess.onFileRenamed( (prev, next) => IdeBridge.filenameChanged(prev, next));
         ideAccess.onFileDeleted( (name)       => IdeBridge.fileDeleted(name));
         ideAccess.onFileCreated( (name)       => IdeBridge.fileCreated(name));
-        ideAccess.onFileSelected((name)       => IdeBridge.fileSelected(name));
+
+        // Intercept the IDE's initial auto-selection: if it picks a different
+        // file than what was active before the page refresh, override it once.
+        const storedFile = globalThis.localStorage?.getItem('b2j.selected_file_name') ?? '';
+        let _initialSelectionHandled = !storedFile; // skip intercept if nothing stored
+        ideAccess.onFileSelected((name) => {
+          if (!_initialSelectionHandled) {
+            _initialSelectionHandled = true;
+            if (name !== storedFile) {
+              // The IDE auto-selected the wrong file — drive it to the right one.
+              // IdeBridge.selectFileInIDE will call selectFile() without a
+              // suppression flag, which makes the IDE fire onFileSelected again
+              // with storedFile so the workspace loads correctly.
+              IdeBridge.selectFileInIDE(storedFile);
+              return; // discard this event for the wrong file
+            }
+          }
+          IdeBridge.fileSelected(name);
+        });
 
         // ── Java-modified detection polling ───────────────────────────
         // Poll every 350 ms to compare the IDE's current code against the

@@ -15,6 +15,55 @@ export class IdeBridge {
    */
   static last_java_file_name = '';
 
+  /**
+   * Direct reference to the Online-IDE Java IDE access object.
+   * Set once from index.js when online_ide_access is first assigned.
+   * Enables B2J to actively drive file selection in the IDE.
+   */
+  static ideAccess = null;
+
+  /**
+   * Programmatically selects a file in the Online-IDE file explorer.
+   * Triggers the IDE's own onFileSelected callback so IdeBridge.fileSelected
+   * is called and loads the corresponding Blockly workspace.
+   * @param {string} fileName  e.g. 'Foo.java'
+   * @returns {boolean} true if the file was found and selected
+   */
+  static selectFileInIDE(fileName) {
+    const ideAccess = this.ideAccess;
+    if (!ideAccess) { 
+      return false;
+    }
+    const wrappedFiles = ideAccess.getFiles?.() ?? [];
+    const wrapped = wrappedFiles.find(f => f.getName?.() === fileName);
+    if (!wrapped) {
+      return false;
+    }
+    const internalFile = wrapped.file ?? wrapped;
+    try {
+      const treeview = ideAccess.ide?.fileExplorer?.treeview;
+      if (treeview) {
+        // Clear every currently highlighted node first so we don't end up
+        // with two files selected at once.
+        treeview.unselectAllNodes(false);
+        // Select the target node. invokeCallback=true fires the IDE's internal
+        // nodeClickedCallback → selectFile + notifyFileSelected → our
+        // onFileSelected wrapper → IdeBridge.fileSelected loads the workspace.
+        const node = treeview.nodes?.find(n => n.externalObject === internalFile);
+        if (node) {
+          treeview.selectNodeAndSetFocus(node, true);
+          return true;
+        }
+      }
+      // Fallback when the treeview isn't available yet.
+      ideAccess.ide?.fileExplorer?.selectFile?.(internalFile);
+    } catch (e) {
+      // If the IDE API fails, update IdeBridge state directly as a fallback.
+      this.fileSelected(fileName);
+    }
+    return true;
+  }
+
   static syncClassNameFromIDE() {
     let className = '';
     const fileName = this.selected_file_name;
@@ -125,6 +174,10 @@ export class IdeBridge {
     // (bypassing the setter so we don't trigger a reload) and sync the class name.
     if (this.selected_file_name === previousName) {
       this.selected_file_name = newName;
+      try {
+        globalThis.localStorage?.setItem('b2j.selected_file_name', newName);
+        globalThis.localStorage?.setItem('b2j.last_java_file_name', newName);
+      } catch (e) {}
       this.syncClassNameFromIDE();
     }
   }
@@ -145,6 +198,7 @@ export class IdeBridge {
     // If the deleted file was currently active, clear the Blockly workspace.
     if (this.selected_file_name === fileName) {
       this.selected_file_name = '';
+      try { globalThis.localStorage?.removeItem('b2j.selected_file_name'); } catch (e) {}
       Blockly.getMainWorkspace()?.clear();
       this.syncClassNameFromIDE();
     }
@@ -185,6 +239,14 @@ export class IdeBridge {
 
     // Update the plain global property so save/load use the correct storage key.
     this.selected_file_name = fileName;
+    try {
+      globalThis.localStorage?.setItem('b2j.selected_file_name', fileName);
+      if (fileName.endsWith('.java')) {
+        globalThis.localStorage?.setItem('b2j.last_java_file_name', fileName);
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
     if (fileName.endsWith('.java')) {
       this.last_java_file_name = fileName;
     }
