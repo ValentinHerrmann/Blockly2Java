@@ -648,7 +648,6 @@ export class ToolboxConfigManager {
     // ── Render right column for a given category ───────────────────────────
     let selectedCatName = null;
     let selectedCatEl = null;
-    let selectedCatColor = '#6d7a9a';
 
     function renderBlockList(catName) {
       blockList.innerHTML = '';
