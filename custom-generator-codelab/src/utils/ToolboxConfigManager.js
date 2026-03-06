@@ -420,6 +420,13 @@ export class ToolboxConfigManager {
     return { version: 1, description: 'Alle Blöcke aktiv', categories };
   }
 
+  /**
+   * Opens the visual (checkbox-based) toolbox editor overlay.
+   * Delegates to {@link openVisualConfigEditor}.
+   *
+   * @param {import('blockly').WorkspaceSvg} workspace
+   * @param {Object} fallbackConfig – config to show when no custom config is active
+   */
   static openConfigEditor(workspace, fallbackConfig) {
     // Delegate to the visual editor by default.
     ToolboxConfigManager.openVisualConfigEditor(workspace, fallbackConfig);
@@ -606,7 +613,9 @@ export class ToolboxConfigManager {
 
       const cb = document.createElement('input');
       cb.type = 'checkbox';
-      cb.id = `b2j-ce-${id}`;
+      // Sanitize id to produce a valid HTML id attribute (no spaces or special chars).
+      const safeId = `b2j-ce-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+      cb.id = safeId;
       cb.checked = initialActive;
       Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor });
 
@@ -614,7 +623,7 @@ export class ToolboxConfigManager {
       Object.assign(info.style, { display: 'flex', flexDirection: 'column', minWidth: '0', gap: '1px' });
 
       const nameLbl = document.createElement('label');
-      nameLbl.htmlFor = `b2j-ce-${id}`;
+      nameLbl.htmlFor = safeId;
       nameLbl.textContent = label;
       Object.assign(nameLbl.style, {
         cursor: 'pointer', fontSize: '12px',
@@ -637,7 +646,7 @@ export class ToolboxConfigManager {
         nameLbl.style.opacity = cb.checked ? '1' : '0.38';
         onChange(cb.checked);
       });
-      row.addEventListener('click', e => { if (e.target !== cb) cb.click(); });
+      row.addEventListener('click', e => { if (e.target === cb || e.target.closest('label')) return; cb.click(); });
       row.append(cb, info);
       return row;
     }
@@ -645,14 +654,13 @@ export class ToolboxConfigManager {
     // ── Render right column for a given category ───────────────────────────
     let selectedCatName = null;
     let selectedCatEl = null;
-    let selectedCatColor = '#6d7a9a';
 
     function renderBlockList(catName) {
       blockList.innerHTML = '';
       const state = catState.get(catName);
       const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
       const color = getCatColor(catDef ?? {});
-      blockHead.textContent = `Blöcke in „${catName}"`;
+      blockHead.textContent = `Blöcke in „${catName}“`;
 
       if (state.subcats) {
         // Dynamic category → show subcategory toggles
@@ -740,7 +748,6 @@ export class ToolboxConfigManager {
         }
         selectedCatName = ci.catName;
         selectedCatEl = ci.item;
-        selectedCatColor = ci.color;
         ci.item.style.background = '#2c3a4a';
         ci.item.style.borderLeftColor = ci.color;
         renderBlockList(ci.catName);
