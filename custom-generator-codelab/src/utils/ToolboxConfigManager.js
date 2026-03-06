@@ -652,7 +652,7 @@ export class ToolboxConfigManager {
       const state = catState.get(catName);
       const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
       const color = getCatColor(catDef ?? {});
-      blockHead.textContent = `Blöcke in „${catName}"`;
+      blockHead.textContent = `Blöcke in „${catName}“`;
 
       if (state.subcats) {
         // Dynamic category → show subcategory toggles
