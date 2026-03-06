@@ -637,7 +637,10 @@ export class ToolboxConfigManager {
         nameLbl.style.opacity = cb.checked ? '1' : '0.38';
         onChange(cb.checked);
       });
-      row.addEventListener('click', e => { if (e.target !== cb) cb.click(); });
+      row.addEventListener('click', e => {
+        if (e.target === cb || e.target.closest('label')) return;
+        cb.click();
+      });
       row.append(cb, info);
       return row;
     }
