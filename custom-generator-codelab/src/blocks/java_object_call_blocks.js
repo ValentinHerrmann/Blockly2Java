@@ -278,6 +278,16 @@ const objCallMixin = {
   mutationToDom() {
     const container = document.createElement('mutation');
     container.setAttribute('args', this.argCount_);
+    // Persist the currently selected METHOD so that the value is available
+    // during domToMutation in JSON-serialisation mode.  In XML mode the value
+    // can be read from sibling <field> elements via _readXmlField, but in JSON
+    // mode the mutation is embedded as an XML string whose parent node has no
+    // field children, so _readXmlField always returns null.  Storing it here
+    // as an attribute ensures the FieldDropdown starts with the right value
+    // regardless of serialisation mode, preventing silent fallback to the
+    // first available option when LocalStorage is temporarily empty.
+    const method = this.getField('METHOD') ? this.getFieldValue('METHOD') : '';
+    if (method) container.setAttribute('method', method);
     (this.argNames_ || []).forEach((n, i) => container.setAttribute('name' + i, n));
     return container;
   },
@@ -288,14 +298,12 @@ const objCallMixin = {
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || 'arg ' + (i + 1));
     }
-    // Pre-read METHOD from the sibling <field> elements on the parent <block>
-    // node. Blockly applies these values AFTER domToMutation returns, but
-    // _updateCallLine creates a fresh FieldDropdown whose initial value must
-    // already be valid — otherwise an intermediate render triggered when
-    // Blockly later calls setFieldValue('METHOD') will find the value absent
-    // from the options list and getTextContent() returns null (crash).
+    // Read METHOD from the mutation attribute (works in both XML and JSON modes).
+    // Fall back to reading from sibling <field> elements on the parent <block>
+    // node, which only works in XML-serialisation mode.
+    const methodFromAttr = xmlElement.getAttribute('method') || null;
     const blockEl = xmlElement.parentNode;
-    const method  = _readXmlField(blockEl, 'METHOD');
+    const method  = methodFromAttr || _readXmlField(blockEl, 'METHOD');
     this._updateCallLine(method);
   },
 
@@ -459,6 +467,12 @@ const extStaticCallMixin = {
   mutationToDom() {
     const container = document.createElement('mutation');
     container.setAttribute('args', this.argCount_);
+    // Persist CLASS and METHOD in the mutation so they survive JSON-based
+    // deserialization (same reason as in objCallMixin — see its mutationToDom).
+    const cls    = this.getField('CLASS')  ? this.getFieldValue('CLASS')  : '';
+    const method = this.getField('METHOD') ? this.getFieldValue('METHOD') : '';
+    if (cls)    container.setAttribute('class',  cls);
+    if (method) container.setAttribute('method', method);
     (this.argNames_ || []).forEach((n, i) => container.setAttribute('name' + i, n));
     return container;
   },
@@ -469,13 +483,13 @@ const extStaticCallMixin = {
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || 'arg ' + (i + 1));
     }
-    // Pre-read CLASS + METHOD from sibling <field> elements (see objCallMixin
-    // domToMutation for the full explanation). Passing them here ensures the
-    // dropdowns already hold valid values before Blockly applies them via its
-    // own field deserialization, preventing intermediate-render crashes.
+    // Read CLASS + METHOD from mutation attributes first (works in both modes),
+    // then fall back to sibling <field> elements (XML mode only).
+    const clsFromAttr    = xmlElement.getAttribute('class')  || null;
+    const methodFromAttr = xmlElement.getAttribute('method') || null;
     const blockEl = xmlElement.parentNode;
-    const cls    = _readXmlField(blockEl, 'CLASS');
-    const method = _readXmlField(blockEl, 'METHOD');
+    const cls    = clsFromAttr    || _readXmlField(blockEl, 'CLASS');
+    const method = methodFromAttr || _readXmlField(blockEl, 'METHOD');
     this._updateCallLine(cls, method);
   },
 

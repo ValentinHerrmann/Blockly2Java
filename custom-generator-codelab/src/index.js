@@ -446,11 +446,18 @@ function silentGenerateForClass(className) {
 
   setClassName(className);
   LocalStorageManager.clearConstructors(className);
-  LocalStorageManager.clearMethods(className);
 
   // load() internally calls Blockly.Events.disable/enable, so the workspace
   // change listener won't fire and trigger a recursive onBlocksChange().
+  // NOTE: clearMethods() is intentionally called AFTER load(), not before.
+  // Clearing methods before load would erase this class's method entries from
+  // LocalStorage while the workspace is being deserialised.  The method-call
+  // FieldDropdown reads LocalStorage during deserialization to populate its
+  // option list; if the entries are already gone the dropdown can't validate
+  // the stored method name and silently falls back to the first available
+  // option (from another class), corrupting the saved workspace.
   load(ws);
+  LocalStorageManager.clearMethods(className);
 
   const rawCode = generateCode();
   const modCode = CodeTransformer.transformCode(rawCode);
