@@ -294,6 +294,9 @@ export class ToolboxConfigManager {
     callconstructor:          'Objekt erzeugen (new)',
     java_extends:             'Klasse erbt von (extends)',
     java_super_call:          'super(…) aufrufen',
+    // Grafik
+    gfx_extends:              'Grafik-Klasse erbt von',
+    gfx_event_handler:        'Ereignis-Methode (@Override)',
   };
 
   /**
@@ -960,9 +963,8 @@ export class ToolboxConfigManager {
 
       const entry = configMap.get(item.name);
 
-      // No config entry for this category → show unchanged (default-on).
+      // No config entry for this category → hide when a config is loaded (allowlist semantics).
       if (!entry) {
-        filteredContents.push(item);
         continue;
       }
 
@@ -992,8 +994,8 @@ export class ToolboxConfigManager {
         if (block.kind?.toLowerCase() !== 'block') return true; // keep non-block items (labels, buttons…)
         // If this block type is in the config, honour its flag.
         if (blockMap.has(block.type)) return blockMap.get(block.type);
-        // Not mentioned → default-on.
-        return true;
+        // Not mentioned → default-off (allowlist semantics).
+        return false;
       });
 
       // If all blocks were removed, drop the whole category.

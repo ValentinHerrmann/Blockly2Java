@@ -186,7 +186,7 @@ export function text_charAt(block, generator) {
     case 'RANDOM': {
       const functionName =
           generator.provideFunction_('textRandomLetter', `
-public Character ${generator.FUNCTION_NAME_PLACEHOLDER_}(String text) {
+public static Character ${generator.FUNCTION_NAME_PLACEHOLDER_}(String text) {
   int x = new Random().nextInt(text.length());
   return text.charAt(x);
 }
@@ -251,7 +251,7 @@ export function text_getSubstring(block, generator) {
     const at2Param = (where2 === 'FROM_END' || where2 === 'FROM_START') ? ', at2' : '';
     const functionName = generator.provideFunction_(
         'subsequence' + wherePascalCase[where1] + wherePascalCase[where2], `
-public String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String sequence${at1Param}${at2Param}) {
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String sequence${at1Param}${at2Param}) {
   int start = ${getSubstringIndex('sequence', where1, 'at1')};
   int end = ${getSubstringIndex('sequence', where2, 'at2')} + 1;
   return sequence.substring(start, end);
@@ -282,7 +282,7 @@ export function text_changeCase(block, generator) {
   } else {
     const functionName =
         generator.provideFunction_('textToTitleCase', `
-public String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String str) {
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String str) {
   String[] words = str.split("\\s+");
   StringBuilder sb = new StringBuilder();
   for (String word : words) {
@@ -340,7 +340,7 @@ export function text_count(block, generator) {
   const text = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   const sub = generator.valueToCode(block, 'SUB', Order.NONE) || "\"\"";
   const functionName = generator.provideFunction_('textCount', `
-public int ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle) {
+public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle) {
   if (needle.length() == 0) {
     return haystack.length() + 1;
   } else {
@@ -357,7 +357,7 @@ export function text_replace(block, generator) {
   const from = generator.valueToCode(block, 'FROM', Order.NONE) || "\"\"";
   const to = generator.valueToCode(block, 'TO', Order.NONE) || "\"\"";
   const functionName = generator.provideFunction_('textReplace', `
-public String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle, String replacement) {
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle, String replacement) {
   needle = java.util.regex.Pattern.quote(needle);
   return haystack.replaceAll(needle, replacement);
 }

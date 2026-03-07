@@ -117,6 +117,109 @@
         { "type": "defconstructor",   "active": false },
         { "type": "callconstructor",  "active": false }
       ]
+    },
+    {
+      "name": "Grafik: Schildkröte",
+      "active": true,
+      "blocks": [
+        { "type": "gfx_new_turtle",         "active": true },
+        { "type": "gfx_new_turtle_stmt",    "active": true },
+        { "type": "gfx_forward",            "active": true },
+        { "type": "gfx_turtle_turn",        "active": true },
+        { "type": "gfx_define_direction",   "active": true },
+        { "type": "gfx_turtle_pen_up",      "active": true },
+        { "type": "gfx_turtle_pen_down",    "active": true },
+        { "type": "gfx_define_center",      "active": true }
+      ]
+    },
+    {
+      "name": "Grafik: Objekte",
+      "active": true,
+      "blocks": [
+        { "type": "gfx_extends",           "active": false },
+        { "type": "gfx_new_world",          "active": true },
+        { "type": "gfx_new_world_stmt",     "active": true },
+        { "type": "gfx_new_circle",         "active": true },
+        { "type": "gfx_new_circle_stmt",    "active": true },
+        { "type": "gfx_new_ellipse",        "active": true },
+        { "type": "gfx_new_ellipse_stmt",   "active": true },
+        { "type": "gfx_new_rect",           "active": true },
+        { "type": "gfx_new_rect_stmt",      "active": true },
+        { "type": "gfx_new_rrect",          "active": true },
+        { "type": "gfx_new_rrect_stmt",     "active": true },
+        { "type": "gfx_new_triangle",       "active": true },
+        { "type": "gfx_new_triangle_stmt",  "active": true },
+        { "type": "gfx_new_line",           "active": true },
+        { "type": "gfx_new_line_stmt",      "active": true },
+        { "type": "gfx_new_polygon",        "active": true },
+        { "type": "gfx_new_polygon_stmt",   "active": true },
+        { "type": "gfx_new_text",           "active": true },
+        { "type": "gfx_new_text_stmt",      "active": true },
+        { "type": "gfx_new_group",          "active": true },
+        { "type": "gfx_new_group_stmt",     "active": true },
+        { "type": "gfx_new_bitmap",         "active": true },
+        { "type": "gfx_new_bitmap_stmt",    "active": true }
+      ]
+    },
+    {
+      "name": "Grafik: Erscheinung",
+      "active": true,
+      "blocks": [
+        { "type": "gfx_color_const",          "active": true },
+        { "type": "gfx_set_fill_color",       "active": true },
+        { "type": "gfx_set_fill_color_alpha", "active": true },
+        { "type": "gfx_set_border_color",     "active": true },
+        { "type": "gfx_set_border_width",     "active": true },
+        { "type": "gfx_set_alpha",            "active": true },
+        { "type": "gfx_set_visible",          "active": true },
+        { "type": "gfx_bring_to_front",       "active": true },
+        { "type": "gfx_send_to_back",         "active": true },
+        { "type": "gfx_set_text_content",     "active": true },
+        { "type": "gfx_set_alignment",        "active": true },
+        { "type": "gfx_default_fill_color",   "active": true },
+        { "type": "gfx_default_visibility",   "active": true }
+      ]
+    },
+    {
+      "name": "Grafik: Bewegung",
+      "active": true,
+      "blocks": [
+        { "type": "gfx_move",              "active": true },
+        { "type": "gfx_rotate",            "active": true },
+        { "type": "gfx_rotate_around",     "active": true },
+        { "type": "gfx_scale",             "active": true },
+        { "type": "gfx_scale_around",      "active": true },
+        { "type": "gfx_mirror_x",          "active": true },
+        { "type": "gfx_mirror_y",          "active": true },
+        { "type": "gfx_line_set_points",   "active": true },
+        { "type": "gfx_polygon_add_point", "active": true }
+      ]
+    },
+    {
+      "name": "Grafik: Steuerung",
+      "active": true,
+      "blocks": [
+        { "type": "gfx_event_handler",          "active": true },
+        { "type": "gfx_get_world",              "active": true },
+        { "type": "gfx_get_width",              "active": true },
+        { "type": "gfx_get_height",             "active": true },
+        { "type": "gfx_get_x",                  "active": true },
+        { "type": "gfx_get_y",                  "active": true },
+        { "type": "gfx_set_cursor",             "active": true },
+        { "type": "gfx_world_set_background",   "active": true },
+        { "type": "gfx_world_stop",             "active": true },
+        { "type": "gfx_world_start",            "active": true },
+        { "type": "gfx_is_key_down",            "active": true },
+        { "type": "gfx_is_key_up",              "active": true },
+        { "type": "gfx_is_mouse_down",          "active": true },
+        { "type": "gfx_get_mouse_x",            "active": true },
+        { "type": "gfx_get_mouse_y",            "active": true },
+        { "type": "gfx_group_add",              "active": true },
+        { "type": "gfx_get_collision_pairs",    "active": true },
+        { "type": "gfx_get_colliding_shapes",   "active": true },
+        { "type": "gfx_bitmap_set_pixel",       "active": true },
+        { "type": "gfx_bitmap_get_pixel",       "active": true }
+      ]
     }
   ]
 }

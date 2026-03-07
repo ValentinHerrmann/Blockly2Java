@@ -273,6 +273,39 @@ export function getType(var_type) {
     case 'CLASS':
     case 'callconstructor':
       return TYPES.CLASS;
+    // Legacy graphics block names
+    case 'graphics_new_world':     return 'World';
+    case 'graphics_new_circle':    return 'Circle';
+    case 'graphics_new_rectangle': return 'Rectangle';
+    case 'graphics_new_line':      return 'Line';
+    case 'graphics_new_text':      return 'Text';
+    // New gfx_ graphics blocks
+    case 'gfx_new_world':     return 'World';
+    case 'gfx_new_circle':    return 'Circle';
+    case 'gfx_new_ellipse':   return 'Ellipse';
+    case 'gfx_new_rect':      return 'Rectangle';
+    case 'gfx_new_rrect':     return 'RoundedRectangle';
+    case 'gfx_new_triangle':  return 'Triangle';
+    case 'gfx_new_line':      return 'Line';
+    case 'gfx_new_text':      return 'Text';
+    case 'gfx_new_turtle':    return 'Turtle';
+    case 'gfx_new_group':     return 'Group';
+    case 'gfx_new_bitmap':    return 'Bitmap';
+    case 'gfx_new_polygon':   return 'Polygon';
+    case 'gfx_get_world':     return 'World';
+    case 'gfx_color_const':
+    case 'gfx_bitmap_get_pixel': return TYPES.STRING;
+    case 'gfx_is_key_down':
+    case 'gfx_is_key_up':
+    case 'gfx_is_mouse_down':   return TYPES.BOOLEAN;
+    case 'gfx_get_width':
+    case 'gfx_get_height':
+    case 'gfx_get_x':
+    case 'gfx_get_y':
+    case 'gfx_get_mouse_x':
+    case 'gfx_get_mouse_y':     return TYPES.INTEGER;
+    case 'gfx_get_collision_pairs':
+    case 'gfx_get_colliding_shapes': return TYPES.LIST;
     default:
       //return TYPES.OBJECT;
       break;

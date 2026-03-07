@@ -145,6 +145,38 @@ export const FULL_ACTIVE_CONFIG = {
       ],
     },
     {
+      name: 'Grafik-Objekte',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'graphics_new_world',     active: true },
+        { type: 'graphics_new_circle',    active: true },
+        { type: 'graphics_new_rectangle', active: true },
+        { type: 'graphics_new_line',      active: true },
+        { type: 'graphics_new_text',      active: true },
+      ],
+    },
+    {
+      name: 'Grafik-Aussehen',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'graphics_setfillcolor',   active: true },
+        { type: 'graphics_setbordercolor', active: true },
+        { type: 'graphics_setvisible',     active: true },
+        { type: 'graphics_setbgcolor',     active: true },
+        { type: 'graphics_bringtofront',   active: true },
+        { type: 'graphics_sendtoback',     active: true },
+      ],
+    },
+    {
+      name: 'Grafik-Bewegung',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'graphics_move',   active: true },
+        { type: 'graphics_rotate', active: true },
+        { type: 'graphics_scale',  active: true },
+      ],
+    },
+    {
       name: 'Variablen',
       active: true,
       subcategories: [

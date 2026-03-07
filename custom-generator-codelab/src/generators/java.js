@@ -25,6 +25,7 @@ import * as variablesDynamic from './javascript/variables_dynamic.js';
 import * as defconstructor from './javascript/constructors.js';
 import * as javaMethods from './javascript/java_methods.js';
 import * as javaObjectCalls from './javascript/java_object_calls.js';
+import * as graphics from './javascript/graphics.js';
 
 export * from './javascript/javascript_generator.js';
 
@@ -38,5 +39,5 @@ export const javaGenerator = new JavascriptGenerator();
 Object.assign(
   javaGenerator.forBlock,
   colour, lists, logic, loops, math, procedures,
-  text, variables, variablesDynamic, defconstructor, javaMethods, javaObjectCalls
+  text, variables, variablesDynamic, defconstructor, javaMethods, javaObjectCalls, graphics
 );

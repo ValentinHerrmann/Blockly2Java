@@ -163,7 +163,7 @@ export function math_number_property(block, generator) {
   if (dropdownProperty === 'PRIME') {
     // Prime is a special case as it is not a one-liner test.
     const functionName = generator.provideFunction_('mathIsPrime', `
-      public boolean ${generator.FUNCTION_NAME_PLACEHOLDER_}(int n) {
+      public static boolean ${generator.FUNCTION_NAME_PLACEHOLDER_}(int n) {
         if (n == 2 || n == 3) {
           return true;
         }
@@ -221,7 +221,7 @@ export function math_on_list(block, generator) {
       break;
     case 'AVERAGE': {
       const functionName = generator.provideFunction_('mathMean', `
-public double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
+public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
   return myList.stream().mapToInt(Integer::intValue).average().orElse(0);
 }
 `);
@@ -231,7 +231,7 @@ public double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
     }
     case 'MEDIAN': {
       const functionName = generator.provideFunction_('mathMedian', `
-public double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
+public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
   List<Integer> localList = myList.stream().filter(Objects::nonNull).sorted(Comparator.reverseOrder()).collect(Collectors.toList());
   if (localList.isEmpty()) return 0;
   int size = localList.size();
@@ -248,7 +248,7 @@ public double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
     }
     case 'MODE': {
       const functionName = generator.provideFunction_('mathModes', `
-public List<Integer> ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> values) {
+public static List<Integer> ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> values) {
   Map<Integer, Long> counts = values.stream().filter(Objects::nonNull)
                           .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
   long maxCount = counts.values().stream().max(Long::compareTo).orElse(0L);
@@ -264,7 +264,7 @@ public List<Integer> ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> value
     }
     case 'STD_DEV': {
       const functionName = generator.provideFunction_('mathStandardDeviation', `
-public double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> numbers) {
+public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> numbers) {
   int n = numbers.size();
   if (n == 0) return 0;
   double mean = numbers.stream().mapToInt(Integer::intValue).average().orElse(0);
@@ -278,7 +278,7 @@ public double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> numbers) {
     }
     case 'RANDOM': {
       const functionName = generator.provideFunction_('mathRandomList', `
-public int ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> list) {
+public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> list) {
   Random rand = new Random();
   return list.get(rand.nextInt(list.size()));
 }
@@ -321,7 +321,7 @@ export function math_random_int(block, generator) {
   const argument0 = generator.valueToCode(block, 'FROM', Order.NONE) || '0';
   const argument1 = generator.valueToCode(block, 'TO', Order.NONE) || '0';
   const functionName = generator.provideFunction_('mathRandomInt', `
-  public int ${generator.FUNCTION_NAME_PLACEHOLDER_}(int a, int b) {
+  public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(int a, int b) {
     if (a > b) {
       // Swap a and b to ensure a is smaller.
       int c = a;
