@@ -685,6 +685,13 @@ function _resolveByAssignedVars(workSpace, vars, recursionDeepness) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
+function _resolveSetterType(setterTypes) {
+  if (setterTypes.length === 0) return null;
+  if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
+  if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
+  return setterTypes[0];
+}
+
 function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) {
   // If the variable's display name encodes an explicit type (e.g. "int test"),
   // that type unconditionally overrides any automatic inference.
@@ -703,28 +710,27 @@ function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) 
   ]);
   const varsAssignedToThis = [];
   const setterTypes = _collectSetterTypes(workSpace, varId, GETTER_BLOCK_TYPES, varsAssignedToThis);
-
-  if (setterTypes.length > 0) {
-    if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
-    if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
-    return setterTypes[0];
-  }
+  const setterType = _resolveSetterType(setterTypes);
+  if (setterType) return setterType;
 
   const mathType = _searchMathChangeVar(workSpace, varId);
-  if (mathType) return mathType;
-
   const varsAssignedFromThis = [];
-  const getterType = _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFromThis, recursionDeepness);
-  if (getterType !== 'var') return getterType;
 
-  const ctrType = _searchCallconstructorInput(workSpace, varId);
-  if (ctrType) return ctrType;
+  const resolvers = [
+    () => mathType,
+    () => {
+      const getterType = _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFromThis, recursionDeepness);
+      return getterType !== 'var' ? getterType : null;
+    },
+    () => _searchCallconstructorInput(workSpace, varId),
+    () => _searchProcedureCallInput(workSpace, varId),
+    () => _searchMethodCallInput(workSpace, varId, useCompares, recursionDeepness),
+  ];
 
-  const procType = _searchProcedureCallInput(workSpace, varId);
-  if (procType) return procType;
-
-  const methodType = _searchMethodCallInput(workSpace, varId, useCompares, recursionDeepness);
-  if (methodType) return methodType;
+  for (const resolver of resolvers) {
+    const resolved = resolver();
+    if (resolved) return resolved;
+  }
 
   if (recursionDeepness <= 0) {
     console.log('Recursion limit reached while searching for variable type');
