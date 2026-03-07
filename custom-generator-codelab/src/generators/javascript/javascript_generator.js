@@ -118,10 +118,73 @@ export function parseExplicitType(rawName) {
   if (!typePart || !namePart) return null;
   // typePart: Java type identifier, may include package qualifiers (.), generics
   // (<...>, including wildcards like "? extends Foo"), or arrays ([]).
-  if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*[A-Za-z0-9_$<>[\],.?\s]*$/.test(typePart)) return null;
+  // For security: avoid complex backtracking regexes. Use a deterministic
+  // character/structure validator to prevent catastrophic backtracking.
+  if (!isValidTypeString(typePart)) return null;
   // namePart: simple Java identifier (no spaces or special chars)
   if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(namePart)) return null;
   return { type: typePart, name: namePart };
+}
+
+/**
+ * Lightweight, deterministic validator for Java-style type strings.
+ * Avoids any nested/ambiguous regex constructs to prevent catastrophic
+ * backtracking on untrusted input. Returns true for plausible type
+ * expressions such as "java.util.List<String[]>" or "MyClass".
+ */
+function isValidTypeString(s) {
+  if (!s || typeof s !== 'string') return false;
+  // Impose a reasonable length limit to bound processing cost.
+  if (s.length > 200) return false;
+
+  // Allowed characters (plus dot and whitespace). Validate per-character
+  // rather than using a single complex regex.
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charAt(i);
+    const ok = (
+      (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
+      (ch >= '0' && ch <= '9') || ch === '_' || ch === '$' ||
+      ch === '.' || ch === '<' || ch === '>' || ch === '[' || ch === ']' ||
+      ch === ',' || ch === '?' || ch === ' ' || ch === '\t'
+    );
+    if (!ok) return false;
+  }
+
+  // Must not start or end with a dot and no consecutive dots.
+  if (s.startsWith('.') || s.endsWith('.') || s.indexOf('..') >= 0) return false;
+
+  // Each dot-separated segment must start with a Java identifier start char.
+  const segments = s.split('.');
+  for (const seg of segments) {
+    const segTrim = seg.trim();
+    if (segTrim.length === 0) return false;
+    const first = segTrim.charAt(0);
+    if (!(/[A-Za-z_$]/.test(first))) return false;
+  }
+
+  // Check balanced angle brackets and square brackets and reasonable nesting
+  let angleDepth = 0;
+  let squareDepth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charAt(i);
+    if (ch === '<') {
+      angleDepth++;
+      // limit nesting depth to avoid pathological inputs
+      if (angleDepth > 10) return false;
+    } else if (ch === '>') {
+      if (angleDepth <= 0) return false;
+      angleDepth--;
+    } else if (ch === '[') {
+      squareDepth++;
+      if (squareDepth > 10) return false;
+    } else if (ch === ']') {
+      if (squareDepth <= 0) return false;
+      squareDepth--;
+    }
+  }
+  if (angleDepth !== 0 || squareDepth !== 0) return false;
+
+  return true;
 }
 
 /**
