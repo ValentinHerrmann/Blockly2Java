@@ -151,7 +151,7 @@ function isValidTypeString(s) {
   }
 
   // Must not start or end with a dot and no consecutive dots.
-  if (s.startsWith('.') || s.endsWith('.') || s.indexOf('..') >= 0) return false;
+  if (s.startsWith('.') || s.endsWith('.') || s.includes('..')) return false;
 
   // Each dot-separated segment must start with a Java identifier start char.
   const segments = s.split('.');
