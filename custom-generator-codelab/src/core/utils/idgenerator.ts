@@ -53,7 +53,7 @@ function secureRandomBytes(n: number): Uint8Array {
   try {
     // Node.js fallback
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const nodeCrypto = require('crypto');
+    const nodeCrypto = require('node:crypto');
     return nodeCrypto.randomBytes(n);
   } catch (e) {
     // Last-resort fallback to Math.random (non-crypto). Keep bounded and
@@ -81,7 +81,7 @@ function secureRandomUint32(): number {
     return arr[0];
   }
   try {
-    const nodeCrypto = require('crypto');
+    const nodeCrypto = require('node:crypto');
     return nodeCrypto.randomBytes(4).readUInt32LE(0);
   } catch (e) {
     return Math.floor(Math.random() * 0xffffffff);
