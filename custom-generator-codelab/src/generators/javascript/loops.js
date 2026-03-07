@@ -13,7 +13,7 @@
 import * as Blockly from 'blockly/core';
 // import * as stringUtils from 'blockly/core/utils/string.js';
 // import {NameType} from 'blockly/core/names.js';
-import {Order, TYPES, adjustStaticName} from './javascript_generator.js';
+import {Order, adjustStaticName} from './javascript_generator.js';
 
 
 export function controls_repeat_ext(block, generator) {

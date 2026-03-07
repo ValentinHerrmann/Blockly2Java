@@ -15,9 +15,9 @@ export class UiManager {
       textPrimary: rootStyles.getPropertyValue('--text-primary').trim(),
       textSecondary: rootStyles.getPropertyValue('--text-secondary').trim(),
       textTertiary: rootStyles.getPropertyValue('--text-tertiary').trim(),
-      opacityFlyout: parseFloat(rootStyles.getPropertyValue('--opacity-flyout').trim()),
-      opacityScrollbar: parseFloat(rootStyles.getPropertyValue('--opacity-scrollbar').trim()),
-      opacityMarker: parseFloat(rootStyles.getPropertyValue('--opacity-marker').trim()),
+      opacityFlyout: Number.parseFloat(rootStyles.getPropertyValue('--opacity-flyout').trim()),
+      opacityScrollbar: Number.parseFloat(rootStyles.getPropertyValue('--opacity-scrollbar').trim()),
+      opacityMarker: Number.parseFloat(rootStyles.getPropertyValue('--opacity-marker').trim()),
     };
 
     return Blockly.Theme.defineTheme('dark', {
@@ -75,7 +75,7 @@ export class UiManager {
     /** Trigger a Blockly resize and a synthetic window resize (for the IDE). */
     function notifyResize() {
       Blockly.svgResize(workspace);
-      window.dispatchEvent(new Event('resize'));
+      globalThis.dispatchEvent(new Event('resize'));
     }
 
     /** Switch to wide mode (both panes visible). */
@@ -173,7 +173,7 @@ export class UiManager {
     let layoutChanging = false;
     function updateLayout() {
       if (layoutChanging) return;
-      const narrow = window.innerWidth < WIDE_THRESHOLD;
+      const narrow = globalThis.innerWidth < WIDE_THRESHOLD;
       if (narrow === isNarrow) return; // no mode change
       layoutChanging = true;
       if (narrow) {
@@ -351,7 +351,7 @@ export class UiManager {
     //  • window 'load' event   – covers cases where embedded scripts reflow
     requestAnimationFrame(() => Blockly.svgResize(workspace));
     setTimeout(() => Blockly.svgResize(workspace), 300);
-    window.addEventListener('load', () => Blockly.svgResize(workspace), { once: true });
+    globalThis.addEventListener('load', () => Blockly.svgResize(workspace), { once: true });
   }
 
   /**

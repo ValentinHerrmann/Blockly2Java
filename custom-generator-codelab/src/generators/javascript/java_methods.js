@@ -14,7 +14,7 @@
  * the existing getVariableType helper.
  */
 
-import {getType, getVariableType, parseExplicitType, Order, getClassName, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, parseExplicitType, Order, getClassName} from './javascript_generator.js';
 import * as Blockly from 'blockly';
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 

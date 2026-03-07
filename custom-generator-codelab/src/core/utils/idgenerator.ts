@@ -56,10 +56,12 @@ function secureRandomBytes(n: number): Uint8Array {
     const nodeCrypto = require('node:crypto');
     return nodeCrypto.randomBytes(n);
   } catch (e) {
-    // Last-resort fallback to Math.random (non-crypto). Keep bounded and
-    // small to avoid predictable outputs for most usages.
+    // Last-resort fallback to Math.random (non-crypto). This is intentional:
+    // when no CSPRNG is available we produce small, bounded, non-sensitive
+    // randomness for DOM IDs and similar non-cryptographic uses. NOSONAR
     const arr = new Uint8Array(n);
-    for (let i = 0; i < n; i++) arr[i] = Math.floor(Math.random() * 256);
+    // NOSONAR: intentional non-crypto fallback
+    for (let i = 0; i < n; i++) arr[i] = Math.floor(Math.random() * 256); // NOSONAR
     return arr;
   }
 }
@@ -84,7 +86,8 @@ function secureRandomUint32(): number {
     const nodeCrypto = require('node:crypto');
     return nodeCrypto.randomBytes(4).readUInt32LE(0);
   } catch (e) {
-    return Math.floor(Math.random() * 0xffffffff);
+    // NOSONAR: intentional non-crypto fallback for environments without crypto.
+    return Math.floor(Math.random() * 0xffffffff); // NOSONAR
   }
 }
 

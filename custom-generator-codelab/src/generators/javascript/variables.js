@@ -11,7 +11,7 @@
 // Former goog.module ID: Blockly.JavaScript.variables
 
 import * as Blockly from 'blockly';
-import {Order, adjustStaticName, getVariableType, getClassName, getVarCodeName} from './javascript_generator.js';
+import {Order, adjustStaticName, getVariableType, getVarCodeName} from './javascript_generator.js';
 
 
 export function variables_get(block, generator) {

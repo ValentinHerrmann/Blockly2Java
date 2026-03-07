@@ -464,8 +464,8 @@ export class ToolboxConfigManager {
         const c = catDef.colour;
         if (typeof c === 'number') return `hsl(${c}, 42%, 45%)`;
         if (typeof c === 'string' && /^#/.test(c)) return c;
-        const n = parseFloat(c);
-        if (!isNaN(n)) return `hsl(${n}, 42%, 45%)`;
+        const n = Number.parseFloat(c);
+        if (!Number.isNaN(n)) return `hsl(${n}, 42%, 45%)`;
         return String(c);
       }
       return '#6d7a9a';
