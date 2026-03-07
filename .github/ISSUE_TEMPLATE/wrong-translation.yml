@@ -1,0 +1,47 @@
+name: Wrong translation
+description: Some blocks aren't correctly translated to Java
+title: "[BUG] Wrong Translation of <xxxxx>"
+labels:
+  - bug
+assignees:
+  - ValentinHerrmann
+body:
+  - type: textarea
+    id: workspace-json
+    attributes:
+      label: Blockly Workspace (JSON)
+      description: Paste the JSON export of the Blockly workspace that is wrongly translated.
+      placeholder: |
+        {
+          "blocks": { ... }
+        }
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: wrong-java
+    attributes:
+      label: Wrong Java output
+      description: Paste the incorrect Java code that Blockly2Java currently generates.
+      placeholder: |
+        // paste wrong Java code here
+      render: java
+    validations:
+      required: true
+  - type: textarea
+    id: correct-java
+    attributes:
+      label: Correct Java code
+      description: Paste the Java code that should be generated instead.
+      placeholder: |
+        // paste correct Java code here
+      render: java
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Any other context or screenshots that might help understand the issue.
+    validations:
+      required: false
