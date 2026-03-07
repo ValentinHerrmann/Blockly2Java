@@ -28,6 +28,7 @@ import {Rect} from './utils/rect.js';
 import {Size} from './utils/size.js';
 import {Svg} from './utils/svg.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
+import {randomSuffix} from './utils/idgenerator.js';
 
 /**
  * Class for a zoom controls.
@@ -101,7 +102,7 @@ export class ZoomControls implements IPositionable {
     // Each filter/pattern needs a unique ID for the case of multiple Blockly
     // instances on a page.  Browser behaviour becomes undefined otherwise.
     // https://neil.fraser.name/news/2015/11/01/
-    const rnd = String(Math.random()).substring(2);
+    const rnd = randomSuffix();
     this.createZoomOutSvg(rnd);
     this.createZoomInSvg(rnd);
     if (this.workspace.isMovable()) {

@@ -41,7 +41,6 @@
     "async_hooks": "^1.0.0",
     "blockly": "^10.3.0",
     "buffer": "^6.0.3",
-    "crypto": "^1.0.1",
     "fs": "^0.0.1-security",
     "http": "^0.0.1-security",
     "isomorphic-git": "^1.37.2",
