@@ -446,12 +446,11 @@ const GFX_EVENT_SIGNATURES = {
   'act':          '',
   'onKeyDown':    'String key',
   'onKeyUp':      'String key',
-  'onMouseClick': 'double x, double y',
-  'onMouseMove':  'double x, double y',
-  'onMouseDown':  'double x, double y',
-  'onMouseUp':    'double x, double y',
-  'onMouseEnter': 'double x, double y',
-  'onMouseLeave': 'double x, double y',
+  'onKeyTyped':   'String key',
+  'onMouseDown':  'double x, double y, int key',
+  'onMouseUp':    'double x, double y, int key',
+  'onMouseEnter': '',
+  'onMouseLeave': '',
 };
 
 export function gfx_event_handler(block, generator) {

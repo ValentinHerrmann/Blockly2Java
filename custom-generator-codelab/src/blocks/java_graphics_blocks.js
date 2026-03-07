@@ -1025,15 +1025,14 @@ Blockly.Blocks['gfx_extends'] = {
 // Creates an @Override method stub for the events defined by the learnj.de
 // graphics API (act, onKeyDown/Up, onMouse*).
 const GFX_EVENT_LIST = [
-  ['act()  — Animationsschritt',                 'act'],
-  ['onKeyDown(key)  — Taste gedrückt',           'onKeyDown'],
-  ['onKeyUp(key)  — Taste losgelassen',          'onKeyUp'],
-  ['onMouseClick(x, y)  — Mausklick',            'onMouseClick'],
-  ['onMouseMove(x, y)  — Mausbewegung',          'onMouseMove'],
-  ['onMouseDown(x, y)  — Maustaste gedrückt',    'onMouseDown'],
-  ['onMouseUp(x, y)  — Maustaste losgelassen',   'onMouseUp'],
-  ['onMouseEnter(x, y)  — Maus betritt Objekt',  'onMouseEnter'],
-  ['onMouseLeave(x, y)  — Maus verlässt Objekt', 'onMouseLeave'],
+  ['act()  — Animationsschritt',                      'act'],
+  ['onKeyDown(key)  — Taste gedrückt',                'onKeyDown'],
+  ['onKeyUp(key)  — Taste losgelassen',               'onKeyUp'],
+  ['onKeyTyped(key)  — Taste angeschlagen',           'onKeyTyped'],
+  ['onMouseDown(x, y, key)  — Maustaste gedrückt',          'onMouseDown'],
+  ['onMouseUp(x, y, key)  — Maustaste losgelassen',         'onMouseUp'],
+  ['onMouseEnter()  — Maus betritt Objekt',           'onMouseEnter'],
+  ['onMouseLeave()  — Maus verlässt Objekt',          'onMouseLeave'],
 ];
 
 /** Variable names to create in the workspace for each event's parameters. */
@@ -1041,12 +1040,11 @@ const GFX_EVENT_PARAM_VARS = {
   'act':          [],
   'onKeyDown':    ['key'],
   'onKeyUp':      ['key'],
-  'onMouseClick': ['x', 'y'],
-  'onMouseMove':  ['x', 'y'],
-  'onMouseDown':  ['x', 'y'],
-  'onMouseUp':    ['x', 'y'],
-  'onMouseEnter': ['x', 'y'],
-  'onMouseLeave': ['x', 'y'],
+  'onKeyTyped':   ['key'],
+  'onMouseDown':  ['x', 'y', 'key'],
+  'onMouseUp':    ['x', 'y', 'key'],
+  'onMouseEnter': [],
+  'onMouseLeave': [],
 };
 
 Blockly.Blocks['gfx_event_handler'] = {
@@ -1068,8 +1066,9 @@ Blockly.Blocks['gfx_event_handler'] = {
     this.setTooltip(
       'Definiert eine Ereignis-Methode die automatisch aufgerufen wird.\n' +
       'act() läuft bei jedem Animationsschritt.\n' +
-      'onKeyDown / onKeyUp erhalten den Tastennamen als Variable "key".\n' +
-      'onMouse*-Methoden erhalten die Klickkoordinaten als Variablen "x" und "y".'
+      'onKeyDown / onKeyUp / onKeyTyped erhalten den Tastennamen als Variable "key".\n' +
+      'onMouseDown / onMouseUp erhalten Position (x, y) und Maustaste (0 = links, 2 = rechts) als Variable "key".\n' +
+      'onMouseEnter / onMouseLeave haben keine Parameter.'
     );
     this.setHelpUrl('');
   },
