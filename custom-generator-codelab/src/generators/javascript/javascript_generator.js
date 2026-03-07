@@ -111,13 +111,14 @@ export const TYPES = {
  */
 export function parseExplicitType(rawName) {
   if (!rawName) return null;
-  const spaceIdx = rawName.indexOf(' ');
+  const spaceIdx = rawName.lastIndexOf(' ');
   if (spaceIdx <= 0) return null;
   const typePart = rawName.slice(0, spaceIdx);
   const namePart = rawName.slice(spaceIdx + 1).trim();
   if (!typePart || !namePart) return null;
-  // typePart: Java type identifier, may include generics (<>) or arrays ([])
-  if (!/^[A-Za-z_$][A-Za-z0-9_$<>\[\],]*$/.test(typePart)) return null;
+  // typePart: Java type identifier, may include package qualifiers (.), generics
+  // (<...>, including wildcards like "? extends Foo"), or arrays ([]).
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*[A-Za-z0-9_$<>\[\],.\?\s]*$/.test(typePart)) return null;
   // namePart: simple Java identifier (no spaces or special chars)
   if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(namePart)) return null;
   return { type: typePart, name: namePart };
@@ -972,10 +973,16 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
       if(!par) {
         let name = this.nameDB_.getName(varId, Blockly.Names.NameType.VARIABLE);
-        // If the variable's display name encodes an explicit type prefix, use the
-        // bare name part as the code identifier (e.g. "int test" → "test").
+        // bare name part as the base for the code identifier (e.g. "int test" → "test"),
+        // but still run it through nameDB_ to ensure it is safe and unique.
         const _rawVarName = workspace.getVariableById(varId)?.name ?? '';
         const _parsedVarName = parseExplicitType(_rawVarName);
+        if (_parsedVarName) {
+          name = this.nameDB_.getDistinctName(
+            _parsedVarName.name,
+            Blockly.Names.NameType.VARIABLE,
+          );
+        }
         if (_parsedVarName) name = _parsedVarName.name;
         let orgType = getVariableType(workspace, varId, true);
         let type = orgType;
