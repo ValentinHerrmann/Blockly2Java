@@ -98,6 +98,47 @@ export const TYPES = {
   CLASS: '__CLASS__'
 };
 
+/**
+ * Parses an explicit Java type prefix from a Blockly variable or method display name.
+ *
+ * If the user names a variable/parameter/method "int test", this returns
+ * {type: "int", name: "test"}, allowing the explicit type to override inference.
+ * The name part must be a single identifier (no spaces).
+ * The type part may include generics or array notation, e.g. "List<String> items".
+ *
+ * Returns null when no valid type prefix is present (no space, or either part
+ * contains characters that are not valid in Java identifiers/type expressions).
+ */
+export function parseExplicitType(rawName) {
+  if (!rawName) return null;
+  const spaceIdx = rawName.indexOf(' ');
+  if (spaceIdx <= 0) return null;
+  const typePart = rawName.slice(0, spaceIdx);
+  const namePart = rawName.slice(spaceIdx + 1).trim();
+  if (!typePart || !namePart) return null;
+  // typePart: Java type identifier, may include generics (<>) or arrays ([])
+  if (!/^[A-Za-z_$][A-Za-z0-9_$<>\[\],]*$/.test(typePart)) return null;
+  // namePart: simple Java identifier (no spaces or special chars)
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(namePart)) return null;
+  return { type: typePart, name: namePart };
+}
+
+/**
+ * Returns the Java code identifier for a variable, stripping any explicit type
+ * prefix that the user may have written into the variable's display name.
+ *
+ * E.g. if the variable's display name is "int test", returns "test".
+ * Falls back to generator.getVariableName(varId) for variables without a prefix.
+ */
+export function getVarCodeName(workspace, generator, varId) {
+  const varModel = workspace?.getVariableById?.(varId);
+  if (varModel) {
+    const parsed = parseExplicitType(varModel.name);
+    if (parsed) return parsed.name;
+  }
+  return generator.getVariableName(varId);
+}
+
 
 export const validRoots = [
   'procedures_defnoreturn',
@@ -644,6 +685,14 @@ function _resolveByAssignedVars(workSpace, vars, recursionDeepness) {
 // ────────────────────────────────────────────────────────────────────────────
 
 function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) {
+  // If the variable's display name encodes an explicit type (e.g. "int test"),
+  // that type unconditionally overrides any automatic inference.
+  const _varModel = workSpace.getVariableById?.(varId);
+  if (_varModel) {
+    const _explicit = parseExplicitType(_varModel.name);
+    if (_explicit) return _explicit.type;
+  }
+
   const forLoopType = _searchForLoopVar(workSpace, varId);
   if (forLoopType) return forLoopType;
 
@@ -923,6 +972,11 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
       if(!par) {
         let name = this.nameDB_.getName(varId, Blockly.Names.NameType.VARIABLE);
+        // If the variable's display name encodes an explicit type prefix, use the
+        // bare name part as the code identifier (e.g. "int test" → "test").
+        const _rawVarName = workspace.getVariableById(varId)?.name ?? '';
+        const _parsedVarName = parseExplicitType(_rawVarName);
+        if (_parsedVarName) name = _parsedVarName.name;
         let orgType = getVariableType(workspace, varId, true);
         let type = orgType;
         let definition = def_map.get(orgType);

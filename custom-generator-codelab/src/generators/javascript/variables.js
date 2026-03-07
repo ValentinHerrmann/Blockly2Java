@@ -11,12 +11,12 @@
 // Former goog.module ID: Blockly.JavaScript.variables
 
 import * as Blockly from 'blockly';
-import {Order, adjustStaticName, getVariableType, getClassName} from './javascript_generator.js';
+import {Order, adjustStaticName, getVariableType, getClassName, getVarCodeName} from './javascript_generator.js';
 
 
 export function variables_get(block, generator) {
   // Variable getter.
-  const code = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  const code = adjustStaticName(getVarCodeName(block.workspace, generator, block.getFieldValue('VAR')));
   // console.log("variables_get: " + code);
   return [code, Order.ATOMIC];
 };
@@ -27,7 +27,7 @@ export function variables_set(block, generator) {
   const argument0 = generator.valueToCode(
                         block, 'VALUE', Order.ASSIGNMENT) || '';
   //console.log("argument0: "+ argument0);                        
-  const varName = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  const varName = adjustStaticName(getVarCodeName(block.workspace, generator, block.getFieldValue('VAR')));
   //console.log("varName: "+ varName);       
   if(argument0 === '')
     {
@@ -41,12 +41,12 @@ export function variables_set(block, generator) {
 // These mirror variables_get/set but are restricted to type '' in FieldVariable.
 
 export function java_normal_attr_get(block, generator) {
-  const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  const name = adjustStaticName(getVarCodeName(block.workspace, generator, block.getFieldValue('VAR')));
   return [name, Order.MEMBER];
 };
 
 export function java_normal_attr_set(block, generator) {
-  const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  const name = adjustStaticName(getVarCodeName(block.workspace, generator, block.getFieldValue('VAR')));
   const argument0 = generator.valueToCode(block, 'VALUE', Order.ASSIGNMENT) || '';
   if (argument0 === '') {
     return '// ' + name + ' = ;    // Wert fehlt\n';
@@ -59,12 +59,12 @@ export function java_normal_attr_set(block, generator) {
 // variables but detected as static there. The getter/setter emit ClassName.name.
 
 export function java_static_attr_get(block, generator) {
-  const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  const name = adjustStaticName(getVarCodeName(block.workspace, generator, block.getFieldValue('VAR')));
   return [name, Order.MEMBER];
 };
 
 export function java_static_attr_set(block, generator) {
-  const name = adjustStaticName(generator.getVariableName(block.getFieldValue('VAR')));
+  const name = adjustStaticName(getVarCodeName(block.workspace, generator, block.getFieldValue('VAR')));
   const value = generator.valueToCode(block, 'VALUE', Order.ASSIGNMENT) || '';
   if (value === '') {
     return '// ' + name + ' = ;    // Wert fehlt\n';
@@ -77,20 +77,20 @@ export function java_static_attr_set(block, generator) {
 // The generator simply emits the variable name (same as variables_get).
 
 export function java_param_get(block, generator) {
-  const code = generator.getVariableName(block.getFieldValue('VAR'));
+  const code = getVarCodeName(block.workspace, generator, block.getFieldValue('VAR'));
   return [code, Order.ATOMIC];
 };
 // No class-level declaration is generated for local variables.
 // The setter outputs "type name = value;" (inline declaration with inferred type).
 
 export function java_local_var_get(block, generator) {
-  const code = generator.getVariableName(block.getFieldValue('VAR'));
+  const code = getVarCodeName(block.workspace, generator, block.getFieldValue('VAR'));
   return [code, Order.ATOMIC];
 };
 
 export function java_local_var_set(block, generator) {
   const varId  = block.getFieldValue('VAR');
-  const varName = generator.getVariableName(varId);
+  const varName = getVarCodeName(block.workspace, generator, varId);
   const value   = generator.valueToCode(block, 'VALUE', Order.ASSIGNMENT) || '';
 
   // Only declare the type on the first assignment; subsequent ones are plain assignments.

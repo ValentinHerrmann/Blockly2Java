@@ -14,7 +14,7 @@
  * the existing getVariableType helper.
  */
 
-import {getType, getVariableType, Order, getClassName, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, parseExplicitType, Order, getClassName, TYPES} from './javascript_generator.js';
 import * as Blockly from 'blockly';
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
@@ -43,7 +43,12 @@ function _computeReturnType(block) {
 // Returns the complete "public [static] [returnType] name(params) { … }" string.
 // ─────────────────────────────────────────────────────────────────────────────
 function buildMethodCode(block, generator, isStatic) {
-  const funcName = block.getFieldValue('NAME') || 'unbekannt';
+  const rawFuncName = block.getFieldValue('NAME') || 'unbekannt';
+  // Allow an explicit return type prefix in the method name:
+  // e.g. "int myMethod" → return type "int", method name "myMethod".
+  const _parsedFuncName = parseExplicitType(rawFuncName);
+  const funcName = _parsedFuncName ? _parsedFuncName.name : rawFuncName;
+  const explicitReturnType = _parsedFuncName ? _parsedFuncName.type : null;
 
   // Reset per-method local-variable tracking so the first use inside every
   // method is always emitted as a declaration, not a plain assignment.
@@ -92,6 +97,10 @@ function buildMethodCode(block, generator, isStatic) {
     returnValue = generator.INDENT + 'return ' + returnValue + ';\n';
   }
 
+  // An explicit return type written into the method name (e.g. "int myMethod")
+  // overrides the type inferred from the connected return block.
+  if (explicitReturnType) returnType = explicitReturnType;
+
   // --- parameters ---
   const ws = Blockly.getMainWorkspace();
   const args = [];
@@ -103,6 +112,13 @@ function buildMethodCode(block, generator, isStatic) {
     const _hintKey = isStatic ? (getClassName() + '::' + funcName) : funcName;
     const _crossClassHints = LocalStorageManager.getObjCallTypeHints(_hintKey);
     for (let i = 0; i < block.arguments_.length; i++) {
+      const rawParamName = block.arguments_[i];
+      // Allow an explicit type prefix in the parameter name (e.g. "int count" → type "int", identifier "count").
+      const _parsedParam = parseExplicitType(rawParamName);
+      if (_parsedParam) {
+        args.push(_parsedParam.type + ' ' + _parsedParam.name);
+        continue;
+      }
       let paramType = varModels[i]
         ? getVariableType(ws, varModels[i].getId(), true)
         : 'Object';
@@ -114,10 +130,7 @@ function buildMethodCode(block, generator, isStatic) {
         const _hint = _crossClassHints[i];
         if (_hint && _hint !== 'var') paramType = _hint;
       }
-      // Keep the leading '_' prefix consistent with the defconstructor convention
-      // so that variables_get/set inside the body reference the same name.
-      const paramName = block.arguments_[i];
-      args.push(paramType + ' ' + paramName);
+      args.push(paramType + ' ' + rawParamName);
     }
   }
 
@@ -132,7 +145,9 @@ function buildMethodCode(block, generator, isStatic) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function java_static_method_noreturn(block, generator) {
-  const funcName = block.getFieldValue('NAME') || 'unbekannt';
+  const rawFuncName = block.getFieldValue('NAME') || 'unbekannt';
+  const _p = parseExplicitType(rawFuncName);
+  const funcName = _p ? _p.name : rawFuncName;
   const code = buildMethodCode(block, generator, true);
   generator.definitions_['%static_' + funcName] = code;
   LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: true, hasReturn: false });
@@ -140,8 +155,10 @@ export function java_static_method_noreturn(block, generator) {
 }
 
 export function java_static_method_return(block, generator) {
-  const funcName = block.getFieldValue('NAME') || 'unbekannt';
-  const returnType = _computeReturnType(block);
+  const rawFuncName = block.getFieldValue('NAME') || 'unbekannt';
+  const _p = parseExplicitType(rawFuncName);
+  const funcName = _p ? _p.name : rawFuncName;
+  const returnType = _p ? _p.type : _computeReturnType(block);
   const code = buildMethodCode(block, generator, true);
   generator.definitions_['%static_' + funcName] = code;
   LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: true, hasReturn: true, returnType });
@@ -149,7 +166,9 @@ export function java_static_method_return(block, generator) {
 }
 
 export function java_method_noreturn(block, generator) {
-  const funcName = block.getFieldValue('NAME') || 'unbekannt';
+  const rawFuncName = block.getFieldValue('NAME') || 'unbekannt';
+  const _p = parseExplicitType(rawFuncName);
+  const funcName = _p ? _p.name : rawFuncName;
   const code = buildMethodCode(block, generator, false);
   generator.definitions_['%method_' + funcName] = code;
   LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: false, hasReturn: false });
@@ -157,8 +176,10 @@ export function java_method_noreturn(block, generator) {
 }
 
 export function java_method_return(block, generator) {
-  const funcName = block.getFieldValue('NAME') || 'unbekannt';
-  const returnType = _computeReturnType(block);
+  const rawFuncName = block.getFieldValue('NAME') || 'unbekannt';
+  const _p = parseExplicitType(rawFuncName);
+  const funcName = _p ? _p.name : rawFuncName;
+  const returnType = _p ? _p.type : _computeReturnType(block);
   const code = buildMethodCode(block, generator, false);
   generator.definitions_['%method_' + funcName] = code;
   LocalStorageManager.storeMethods(getClassName(), { name: funcName, arguments: block.arguments_ || [], isStatic: false, hasReturn: true, returnType });
@@ -178,27 +199,35 @@ function buildCallArgs(block, generator) {
 }
 
 export function java_static_method_call_noreturn(block, generator) {
-  const name = block.getFieldValue('NAME');
+  const rawName = block.getFieldValue('NAME');
+  const _p = parseExplicitType(rawName);
+  const name = _p ? _p.name : rawName;
   const args = buildCallArgs(block, generator);
   return `${name}(${args});
 `;
 }
 
 export function java_static_method_call_return(block, generator) {
-  const name = block.getFieldValue('NAME');
+  const rawName = block.getFieldValue('NAME');
+  const _p = parseExplicitType(rawName);
+  const name = _p ? _p.name : rawName;
   const args = buildCallArgs(block, generator);
   return [`${name}(${args})`, Order.ATOMIC];
 }
 
 export function java_method_call_noreturn(block, generator) {
-  const name = block.getFieldValue('NAME');
+  const rawName = block.getFieldValue('NAME');
+  const _p = parseExplicitType(rawName);
+  const name = _p ? _p.name : rawName;
   const args = buildCallArgs(block, generator);
   return `${name}(${args});
 `;
 }
 
 export function java_method_call_return(block, generator) {
-  const name = block.getFieldValue('NAME');
+  const rawName = block.getFieldValue('NAME');
+  const _p = parseExplicitType(rawName);
+  const name = _p ? _p.name : rawName;
   const args = buildCallArgs(block, generator);
   return [`${name}(${args})`, Order.ATOMIC];
 }
