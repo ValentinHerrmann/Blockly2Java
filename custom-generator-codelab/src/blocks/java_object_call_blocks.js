@@ -293,7 +293,7 @@ const objCallMixin = {
   },
 
   domToMutation(xmlElement) {
-    this.argCount_ = parseInt(xmlElement.getAttribute('args') || '0', 10);
+    this.argCount_ = Number.parseInt(xmlElement.getAttribute('args') || '0', 10);
     this.argNames_ = [];
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || 'arg ' + (i + 1));
@@ -478,7 +478,7 @@ const extStaticCallMixin = {
   },
 
   domToMutation(xmlElement) {
-    this.argCount_ = parseInt(xmlElement.getAttribute('args') || '0', 10);
+    this.argCount_ = Number.parseInt(xmlElement.getAttribute('args') || '0', 10);
     this.argNames_ = [];
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || 'arg ' + (i + 1));

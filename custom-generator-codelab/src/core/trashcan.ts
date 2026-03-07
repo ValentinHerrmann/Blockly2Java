@@ -38,6 +38,7 @@ import {Svg} from './utils/svg.js';
 import {BlockInfo} from './utils/toolbox.js';
 import * as toolbox from './utils/toolbox.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
+import {randomSuffix} from './utils/idgenerator.js';
 
 /**
  * Class for a trash can.
@@ -163,7 +164,7 @@ export class Trashcan
         */
     this.svgGroup = dom.createSvgElement(Svg.G, {'class': 'blocklyTrash'});
     let clip;
-    const rnd = String(Math.random()).substring(2);
+    const rnd = randomSuffix();
     clip = dom.createSvgElement(
       Svg.CLIPPATH,
       {'id': 'blocklyTrashBodyClipPath' + rnd},

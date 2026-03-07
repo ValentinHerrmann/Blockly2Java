@@ -11,7 +11,7 @@
 // Former goog.module ID: Blockly.JavaScript.procedures
 
 import { javascriptGenerator } from 'blockly/javascript.js';
-import {getType, getVariableType, resolveArgBlockType, Order, getClassName, setExtendsClass, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, resolveArgBlockType, parseExplicitType, Order, getClassName, setExtendsClass, TYPES} from './javascript_generator.js';
 import * as Blockly from "blockly";
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
@@ -79,7 +79,13 @@ export function defconstructor(block, generator) {
     }
     console.log("variables: " + variables);
     for (let i = 0; i < variables.length; i++) {
-      args[i] = paramTypes[i] + ' ' + variables[i];
+      // Allow an explicit type prefix in the parameter name (e.g. "int count" → type "int", name "count").
+      const _parsedParam = parseExplicitType(variables[i]);
+      if (_parsedParam) {
+        args[i] = _parsedParam.type + ' ' + _parsedParam.name;
+      } else {
+        args[i] = paramTypes[i] + ' ' + variables[i];
+      }
     }
   }
 

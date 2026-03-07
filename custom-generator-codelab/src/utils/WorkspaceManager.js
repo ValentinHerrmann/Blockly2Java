@@ -615,18 +615,18 @@ export class WorkspaceManager {
       // Resolve null if the dialog is closed without selecting a file.
       const onFocus = () => {
         setTimeout(() => {
-          window.removeEventListener('focus', onFocus);
+          globalThis.removeEventListener('focus', onFocus);
           if (!input.files?.length) resolve(null);
         }, 300);
       };
 
       input.addEventListener('change', () => {
-        window.removeEventListener('focus', onFocus);
+        globalThis.removeEventListener('focus', onFocus);
         resolve(input.files?.[0] ?? null);
       });
 
       document.body.appendChild(input);
-      window.addEventListener('focus', onFocus);
+      globalThis.addEventListener('focus', onFocus);
       input.click();
       // Clean up the element shortly after.
       setTimeout(() => input.remove(), 60_000);

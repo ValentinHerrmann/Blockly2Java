@@ -14,6 +14,7 @@ import * as dom from '../../utils/dom.js';
 import * as parsing from '../../utils/parsing.js';
 import {Svg} from '../../utils/svg.js';
 import * as svgPaths from '../../utils/svg_paths.js';
+import {randomSuffix} from '../../utils/idgenerator.js';
 
 /** An object containing sizing and path information about outside corners. */
 export interface OutsideCorners {
@@ -463,7 +464,7 @@ export class ConstantProvider {
      * A random identifier used to ensure a unique ID is used for each
      * filter/pattern for the case of multiple Blockly instances on a page.
      */
-    this.randomIdentifier = String(Math.random()).substring(2);
+    this.randomIdentifier = randomSuffix();
   }
 
   /**

@@ -26,6 +26,7 @@ import * as dom from './utils/dom.js';
 import {Svg} from './utils/svg.js';
 import * as svgMath from './utils/svg_math.js';
 import * as svgPaths from './utils/svg_paths.js';
+import {randomInt} from './utils/idgenerator.js';
 
 /** A shape that has a pathDown property. */
 interface PathDownShape {
@@ -163,12 +164,12 @@ export class RenderedConnection extends Connection {
     let dx =
       staticConnection.x +
       config.snapRadius +
-      Math.floor(Math.random() * BUMP_RANDOMNESS) -
+      randomInt(BUMP_RANDOMNESS) -
       this.x;
     let dy =
       staticConnection.y +
       config.snapRadius +
-      Math.floor(Math.random() * BUMP_RANDOMNESS) -
+      randomInt(BUMP_RANDOMNESS) -
       this.y;
     if (reverse) {
       // When reversing a bump due to an uneditable block, bump up.
@@ -178,7 +179,7 @@ export class RenderedConnection extends Connection {
       dx =
         staticConnection.x -
         config.snapRadius -
-        Math.floor(Math.random() * BUMP_RANDOMNESS) -
+        randomInt(BUMP_RANDOMNESS) -
         this.x;
     }
     rootBlock.moveBy(dx, dy, ['bump']);

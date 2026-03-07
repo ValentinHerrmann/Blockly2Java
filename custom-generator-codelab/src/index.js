@@ -219,7 +219,7 @@ function setupListeners(workspace) {
           // Relocate the bottom panel into B2J's section.
           ideBottomSection.appendChild(bottomDiv);
           // Let Monaco know its container dimensions changed.
-          window.dispatchEvent(new Event('resize'));
+          globalThis.dispatchEvent(new Event('resize'));
         }
       });
     },

@@ -98,6 +98,111 @@ export const TYPES = {
   CLASS: '__CLASS__'
 };
 
+/**
+ * Parses an explicit Java type prefix from a Blockly variable or method display name.
+ *
+ * If the user names a variable/parameter/method "int test", this returns
+ * {type: "int", name: "test"}, allowing the explicit type to override inference.
+ * The name part must be a single identifier (no spaces).
+ * The type part may include generics or array notation, e.g. "List<String> items".
+ *
+ * Returns null when no valid type prefix is present (no space, or either part
+ * contains characters that are not valid in Java identifiers/type expressions).
+ */
+export function parseExplicitType(rawName) {
+  if (!rawName) return null;
+  const spaceIdx = rawName.lastIndexOf(' ');
+  if (spaceIdx <= 0) return null;
+  const typePart = rawName.slice(0, spaceIdx);
+  const namePart = rawName.slice(spaceIdx + 1).trim();
+  if (!typePart || !namePart) return null;
+  // typePart: Java type identifier, may include package qualifiers (.), generics
+  // (<...>, including wildcards like "? extends Foo"), or arrays ([]).
+  // For security: avoid complex backtracking regexes. Use a deterministic
+  // character/structure validator to prevent catastrophic backtracking.
+  if (!isValidTypeString(typePart)) return null;
+  // namePart: simple Java identifier (no spaces or special chars)
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(namePart)) return null;
+  return { type: typePart, name: namePart };
+}
+
+/**
+ * Lightweight, deterministic validator for Java-style type strings.
+ * Avoids any nested/ambiguous regex constructs to prevent catastrophic
+ * backtracking on untrusted input. Returns true for plausible type
+ * expressions such as "java.util.List<String[]>" or "MyClass".
+ */
+function isValidTypeString(s) {
+  if (!s || typeof s !== 'string') return false;
+  // Impose a reasonable length limit to bound processing cost.
+  if (s.length > 200) return false;
+
+  // Allowed characters (plus dot and whitespace). Validate per-character
+  // rather than using a single complex regex.
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charAt(i);
+    const ok = (
+      (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
+      (ch >= '0' && ch <= '9') || ch === '_' || ch === '$' ||
+      ch === '.' || ch === '<' || ch === '>' || ch === '[' || ch === ']' ||
+      ch === ',' || ch === '?' || ch === ' ' || ch === '\t'
+    );
+    if (!ok) return false;
+  }
+
+  // Must not start or end with a dot and no consecutive dots.
+  if (s.startsWith('.') || s.endsWith('.') || s.includes('..')) return false;
+
+  // Each dot-separated segment must start with a Java identifier start char.
+  const segments = s.split('.');
+  for (const seg of segments) {
+    const segTrim = seg.trim();
+    if (segTrim.length === 0) return false;
+    const first = segTrim.charAt(0);
+    if (!(/[A-Za-z_$]/.test(first))) return false;
+  }
+
+  // Check balanced angle brackets and square brackets and reasonable nesting
+  let angleDepth = 0;
+  let squareDepth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charAt(i);
+    if (ch === '<') {
+      angleDepth++;
+      // limit nesting depth to avoid pathological inputs
+      if (angleDepth > 10) return false;
+    } else if (ch === '>') {
+      if (angleDepth <= 0) return false;
+      angleDepth--;
+    } else if (ch === '[') {
+      squareDepth++;
+      if (squareDepth > 10) return false;
+    } else if (ch === ']') {
+      if (squareDepth <= 0) return false;
+      squareDepth--;
+    }
+  }
+  if (angleDepth !== 0 || squareDepth !== 0) return false;
+
+  return true;
+}
+
+/**
+ * Returns the Java code identifier for a variable, stripping any explicit type
+ * prefix that the user may have written into the variable's display name.
+ *
+ * E.g. if the variable's display name is "int test", returns "test".
+ * Falls back to generator.getVariableName(varId) for variables without a prefix.
+ */
+export function getVarCodeName(workspace, generator, varId) {
+  const varModel = workspace?.getVariableById?.(varId);
+  if (varModel) {
+    const parsed = parseExplicitType(varModel.name);
+    if (parsed) return parsed.name;
+  }
+  return generator.getVariableName(varId);
+}
+
 
 export const validRoots = [
   'procedures_defnoreturn',
@@ -643,7 +748,22 @@ function _resolveByAssignedVars(workSpace, vars, recursionDeepness) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
+function _resolveSetterType(setterTypes) {
+  if (setterTypes.length === 0) return null;
+  if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
+  if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
+  return setterTypes[0];
+}
+
 function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) {
+  // If the variable's display name encodes an explicit type (e.g. "int test"),
+  // that type unconditionally overrides any automatic inference.
+  const _varModel = workSpace.getVariableById?.(varId);
+  if (_varModel) {
+    const _explicit = parseExplicitType(_varModel.name);
+    if (_explicit) return _explicit.type;
+  }
+
   const forLoopType = _searchForLoopVar(workSpace, varId);
   if (forLoopType) return forLoopType;
 
@@ -653,28 +773,27 @@ function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) 
   ]);
   const varsAssignedToThis = [];
   const setterTypes = _collectSetterTypes(workSpace, varId, GETTER_BLOCK_TYPES, varsAssignedToThis);
-
-  if (setterTypes.length > 0) {
-    if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
-    if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
-    return setterTypes[0];
-  }
+  const setterType = _resolveSetterType(setterTypes);
+  if (setterType) return setterType;
 
   const mathType = _searchMathChangeVar(workSpace, varId);
-  if (mathType) return mathType;
-
   const varsAssignedFromThis = [];
-  const getterType = _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFromThis, recursionDeepness);
-  if (getterType !== 'var') return getterType;
 
-  const ctrType = _searchCallconstructorInput(workSpace, varId);
-  if (ctrType) return ctrType;
+  const resolvers = [
+    () => mathType,
+    () => {
+      const getterType = _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFromThis, recursionDeepness);
+      return getterType !== 'var' ? getterType : null;
+    },
+    () => _searchCallconstructorInput(workSpace, varId),
+    () => _searchProcedureCallInput(workSpace, varId),
+    () => _searchMethodCallInput(workSpace, varId, useCompares, recursionDeepness),
+  ];
 
-  const procType = _searchProcedureCallInput(workSpace, varId);
-  if (procType) return procType;
-
-  const methodType = _searchMethodCallInput(workSpace, varId, useCompares, recursionDeepness);
-  if (methodType) return methodType;
+  for (const resolver of resolvers) {
+    const resolved = resolver();
+    if (resolved) return resolved;
+  }
 
   if (recursionDeepness <= 0) {
     console.log('Recursion limit reached while searching for variable type');
@@ -923,6 +1042,17 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
 
       if(!par) {
         let name = this.nameDB_.getName(varId, Blockly.Names.NameType.VARIABLE);
+        // bare name part as the base for the code identifier (e.g. "int test" → "test"),
+        // but still run it through nameDB_ to ensure it is safe and unique.
+        const _rawVarName = workspace.getVariableById(varId)?.name ?? '';
+        const _parsedVarName = parseExplicitType(_rawVarName);
+        if (_parsedVarName) {
+          name = this.nameDB_.getDistinctName(
+            _parsedVarName.name,
+            Blockly.Names.NameType.VARIABLE,
+          );
+        }
+        if (_parsedVarName) name = _parsedVarName.name;
         let orgType = getVariableType(workspace, varId, true);
         let type = orgType;
         let definition = def_map.get(orgType);

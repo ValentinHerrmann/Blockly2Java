@@ -25,6 +25,7 @@ import {Svg} from './utils/svg.js';
 import * as userAgent from './utils/useragent.js';
 import * as WidgetDiv from './widgetdiv.js';
 import {WorkspaceSvg} from './workspace_svg.js';
+import {randomSuffix} from './utils/idgenerator.js';
 
 /**
  * Inject a Blockly editor into the specified container element (usually a div).
@@ -125,7 +126,7 @@ function createDom(container: Element, options: Options): SVGElement {
   // Each filter/pattern needs a unique ID for the case of multiple Blockly
   // instances on a page.  Browser behaviour becomes undefined otherwise.
   // https://neil.fraser.name/news/2015/11/01/
-  const rnd = String(Math.random()).substring(2);
+  const rnd = randomSuffix();
 
   options.gridPattern = Grid.createDom(rnd, options.gridOptions, defs);
   return svg;
