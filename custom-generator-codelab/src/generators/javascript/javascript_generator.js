@@ -118,7 +118,7 @@ export function parseExplicitType(rawName) {
   if (!typePart || !namePart) return null;
   // typePart: Java type identifier, may include package qualifiers (.), generics
   // (<...>, including wildcards like "? extends Foo"), or arrays ([]).
-  if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*[A-Za-z0-9_$<>\[\],.\?\s]*$/.test(typePart)) return null;
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*[A-Za-z0-9_$<>[\],.?\s]*$/.test(typePart)) return null;
   // namePart: simple Java identifier (no spaces or special chars)
   if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(namePart)) return null;
   return { type: typePart, name: namePart };
