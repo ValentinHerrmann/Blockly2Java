@@ -207,7 +207,7 @@ export class GitService {
   static async clone(rawUrl, password) {
     const { url, username, password: urlPassword } = this.parseGitUrl(rawUrl);
     const finalPassword = urlPassword || password || '';
-    const finalUsername  = username || 'git';
+    const finalUsername  = username || '';
 
     const fs = this._getFs();
 
