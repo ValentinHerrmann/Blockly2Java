@@ -11,6 +11,40 @@
  */
 
 import * as Blockly from 'blockly/core';
+import { VAR_TYPE_LOCAL } from './java_variable_blocks.js';
+
+/**
+ * Returns an onchange handler that, when a graphics value block is first placed
+ * on the workspace inside a java_local_var_set, gives it the next free
+ * variable name (prefix + N) if the current variable is already used elsewhere.
+ */
+function _makeAutoNameOnchange(prefix) {
+  return function (event) {
+    if (this._autoNamed_ || !this.workspace || this.workspace.isFlyout) return;
+    if (event.type !== Blockly.Events.BLOCK_MOVE &&
+        event.type !== Blockly.Events.BLOCK_CREATE) return;
+    const parent = this.getParent();
+    if (!parent || parent.type !== 'java_local_var_set') return;
+    const varField = parent.getField('VAR');
+    if (!varField) return;
+    const varModel = varField.getVariable();
+    if (!varModel) return;
+    this._autoNamed_ = true;
+    const varId = varModel.getId();
+    const ws = this.workspace;
+    // Check whether another java_local_var_set already uses the same variable.
+    const conflict = ws.getBlocksByType('java_local_var_set', false).some(b => {
+      if (b === parent) return false;
+      return b.getField('VAR')?.getVariable()?.getId() === varId;
+    });
+    if (!conflict) return;
+    // Assign a fresh variable with the next free name to this block only.
+    let n = 1;
+    while (ws.getVariable(prefix + n, VAR_TYPE_LOCAL)) n++;
+    const newVar = ws.createVariable(prefix + n, VAR_TYPE_LOCAL);
+    varField.setValue(newVar.getId());
+  };
+}
 
 // ── palette ──────────────────────────────────────────────────────────────────
 const C_OBJ   = '#00796b';   // teal       – object constructors
@@ -36,6 +70,132 @@ function buildObjInputs(block, label, params) {
 }
 
 // =============================================================================
+// UNIFIED SHAPE BLOCK  (Circle / Ellipse / Rectangle / RoundedRectangle /
+//                       Triangle / Line  – selected via dropdown)
+// =============================================================================
+
+const SHAPE_PARAMS = {
+  Circle:           [['X','x:'], ['Y','y:'], ['RADIUS','Radius:']],
+  Ellipse:          [['X','x:'], ['Y','y:'], ['RADIUS_X','rx:'], ['RADIUS_Y','ry:']],
+  Rectangle:        [['TOP','oben:'], ['LEFT','links:'], ['WIDTH','Breite:'], ['HEIGHT','Höhe:']],
+  RoundedRectangle: [['TOP','oben:'], ['LEFT','links:'], ['WIDTH','Breite:'], ['HEIGHT','Höhe:'], ['CORNER','Ecke:']],
+  Triangle:         [['X1','x1:'], ['Y1','y1:'], ['X2','x2:'], ['Y2','y2:'], ['X3','x3:'], ['Y3','y3:']],
+  Line:             [['X1','x1:'], ['Y1','y1:'], ['X2','x2:'], ['Y2','y2:']],
+};
+
+const SHAPE_DD_OPTIONS = [
+  ['Kreis',           'Circle'],
+  ['Ellipse',         'Ellipse'],
+  ['Rechteck',        'Rectangle'],
+  ['abger. Rechteck', 'RoundedRectangle'],
+  ['Dreieck',         'Triangle'],
+  ['Linie',           'Line'],
+];
+
+// All unique input names across all shapes (for save/remove cycles)
+const ALL_SHAPE_INPUTS = [...new Set(
+  Object.values(SHAPE_PARAMS).flat().map(([n]) => n)
+)];
+
+function makeShapeBlock(isStatement) {
+  return {
+    init: function () {
+      this.shape_ = 'Circle';
+      this._updating_ = false;
+      if (isStatement) {
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+      } else {
+        this.setOutput(true, 'Circle');
+      }
+      this.setColour(C_OBJ);
+      this.setTooltip('Erstellt eine geometrische Form (Kreis, Ellipse, Rechteck, …).');
+      this.updateShape_('Circle');
+    },
+
+    saveExtraState: function () {
+      return { shape: this.shape_ };
+    },
+
+    loadExtraState: function (state) {
+      this.updateShape_((state?.shape) || 'Circle');
+    },
+
+    onchange: isStatement ? undefined : _makeAutoNameOnchange('grafik'),
+
+    /** Creates a dropdown whose validator triggers a shape rebuild on change. */
+    _makeDropdown_: function () {
+      const dd = new Blockly.FieldDropdown(SHAPE_DD_OPTIONS);
+      dd.setValidator((newValue) => {
+        if (!this._updating_) {
+          this.updateShape_(newValue);
+        }
+        return newValue;
+      });
+      return dd;
+    },
+
+    updateShape_: function (shape) {
+      if (this._updating_) return;
+      this._updating_ = true;
+      Blockly.Events.disable();
+      try {
+        this._rebuildInputs_(shape);
+      } finally {
+        Blockly.Events.enable();
+        this._updating_ = false;
+      }
+    },
+
+    _rebuildInputs_: function (shape) {
+      this.shape_ = shape || 'Circle';
+      const params = SHAPE_PARAMS[this.shape_] || SHAPE_PARAMS.Circle;
+
+      // ── Save connections from any existing inputs ──────────────────────
+      const savedConns = {};
+      for (const name of ALL_SHAPE_INPUTS) {
+        const inp = this.getInput('P_' + name);
+        if (inp?.connection) savedConns[name] = inp.connection.targetConnection;
+      }
+
+      // ── Remove all existing inputs ─────────────────────────────────────
+      for (const name of ALL_SHAPE_INPUTS) {
+        if (this.getInput('P_' + name)) this.removeInput('P_' + name);
+      }
+
+      // ── Update output type (value block only) ──────────────────────────
+      if (!isStatement) this.setOutput(true, this.shape_);
+
+      // ── First param: inline with 'neue <dropdown> label' ───────────────
+      const [[n0, l0], ...rest] = params;
+      this.appendValueInput('P_' + n0)
+        .setCheck('Number')
+        .appendField('neue ')
+        .appendField(this._makeDropdown_(), 'SHAPE')
+        .appendField(' ' + l0);
+      this.getField('SHAPE').setValue(this.shape_);
+      if (savedConns[n0]?.getSourceBlock?.()?.workspace) {
+        this.getInput('P_' + n0).connection.connect(savedConns[n0]);
+      }
+
+      // ── Remaining params: right-aligned ────────────────────────────────
+      for (const [n, l] of rest) {
+        this.appendValueInput('P_' + n)
+          .setAlign(Blockly.inputs.Align.RIGHT)
+          .setCheck('Number')
+          .appendField(l);
+        if (savedConns[n]?.getSourceBlock?.()?.workspace) {
+          this.getInput('P_' + n).connection.connect(savedConns[n]);
+        }
+      }
+    },
+
+  };
+}
+
+Blockly.Blocks['gfx_new_shape']      = makeShapeBlock(false);
+
+// =============================================================================
 // 1.  WORLD
 // =============================================================================
 
@@ -49,19 +209,7 @@ Blockly.Blocks['gfx_new_world'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt einen neuen Grafikbereich. Gibt die World zurück (für spätere Methoden-Aufrufe).');
   },
-};
-
-Blockly.Blocks['gfx_new_world_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Welt', [
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt einen neuen Grafikbereich (ohne Rückgabe).');
-  },
+  onchange: _makeAutoNameOnchange('world'),
 };
 
 // =============================================================================
@@ -78,20 +226,6 @@ Blockly.Blocks['gfx_new_circle'] = {
     this.setOutput(true, 'Circle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt einen Kreis mit Mittelpunkt (x, y) und dem angegebenen Radius.');
-  },
-};
-
-Blockly.Blocks['gfx_new_circle_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neuer Kreis', [
-      ['X',      'x:'],
-      ['Y',      'y:'],
-      ['RADIUS', 'Radius:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt einen Kreis (ohne Rückgabe).');
   },
 };
 
@@ -113,20 +247,6 @@ Blockly.Blocks['gfx_new_ellipse'] = {
   },
 };
 
-Blockly.Blocks['gfx_new_ellipse_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Ellipse', [
-      ['X',        'x:'],
-      ['Y',        'y:'],
-      ['RADIUS_X', 'rx:'],
-      ['RADIUS_Y', 'ry:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine Ellipse (ohne Rückgabe).');
-  },
-};
 
 // =============================================================================
 // 4.  RECTANGLE
@@ -146,21 +266,6 @@ Blockly.Blocks['gfx_new_rect'] = {
   },
 };
 
-Blockly.Blocks['gfx_new_rect_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Rechteck', [
-      ['TOP',    'oben:'],
-      ['LEFT',   'links:'],
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Rechteck (ohne Rückgabe).');
-  },
-};
-
 // =============================================================================
 // 5.  ROUNDED RECTANGLE
 // =============================================================================
@@ -177,22 +282,6 @@ Blockly.Blocks['gfx_new_rrect'] = {
     this.setOutput(true, 'RoundedRectangle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Rechteck mit abgerundeten Ecken.');
-  },
-};
-
-Blockly.Blocks['gfx_new_rrect_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neues abger. Rechteck', [
-      ['TOP',    'oben:'],
-      ['LEFT',   'links:'],
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-      ['CORNER', 'Ecke:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Rechteck mit abgerundeten Ecken (ohne Rückgabe).');
   },
 };
 
@@ -216,23 +305,6 @@ Blockly.Blocks['gfx_new_triangle'] = {
   },
 };
 
-Blockly.Blocks['gfx_new_triangle_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Dreieck', [
-      ['X1', 'x1:'],
-      ['Y1', 'y1:'],
-      ['X2', 'x2:'],
-      ['Y2', 'y2:'],
-      ['X3', 'x3:'],
-      ['Y3', 'y3:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Dreieck (ohne Rückgabe).');
-  },
-};
-
 // =============================================================================
 // 7.  LINE
 // =============================================================================
@@ -250,22 +322,6 @@ Blockly.Blocks['gfx_new_line'] = {
     this.setTooltip('Erstellt eine Linie zwischen zwei Punkten.');
   },
 };
-
-Blockly.Blocks['gfx_new_line_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Linie', [
-      ['X1', 'x1:'],
-      ['Y1', 'y1:'],
-      ['X2', 'x2:'],
-      ['Y2', 'y2:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine Linie (ohne Rückgabe).');
-  },
-};
-
 // =============================================================================
 // 8.  TEXT
 // =============================================================================
@@ -282,21 +338,7 @@ Blockly.Blocks['gfx_new_text'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Text-Objekt an Position (x, y) mit der angegebenen Schriftgröße.');
   },
-};
-
-Blockly.Blocks['gfx_new_text_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neuer Text', [
-      ['X',    'x:'],
-      ['Y',    'y:'],
-      ['SIZE', 'Größe:'],
-      ['TEXT', 'Text:', 'String'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Text-Objekt (ohne Rückgabe).');
-  },
+  onchange: _makeAutoNameOnchange('grafik'),
 };
 
 // =============================================================================
@@ -313,19 +355,7 @@ Blockly.Blocks['gfx_new_turtle'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt eine Turtle an Position (x, y). Die Turtle zeichnet beim Vorwärtsgehen.');
   },
-};
-
-Blockly.Blocks['gfx_new_turtle_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Schildkröte', [
-      ['X', 'x:'],
-      ['Y', 'y:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine Turtle (ohne Rückgabe).');
-  },
+  onchange: _makeAutoNameOnchange('grafik'),
 };
 
 // =============================================================================
@@ -339,16 +369,7 @@ Blockly.Blocks['gfx_new_group'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt eine leere Gruppe. Objekte können danach mit add() hinzugefügt werden.');
   },
-};
-
-Blockly.Blocks['gfx_new_group_stmt'] = {
-  init: function () {
-    this.appendDummyInput().appendField('neue Gruppe');
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine leere Gruppe (ohne Rückgabe).');
-  },
+  onchange: _makeAutoNameOnchange('group'),
 };
 
 // =============================================================================
@@ -369,24 +390,9 @@ Blockly.Blocks['gfx_new_bitmap'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Bitmap-Raster (Spalten×Zeilen Felder) an der angegebenen Position.');
   },
+  onchange: _makeAutoNameOnchange('grafik'),
 };
 
-Blockly.Blocks['gfx_new_bitmap_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Bitmap', [
-      ['COLS',   'Spalten:'],
-      ['ROWS',   'Zeilen:'],
-      ['LEFT',   'links:'],
-      ['TOP',    'oben:'],
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Bitmap-Raster (ohne Rückgabe).');
-  },
-};
 
 // =============================================================================
 // 12.  POLYGON
@@ -401,18 +407,7 @@ Blockly.Blocks['gfx_new_polygon'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Polygon (geschlossen/gefüllt wenn true, offenene Linie wenn false). Punkte mit addPoint() hinzufügen.');
   },
-};
-
-Blockly.Blocks['gfx_new_polygon_stmt'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Polygon', [
-      ['CLOSE', 'geschlossen:', 'Boolean'],
-    ]);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Polygon (ohne Rückgabe).');
-  },
+  onchange: _makeAutoNameOnchange('grafik'),
 };
 
 // =============================================================================
@@ -1041,8 +1036,8 @@ const GFX_EVENT_LIST = [
   ['onKeyTyped(key)  — Taste angeschlagen',           'onKeyTyped'],
   ['onMouseDown(x, y, key)  — Maustaste gedrückt',          'onMouseDown'],
   ['onMouseUp(x, y, key)  — Maustaste losgelassen',         'onMouseUp'],
-  ['onMouseEnter()  — Maus betritt Objekt',           'onMouseEnter'],
-  ['onMouseLeave()  — Maus verlässt Objekt',          'onMouseLeave'],
+  ['onMouseEnter(x, y)  — Maus betritt Objekt',           'onMouseEnter'],
+  ['onMouseLeave(x, y)  — Maus verlässt Objekt',          'onMouseLeave'],
 ];
 
 /** Variable names to create in the workspace for each event's parameters. */
@@ -1053,8 +1048,8 @@ const GFX_EVENT_PARAM_VARS = {
   'onKeyTyped':   ['key'],
   'onMouseDown':  ['x', 'y', 'key'],
   'onMouseUp':    ['x', 'y', 'key'],
-  'onMouseEnter': [],
-  'onMouseLeave': [],
+  'onMouseEnter': ['x', 'y'],
+  'onMouseLeave': ['x', 'y'],
 };
 
 Blockly.Blocks['gfx_event_handler'] = {

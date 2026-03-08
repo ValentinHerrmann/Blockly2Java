@@ -123,7 +123,6 @@
       "active": true,
       "blocks": [
         { "type": "gfx_new_turtle",         "active": true },
-        { "type": "gfx_new_turtle_stmt",    "active": true },
         { "type": "gfx_forward",            "active": true },
         { "type": "gfx_turtle_turn",        "active": true },
         { "type": "gfx_define_direction",   "active": true },
@@ -138,27 +137,16 @@
       "blocks": [
         { "type": "gfx_extends",           "active": false },
         { "type": "gfx_new_world",          "active": true },
-        { "type": "gfx_new_world_stmt",     "active": true },
         { "type": "gfx_new_circle",         "active": true },
-        { "type": "gfx_new_circle_stmt",    "active": true },
         { "type": "gfx_new_ellipse",        "active": true },
-        { "type": "gfx_new_ellipse_stmt",   "active": true },
         { "type": "gfx_new_rect",           "active": true },
-        { "type": "gfx_new_rect_stmt",      "active": true },
         { "type": "gfx_new_rrect",          "active": true },
-        { "type": "gfx_new_rrect_stmt",     "active": true },
         { "type": "gfx_new_triangle",       "active": true },
-        { "type": "gfx_new_triangle_stmt",  "active": true },
         { "type": "gfx_new_line",           "active": true },
-        { "type": "gfx_new_line_stmt",      "active": true },
         { "type": "gfx_new_polygon",        "active": true },
-        { "type": "gfx_new_polygon_stmt",   "active": true },
         { "type": "gfx_new_text",           "active": true },
-        { "type": "gfx_new_text_stmt",      "active": true },
         { "type": "gfx_new_group",          "active": true },
-        { "type": "gfx_new_group_stmt",     "active": true },
-        { "type": "gfx_new_bitmap",         "active": true },
-        { "type": "gfx_new_bitmap_stmt",    "active": true }
+        { "type": "gfx_new_bitmap",         "active": true }
       ]
     },
     {

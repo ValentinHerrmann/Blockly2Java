@@ -648,193 +648,79 @@ export const toolbox = {
                 { 'kind': 'block', 'type': 'gfx_extends' },
                 // ── World ──────────────────────────────────────────────────────
                 {
-                    'kind': 'block', 'type': 'gfx_new_world',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'world1', 'type': 'local' } },
                     'inputs': {
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 800 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 600 } } },
+                        'VALUE': { 'block': {
+                            'type': 'gfx_new_world',
+                            'inputs': {
+                                'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 800 } } },
+                                'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 600 } } },
+                            },
+                        }},
                     },
                 },
+                // ── Shapes (unified) ──────────────────────────────────────────
                 {
-                    'kind': 'block', 'type': 'gfx_new_world_stmt',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
                     'inputs': {
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 800 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 600 } } },
-                    },
-                },
-                // ── Circle ────────────────────────────────────────────────────
-                {
-                    'kind': 'block', 'type': 'gfx_new_circle',
-                    'inputs': {
-                        'X':      { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'Y':      { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'RADIUS': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_circle_stmt',
-                    'inputs': {
-                        'X':      { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'Y':      { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'RADIUS': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                    },
-                },
-                // ── Ellipse ───────────────────────────────────────────────────
-                {
-                    'kind': 'block', 'type': 'gfx_new_ellipse',
-                    'inputs': {
-                        'X':        { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'Y':        { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'RADIUS_X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'RADIUS_Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_ellipse_stmt',
-                    'inputs': {
-                        'X':        { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'Y':        { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'RADIUS_X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'RADIUS_Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                    },
-                },
-                // ── Rectangle ─────────────────────────────────────────────────
-                {
-                    'kind': 'block', 'type': 'gfx_new_rect',
-                    'inputs': {
-                        'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 150 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_rect_stmt',
-                    'inputs': {
-                        'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 150 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                    },
-                },
-                // ── RoundedRectangle ──────────────────────────────────────────
-                {
-                    'kind': 'block', 'type': 'gfx_new_rrect',
-                    'inputs': {
-                        'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 150 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'CORNER': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 15 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_rrect_stmt',
-                    'inputs': {
-                        'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 150 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'CORNER': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 15 } } },
-                    },
-                },
-                // ── Triangle ──────────────────────────────────────────────────
-                {
-                    'kind': 'block', 'type': 'gfx_new_triangle',
-                    'inputs': {
-                        'X1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'Y1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'X2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'Y2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'X3': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 150 } } },
-                        'Y3': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_triangle_stmt',
-                    'inputs': {
-                        'X1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'Y1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'X2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'Y2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'X3': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 150 } } },
-                        'Y3': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                    },
-                },
-                // ── Line ──────────────────────────────────────────────────────
-                {
-                    'kind': 'block', 'type': 'gfx_new_line',
-                    'inputs': {
-                        'X1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                        'Y1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                        'X2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 250 } } },
-                        'Y2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 250 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_line_stmt',
-                    'inputs': {
-                        'X1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                        'Y1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
-                        'X2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 250 } } },
-                        'Y2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 250 } } },
+                        'VALUE': { 'block': { 'type': 'gfx_new_shape' } },
                     },
                 },
                 // ── Polygon ───────────────────────────────────────────────────
                 {
-                    'kind': 'block', 'type': 'gfx_new_polygon',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
                     'inputs': {
-                        'CLOSE': { 'shadow': { 'type': 'logic_boolean', 'fields': { 'BOOL': 'TRUE' } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_polygon_stmt',
-                    'inputs': {
-                        'CLOSE': { 'shadow': { 'type': 'logic_boolean', 'fields': { 'BOOL': 'TRUE' } } },
+                        'VALUE': { 'block': {
+                            'type': 'gfx_new_polygon',
+                            'inputs': {
+                                'CLOSE': { 'shadow': { 'type': 'logic_boolean', 'fields': { 'BOOL': 'TRUE' } } },
+                            },
+                        }},
                     },
                 },
                 // ── Text ──────────────────────────────────────────────────────
                 {
-                    'kind': 'block', 'type': 'gfx_new_text',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
                     'inputs': {
-                        'X':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'Y':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'SIZE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 20 } } },
-                        'TEXT': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': 'Hallo!' } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_text_stmt',
-                    'inputs': {
-                        'X':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'Y':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                        'SIZE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 20 } } },
-                        'TEXT': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': 'Hallo!' } } },
+                        'VALUE': { 'block': {
+                            'type': 'gfx_new_text',
+                            'inputs': {
+                                'X':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
+                                'Y':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
+                                'SIZE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 20 } } },
+                                'TEXT': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': 'Hallo!' } } },
+                            },
+                        }},
                     },
                 },
                 // ── Group ─────────────────────────────────────────────────────
-                { 'kind': 'block', 'type': 'gfx_new_group' },
-                { 'kind': 'block', 'type': 'gfx_new_group_stmt' },
-                // ── Bitmap ────────────────────────────────────────────────────
                 {
-                    'kind': 'block', 'type': 'gfx_new_bitmap',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'group1', 'type': 'local' } },
                     'inputs': {
-                        'COLS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
-                        'ROWS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
-                        'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
-                        'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
+                        'VALUE': { 'block': { 'type': 'gfx_new_group' } },
                     },
                 },
+                // ── Bitmap ────────────────────────────────────────────────────
                 {
-                    'kind': 'block', 'type': 'gfx_new_bitmap_stmt',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
                     'inputs': {
-                        'COLS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
-                        'ROWS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
-                        'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
-                        'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
-                        'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
+                        'VALUE': { 'block': {
+                            'type': 'gfx_new_bitmap',
+                            'inputs': {
+                                'COLS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
+                                'ROWS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
+                                'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
+                                'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
+                                'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
+                                'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
+                            },
+                        }},
                     },
                 },
             ],
@@ -966,17 +852,16 @@ export const toolbox = {
             'contents': [
                 // Konstruktoren
                 {
-                    'kind': 'block', 'type': 'gfx_new_turtle',
+                    'kind': 'block', 'type': 'java_local_var_set',
+                    'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
                     'inputs': {
-                        'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 400 } } },
-                        'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 300 } } },
-                    },
-                },
-                {
-                    'kind': 'block', 'type': 'gfx_new_turtle_stmt',
-                    'inputs': {
-                        'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 400 } } },
-                        'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 300 } } },
+                        'VALUE': { 'block': {
+                            'type': 'gfx_new_turtle',
+                            'inputs': {
+                                'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 400 } } },
+                                'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 300 } } },
+                            },
+                        }},
                     },
                 },
                 // Bewegung

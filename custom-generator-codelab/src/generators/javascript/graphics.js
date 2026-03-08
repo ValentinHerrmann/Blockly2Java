@@ -29,6 +29,33 @@ function obj(block, generator, inputName = 'OBJ') {
 // CONSTRUCTORS – value blocks (return [code, Order])
 // =============================================================================
 
+// ── Unified shape block ───────────────────────────────────────────────────────
+export function gfx_new_shape(block, generator) {
+  const shape = block.getFieldValue('SHAPE') || 'Circle';
+  const n = (name, def) => generator.valueToCode(block, 'P_' + name, Order.NONE) || def;
+  switch (shape) {
+    case 'Circle':
+      return [`new Circle(${n('X','0')}, ${n('Y','0')}, ${n('RADIUS','50')})`, Order.NEW];
+    case 'Ellipse':
+      return [`new Ellipse(${n('X','0')}, ${n('Y','0')}, ${n('RADIUS_X','100')}, ${n('RADIUS_Y','50')})`, Order.NEW];
+    case 'Rectangle':
+      return [`new Rectangle(${n('TOP','0')}, ${n('LEFT','0')}, ${n('WIDTH','100')}, ${n('HEIGHT','80')})`, Order.NEW];
+    case 'RoundedRectangle':
+      return [`new RoundedRectangle(${n('TOP','0')}, ${n('LEFT','0')}, ${n('WIDTH','100')}, ${n('HEIGHT','80')}, ${n('CORNER','10')})`, Order.NEW];
+    case 'Triangle':
+      return [`new Triangle(${n('X1','0')}, ${n('Y1','0')}, ${n('X2','100')}, ${n('Y2','0')}, ${n('X3','50')}, ${n('Y3','80')})`, Order.NEW];
+    case 'Line':
+      return [`new Line(${n('X1','0')}, ${n('Y1','0')}, ${n('X2','100')}, ${n('Y2','100')})`, Order.NEW];
+    default:
+      return ['null', Order.ATOMIC];
+  }
+}
+
+export function gfx_new_shape_stmt(block, generator) {
+  const [code] = gfx_new_shape(block, generator);
+  return `${code};\n`;
+}
+
 export function gfx_new_world(block, generator) {
   const w = num(block, generator, 'WIDTH', '800');
   const h = num(block, generator, 'HEIGHT', '600');
@@ -118,98 +145,6 @@ export function gfx_new_polygon(block, generator) {
   return [`new Polygon(${close})`, Order.NEW];
 }
 
-// =============================================================================
-// CONSTRUCTORS – statement blocks (return string)
-// =============================================================================
-
-export function gfx_new_world_stmt(block, generator) {
-  const w = num(block, generator, 'WIDTH', '800');
-  const h = num(block, generator, 'HEIGHT', '600');
-  return `new World(${w}, ${h});\n`;
-}
-
-export function gfx_new_circle_stmt(block, generator) {
-  const x = num(block, generator, 'X', '0');
-  const y = num(block, generator, 'Y', '0');
-  const r = num(block, generator, 'RADIUS', '50');
-  return `new Circle(${x}, ${y}, ${r});\n`;
-}
-
-export function gfx_new_ellipse_stmt(block, generator) {
-  const x  = num(block, generator, 'X',        '0');
-  const y  = num(block, generator, 'Y',        '0');
-  const rx = num(block, generator, 'RADIUS_X', '100');
-  const ry = num(block, generator, 'RADIUS_Y', '50');
-  return `new Ellipse(${x}, ${y}, ${rx}, ${ry});\n`;
-}
-
-export function gfx_new_rect_stmt(block, generator) {
-  const t = num(block, generator, 'TOP',    '0');
-  const l = num(block, generator, 'LEFT',   '0');
-  const w = num(block, generator, 'WIDTH',  '100');
-  const h = num(block, generator, 'HEIGHT', '80');
-  return `new Rectangle(${t}, ${l}, ${w}, ${h});\n`;
-}
-
-export function gfx_new_rrect_stmt(block, generator) {
-  const t = num(block, generator, 'TOP',    '0');
-  const l = num(block, generator, 'LEFT',   '0');
-  const w = num(block, generator, 'WIDTH',  '100');
-  const h = num(block, generator, 'HEIGHT', '80');
-  const c = num(block, generator, 'CORNER', '10');
-  return `new RoundedRectangle(${t}, ${l}, ${w}, ${h}, ${c});\n`;
-}
-
-export function gfx_new_triangle_stmt(block, generator) {
-  const x1 = num(block, generator, 'X1', '0');
-  const y1 = num(block, generator, 'Y1', '0');
-  const x2 = num(block, generator, 'X2', '100');
-  const y2 = num(block, generator, 'Y2', '0');
-  const x3 = num(block, generator, 'X3', '50');
-  const y3 = num(block, generator, 'Y3', '80');
-  return `new Triangle(${x1}, ${y1}, ${x2}, ${y2}, ${x3}, ${y3});\n`;
-}
-
-export function gfx_new_line_stmt(block, generator) {
-  const x1 = num(block, generator, 'X1', '0');
-  const y1 = num(block, generator, 'Y1', '0');
-  const x2 = num(block, generator, 'X2', '100');
-  const y2 = num(block, generator, 'Y2', '100');
-  return `new Line(${x1}, ${y1}, ${x2}, ${y2});\n`;
-}
-
-export function gfx_new_text_stmt(block, generator) {
-  const x    = num(block, generator, 'X',    '0');
-  const y    = num(block, generator, 'Y',    '0');
-  const size = num(block, generator, 'SIZE', '20');
-  const text = generator.valueToCode(block, 'TEXT', Order.NONE) || '"Text"';
-  return `new Text(${x}, ${y}, ${size}, ${text});\n`;
-}
-
-export function gfx_new_turtle_stmt(block, generator) {
-  const x = num(block, generator, 'X', '400');
-  const y = num(block, generator, 'Y', '300');
-  return `new Turtle(${x}, ${y});\n`;
-}
-
-export function gfx_new_group_stmt(_block, _generator) {
-  return `new Group();\n`;
-}
-
-export function gfx_new_bitmap_stmt(block, generator) {
-  const cols   = num(block, generator, 'COLS',   '10');
-  const rows   = num(block, generator, 'ROWS',   '10');
-  const left   = num(block, generator, 'LEFT',   '0');
-  const top    = num(block, generator, 'TOP',    '0');
-  const width  = num(block, generator, 'WIDTH',  '200');
-  const height = num(block, generator, 'HEIGHT', '200');
-  return `new Bitmap(${cols}, ${rows}, ${left}, ${top}, ${width}, ${height});\n`;
-}
-
-export function gfx_new_polygon_stmt(block, generator) {
-  const close = generator.valueToCode(block, 'CLOSE', Order.NONE) || 'true';
-  return `new Polygon(${close});\n`;
-}
 
 // =============================================================================
 // APPEARANCE – statement generators
@@ -449,8 +384,8 @@ const GFX_EVENT_SIGNATURES = {
   'onKeyTyped':   'String key',
   'onMouseDown':  'double x, double y, int key',
   'onMouseUp':    'double x, double y, int key',
-  'onMouseEnter': '',
-  'onMouseLeave': '',
+  'onMouseEnter': 'double x, double y',
+  'onMouseLeave': 'double x, double y',
 };
 
 export function gfx_event_handler(block, generator) {

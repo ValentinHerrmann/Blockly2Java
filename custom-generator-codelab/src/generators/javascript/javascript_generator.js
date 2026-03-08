@@ -421,7 +421,26 @@ export function adjustStaticName(name) {
  *  2. The class's saved workspace JSON (looking for a java_extends block),
  *     so the hierarchy is available even before the sub-class has been generated.
  */
+/** Built-in graphics library class hierarchy (Shape is the common base). */
+const GFX_CLASS_PARENTS = {
+  'Circle':            'Shape',
+  'Ellipse':           'Shape',
+  'Rectangle':         'Shape',
+  'RoundedRectangle':  'Shape',
+  'Triangle':          'Shape',
+  'Line':              'Shape',
+  'Text':              'Shape',
+  'Turtle':            'Shape',
+  'Group':             'Shape',
+  'Bitmap':            'Shape',
+  'Polygon':           'Shape',
+};
+
 function getClassParent(className) {
+  // 0. Built-in graphics library hierarchy.
+  if (Object.prototype.hasOwnProperty.call(GFX_CLASS_PARENTS, className)) {
+    return GFX_CLASS_PARENTS[className];
+  }
   // 1. Super-call type hints (fastest, populated at generation time).
   const raw = globalThis.localStorage?.getItem(LocalStorageManager.SUPER_CALL_TYPE_HINTS_KEY);
   if (raw) {
@@ -583,6 +602,10 @@ function _collectSetterTypes(workSpace, varId, GETTER_TYPES, varsAssignedToThis)
 
 /** Resolves the Java type of a value block used in an assignment. */
 function _resolveAssignedBlockType(workSpace, valueBlock) {
+  // Unified graphics shape block: type depends on the SHAPE dropdown field.
+  if (valueBlock.type === 'gfx_new_shape') {
+    return valueBlock.getFieldValue('SHAPE') || 'Shape';
+  }
   if (valueBlock.type === 'callconstructor') {
     const dv = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
     const si = dv.indexOf(':::');
