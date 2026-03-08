@@ -1,0 +1,627 @@
+{
+  "version": 1,
+  "description": "Mit Grafik ohne Turtle",
+  "categories": [
+    {
+      "name": "Logik",
+      "active": false,
+      "blocks": [
+        {
+          "type": "controls_if",
+          "active": true
+        },
+        {
+          "type": "logic_compare",
+          "active": true
+        },
+        {
+          "type": "logic_operation",
+          "active": true
+        },
+        {
+          "type": "logic_negate",
+          "active": true
+        },
+        {
+          "type": "logic_boolean",
+          "active": true
+        },
+        {
+          "type": "logic_null",
+          "active": true
+        },
+        {
+          "type": "logic_ternary",
+          "active": false
+        }
+      ]
+    },
+    {
+      "name": "Schleifen",
+      "active": true,
+      "blocks": [
+        {
+          "type": "controls_repeat_ext",
+          "active": true
+        },
+        {
+          "type": "controls_whileUntil",
+          "active": true
+        },
+        {
+          "type": "controls_for",
+          "active": true
+        },
+        {
+          "type": "controls_forEach",
+          "active": false
+        },
+        {
+          "type": "controls_flow_statements",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Mathe",
+      "active": true,
+      "blocks": [
+        {
+          "type": "math_number",
+          "active": true
+        },
+        {
+          "type": "math_arithmetic",
+          "active": true
+        },
+        {
+          "type": "math_single",
+          "active": true
+        },
+        {
+          "type": "math_trig",
+          "active": true
+        },
+        {
+          "type": "math_constant",
+          "active": true
+        },
+        {
+          "type": "math_number_property",
+          "active": true
+        },
+        {
+          "type": "math_round",
+          "active": true
+        },
+        {
+          "type": "math_on_list",
+          "active": true
+        },
+        {
+          "type": "math_modulo",
+          "active": true
+        },
+        {
+          "type": "math_constrain",
+          "active": false
+        },
+        {
+          "type": "math_random_int",
+          "active": true
+        },
+        {
+          "type": "math_random_float",
+          "active": true
+        },
+        {
+          "type": "math_atan2",
+          "active": false
+        }
+      ]
+    },
+    {
+      "name": "Text",
+      "active": true,
+      "blocks": [
+        {
+          "type": "text",
+          "active": true
+        },
+        {
+          "type": "text_multiline",
+          "active": false
+        },
+        {
+          "type": "text_join",
+          "active": true
+        },
+        {
+          "type": "text_append",
+          "active": false
+        },
+        {
+          "type": "text_length",
+          "active": true
+        },
+        {
+          "type": "text_isEmpty",
+          "active": false
+        },
+        {
+          "type": "text_indexOf",
+          "active": false
+        },
+        {
+          "type": "text_charAt",
+          "active": false
+        },
+        {
+          "type": "text_getSubstring",
+          "active": true
+        },
+        {
+          "type": "text_changeCase",
+          "active": true
+        },
+        {
+          "type": "text_trim",
+          "active": true
+        },
+        {
+          "type": "text_count",
+          "active": true
+        },
+        {
+          "type": "text_replace",
+          "active": true
+        },
+        {
+          "type": "text_reverse",
+          "active": true
+        },
+        {
+          "type": "text_print",
+          "active": true
+        },
+        {
+          "type": "text_prompt_ext",
+          "active": false
+        }
+      ]
+    },
+    {
+      "name": "Listen",
+      "active": false,
+      "blocks": [
+        {
+          "type": "lists_create_with",
+          "active": true
+        },
+        {
+          "type": "lists_repeat",
+          "active": true
+        },
+        {
+          "type": "lists_length",
+          "active": true
+        },
+        {
+          "type": "lists_isEmpty",
+          "active": true
+        },
+        {
+          "type": "lists_indexOf",
+          "active": true
+        },
+        {
+          "type": "lists_getIndex",
+          "active": true
+        },
+        {
+          "type": "lists_setIndex",
+          "active": true
+        },
+        {
+          "type": "lists_getSublist",
+          "active": true
+        },
+        {
+          "type": "lists_split",
+          "active": true
+        },
+        {
+          "type": "lists_sort",
+          "active": true
+        },
+        {
+          "type": "lists_reverse",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Farben",
+      "active": false,
+      "blocks": [
+        {
+          "type": "colour_picker",
+          "active": true
+        },
+        {
+          "type": "colour_random",
+          "active": true
+        },
+        {
+          "type": "colour_rgb",
+          "active": true
+        },
+        {
+          "type": "colour_blend",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Variablen",
+      "active": true,
+      "subcategories": [
+        {
+          "name": "Lokale Variablen",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Attribute",
+      "active": true,
+      "subcategories": [
+        {
+          "name": "Instanz-Attribute",
+          "active": true
+        },
+        {
+          "name": "Klassen-Attribute",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Parameter",
+      "active": true,
+      "subcategories": []
+    },
+    {
+      "name": "Methoden",
+      "active": true,
+      "subcategories": [
+        {
+          "name": "Objekt-Methoden",
+          "active": true,
+          "blocks": [
+            {
+              "type": "java_method_noreturn",
+              "active": true
+            },
+            {
+              "type": "java_method_return",
+              "active": true
+            }
+          ]
+        },
+        {
+          "name": "Methoden auf Objekten",
+          "active": true,
+          "blocks": [
+            {
+              "type": "java_obj_method_call_noreturn",
+              "active": true
+            },
+            {
+              "type": "java_obj_method_call_return",
+              "active": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "K-Methoden",
+      "active": true,
+      "subcategories": [
+        {
+          "name": "K-Methoden",
+          "active": true,
+          "blocks": [
+            {
+              "type": "java_static_method_noreturn",
+              "active": true
+            },
+            {
+              "type": "java_static_method_return",
+              "active": true
+            }
+          ]
+        },
+        {
+          "name": "Externe Klassen-Methoden",
+          "active": true,
+          "blocks": [
+            {
+              "type": "java_ext_static_call_noreturn",
+              "active": true
+            },
+            {
+              "type": "java_ext_static_call_return",
+              "active": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Klassen",
+      "active": true,
+      "blocks": [
+        {
+          "type": "defconstructor",
+          "active": true
+        },
+        {
+          "type": "callconstructor",
+          "active": true
+        },
+        {
+          "type": "java_extends",
+          "active": true
+        },
+        {
+          "type": "java_super_call",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Grafik: Objekte",
+      "active": false,
+      "blocks": [
+        {
+          "type": "gfx_extends",
+          "active": true
+        },
+        {
+          "type": "java_local_var_set",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Grafik: Erscheinung",
+      "active": false,
+      "blocks": [
+        {
+          "type": "gfx_color_const",
+          "active": true
+        },
+        {
+          "type": "gfx_set_fill_color",
+          "active": true
+        },
+        {
+          "type": "gfx_set_fill_color_alpha",
+          "active": true
+        },
+        {
+          "type": "gfx_set_border_color",
+          "active": true
+        },
+        {
+          "type": "gfx_set_border_width",
+          "active": true
+        },
+        {
+          "type": "gfx_set_alpha",
+          "active": true
+        },
+        {
+          "type": "gfx_set_visible",
+          "active": true
+        },
+        {
+          "type": "gfx_bring_to_front",
+          "active": true
+        },
+        {
+          "type": "gfx_send_to_back",
+          "active": true
+        },
+        {
+          "type": "gfx_set_text_content",
+          "active": true
+        },
+        {
+          "type": "gfx_set_alignment",
+          "active": true
+        },
+        {
+          "type": "gfx_default_fill_color",
+          "active": true
+        },
+        {
+          "type": "gfx_default_visibility",
+          "active": true
+        },
+        {
+          "type": "colour_picker",
+          "active": true
+        },
+        {
+          "type": "colour_rgb",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Grafik: Bewegung",
+      "active": false,
+      "blocks": [
+        {
+          "type": "gfx_move",
+          "active": true
+        },
+        {
+          "type": "gfx_rotate",
+          "active": true
+        },
+        {
+          "type": "gfx_rotate_around",
+          "active": true
+        },
+        {
+          "type": "gfx_scale",
+          "active": true
+        },
+        {
+          "type": "gfx_scale_around",
+          "active": true
+        },
+        {
+          "type": "gfx_mirror_x",
+          "active": true
+        },
+        {
+          "type": "gfx_mirror_y",
+          "active": true
+        },
+        {
+          "type": "gfx_line_set_points",
+          "active": true
+        },
+        {
+          "type": "gfx_polygon_add_point",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Grafik: Schildkröte",
+      "active": false,
+      "blocks": [
+        {
+          "type": "java_local_var_set",
+          "active": true
+        },
+        {
+          "type": "gfx_forward",
+          "active": true
+        },
+        {
+          "type": "gfx_turtle_turn",
+          "active": true
+        },
+        {
+          "type": "gfx_define_direction",
+          "active": true
+        },
+        {
+          "type": "gfx_turtle_pen_up",
+          "active": true
+        },
+        {
+          "type": "gfx_turtle_pen_down",
+          "active": true
+        },
+        {
+          "type": "gfx_define_center",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "Grafik: Steuerung",
+      "active": false,
+      "blocks": [
+        {
+          "type": "gfx_event_handler",
+          "active": true
+        },
+        {
+          "type": "gfx_get_world",
+          "active": true
+        },
+        {
+          "type": "gfx_get_width",
+          "active": true
+        },
+        {
+          "type": "gfx_get_height",
+          "active": true
+        },
+        {
+          "type": "gfx_set_cursor",
+          "active": true
+        },
+        {
+          "type": "gfx_world_set_background",
+          "active": true
+        },
+        {
+          "type": "gfx_world_stop",
+          "active": true
+        },
+        {
+          "type": "gfx_world_start",
+          "active": true
+        },
+        {
+          "type": "gfx_get_x",
+          "active": true
+        },
+        {
+          "type": "gfx_get_y",
+          "active": true
+        },
+        {
+          "type": "gfx_is_key_down",
+          "active": true
+        },
+        {
+          "type": "gfx_is_key_up",
+          "active": true
+        },
+        {
+          "type": "gfx_is_mouse_down",
+          "active": true
+        },
+        {
+          "type": "gfx_get_mouse_x",
+          "active": true
+        },
+        {
+          "type": "gfx_get_mouse_y",
+          "active": true
+        },
+        {
+          "type": "gfx_group_add",
+          "active": true
+        },
+        {
+          "type": "gfx_get_collision_pairs",
+          "active": true
+        },
+        {
+          "type": "gfx_get_colliding_shapes",
+          "active": true
+        },
+        {
+          "type": "gfx_bitmap_set_pixel",
+          "active": true
+        },
+        {
+          "type": "gfx_bitmap_get_pixel",
+          "active": true
+        }
+      ]
+    }
+  ]
+}

@@ -71,6 +71,7 @@
  */
 
 import { toolbox as FULL_TOOLBOX } from '../toolboxGrade9.js';
+import { templates as TEMPLATE_LIST } from '../toolbox_templates/index.js';
 
 export class ToolboxConfigManager {
 
@@ -322,15 +323,21 @@ export class ToolboxConfigManager {
    * @param {Object|null} fallbackConfig
    * @returns {Map<string, {active:boolean, blocks?:Map<string,boolean>, subcats?:Map<string,boolean>}>}
    */
-  static _buildEditorState(fallbackConfig) {
-    const baseConfig = this.lastConfig ?? fallbackConfig;
+  static _buildEditorState(fallbackConfig, explicitBaseConfig = null) {
+    const baseConfig = explicitBaseConfig ?? this.lastConfig ?? fallbackConfig;
+    // When the base config has a categories array, use allowlist semantics
+    // (unlisted category → inactive), matching buildFilteredToolbox behaviour.
+    // When there is no config at all, default everything to active.
+    const hasAllowlist = !!(baseConfig?.categories?.length);
     const catState = new Map();
 
     for (const catDef of (FULL_TOOLBOX.contents ?? [])) {
       if (catDef.kind?.toLowerCase() !== 'category') continue;
       const catName = catDef.name;
       const configEntry = baseConfig?.categories?.find(c => c.name === catName);
-      const isActive = !configEntry || configEntry.active !== false;
+      const isActive = hasAllowlist
+        ? (configEntry ? configEntry.active !== false : false)
+        : true;
 
       if (catDef.custom) {
         // Dynamic category – expose subcategory toggles.
@@ -446,8 +453,10 @@ export class ToolboxConfigManager {
   static openVisualConfigEditor(workspace, fallbackConfig) {
     document.getElementById('b2j-config-editor-overlay')?.remove();
 
-    // Build checkbox state from current config (or fallback).
-    const catState = ToolboxConfigManager._buildEditorState(fallbackConfig);
+    // Determine the active config to show: prefer lastConfig, then stored, then fallback.
+    const activeConfig = this.lastConfig ?? ToolboxConfigManager.loadStored() ?? fallbackConfig;
+    // Build checkbox state from the active config.
+    let catState = ToolboxConfigManager._buildEditorState(fallbackConfig, activeConfig);
 
     // ── Category colour helper ──────────────────────────────────────────
     const STYLE_COLORS = {
@@ -710,64 +719,96 @@ export class ToolboxConfigManager {
       }
     }
 
-    // ── Category list items ────────────────────────────────────────────────
-    const catItemEls = [];
-    for (const [catName, state] of catState) {
-      const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
-      if (!catDef) continue;
-      const color = getCatColor(catDef);
+    // ── Category list rendering (encapsulated so templates can re-render) ──
+    let catItemEls = [];
+    function renderCategoryList() {
+      // Clear existing items (preserve header at index 0)
+      while (catCol.children.length > 1) catCol.removeChild(catCol.lastChild);
+      catItemEls = [];
+      for (const [catName, state] of catState) {
+        const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
+        if (!catDef) continue;
+        const color = getCatColor(catDef);
 
-      const item = document.createElement('div');
-      Object.assign(item.style, {
-        display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 10px',
-        cursor: 'pointer', userSelect: 'none', borderLeft: '3px solid transparent',
-      });
+        const item = document.createElement('div');
+        Object.assign(item.style, {
+          display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 10px',
+          cursor: 'pointer', userSelect: 'none', borderLeft: '3px solid transparent',
+        });
 
-      const dot = document.createElement('span');
-      Object.assign(dot.style, {
-        width: '8px', height: '8px', borderRadius: '50%',
-        background: color, flexShrink: '0', opacity: state.active ? '1' : '0.3',
-      });
-      const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.checked = state.active;
-      Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor: color });
-      const lbl = document.createElement('span');
-      lbl.textContent = catName;
-      Object.assign(lbl.style, {
-        fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        opacity: state.active ? '1' : '0.4',
-      });
+        const dot = document.createElement('span');
+        Object.assign(dot.style, {
+          width: '8px', height: '8px', borderRadius: '50%',
+          background: color, flexShrink: '0', opacity: state.active ? '1' : '0.3',
+        });
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = state.active;
+        Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor: color });
+        const lbl = document.createElement('span');
+        lbl.textContent = catName;
+        Object.assign(lbl.style, {
+          fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          opacity: state.active ? '1' : '0.4',
+        });
 
-      cb.addEventListener('change', () => {
-        state.active = cb.checked;
-        lbl.style.opacity = cb.checked ? '1' : '0.4';
-        dot.style.opacity = cb.checked ? '1' : '0.3';
-      });
+        cb.addEventListener('change', () => {
+          state.active = cb.checked;
+          lbl.style.opacity = cb.checked ? '1' : '0.4';
+          dot.style.opacity = cb.checked ? '1' : '0.3';
+        });
 
-      function selectItem(ci) {
-        if (selectedCatEl) {
-          selectedCatEl.style.background = '';
-          selectedCatEl.style.borderLeftColor = 'transparent';
+        function selectItem(ci) {
+          if (selectedCatEl) {
+            selectedCatEl.style.background = '';
+            selectedCatEl.style.borderLeftColor = 'transparent';
+          }
+          selectedCatName = ci.catName;
+          selectedCatEl = ci.item;
+          ci.item.style.background = '#2c3a4a';
+          ci.item.style.borderLeftColor = ci.color;
+          renderBlockList(ci.catName);
         }
-        selectedCatName = ci.catName;
-        selectedCatEl = ci.item;
-        ci.item.style.background = '#2c3a4a';
-        ci.item.style.borderLeftColor = ci.color;
-        renderBlockList(ci.catName);
+
+        const ci = { item, catName, color };
+        catItemEls.push(ci);
+
+        item.addEventListener('click', e => { if (e.target !== cb) selectItem(ci); });
+        item.addEventListener('mouseenter', () => { if (selectedCatName !== catName) item.style.background = '#2a2d2e'; });
+        item.addEventListener('mouseleave', () => { if (selectedCatName !== catName) item.style.background = ''; });
+
+        item.append(dot, cb, lbl);
+        catCol.appendChild(item);
       }
-
-      const ci = { item, catName, color };
-      catItemEls.push(ci);
-
-      item.addEventListener('click', e => { if (e.target !== cb) selectItem(ci); });
-      item.addEventListener('mouseenter', () => { if (selectedCatName !== catName) item.style.background = '#2a2d2e'; });
-      item.addEventListener('mouseleave', () => { if (selectedCatName !== catName) item.style.background = ''; });
-
-      item.append(dot, cb, lbl);
-      catCol.appendChild(item);
+      if (catItemEls.length > 0) catItemEls[0].item.click();
     }
 
-    // ── JSON fallback button ───────────────────────────────────────────────
+    // ── Template selector (left of JSON button) ──────────────────────────
+    const tplSelect = document.createElement('select');
+    Object.assign(tplSelect.style, { marginRight: '8px', background: '#2b2b2b', color: '#d4d4d4', border: '1px solid #3c3c3c', padding: '4px 8px', borderRadius: '4px' });
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = 'Custom';
+    tplSelect.appendChild(noneOpt);
+    for (const t of TEMPLATE_LIST) {
+      const o = document.createElement('option'); o.value = t.id; o.textContent = t.label; tplSelect.appendChild(o);
+    }
+    // Insert selector immediately before jsonBtn
+    hdrBtns.insertBefore(tplSelect, jsonBtn);
+
+    tplSelect.addEventListener('change', () => {
+      const id = tplSelect.value;
+      const tpl = TEMPLATE_LIST.find(t => t.id === id);
+      const selConfig = tpl?.config ?? null;
+      catState = ToolboxConfigManager._buildEditorState(fallbackConfig, selConfig);
+      // Apply the selected template immediately to the live workspace so the
+      // toolbox reflects the choice outside the modal as well.
+      if (selConfig != null) {
+        try { ToolboxConfigManager.applyConfig(selConfig, workspace); } catch (e) { /* ignore */ }
+      }
+      renderCategoryList();
+    });
+
+    // json fallback button opens the JSON editor as before
     jsonBtn.onclick = () => {
       overlay.remove();
       ToolboxConfigManager._openJsonEditor(workspace, fallbackConfig);
@@ -777,8 +818,8 @@ export class ToolboxConfigManager {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    // Select the first category automatically.
-    if (catItemEls.length > 0) catItemEls[0].item.click();
+    // Initial render of category list and selection.
+    renderCategoryList();
   }
 
   /**
@@ -788,9 +829,8 @@ export class ToolboxConfigManager {
     // Remove any stale dialog.
     document.getElementById('b2j-config-editor-overlay')?.remove();
 
-    const currentJson = this.lastConfig
-      ? JSON.stringify(this.lastConfig, null, 2)
-      : JSON.stringify(fallbackConfig ?? {}, null, 2);
+    const activeJsonConfig = this.lastConfig ?? ToolboxConfigManager.loadStored() ?? fallbackConfig ?? {};
+    const currentJson = JSON.stringify(activeJsonConfig, null, 2);
 
     // ── Overlay ──────────────────────────────────────────────────────────
     const overlay = document.createElement('div');
@@ -820,36 +860,7 @@ export class ToolboxConfigManager {
     });
     box.appendChild(title);
 
-    // ── Preset shortcuts ─────────────────────────────────────────────────
-    const presetRow = document.createElement('div');
-    Object.assign(presetRow.style, {
-      display: 'flex', alignItems: 'center', gap: '6px',
-      flexShrink: '0', fontFamily: 'Roboto, sans-serif',
-    });
-    const presetLabel = document.createElement('span');
-    presetLabel.textContent = 'Vorlage:';
-    Object.assign(presetLabel.style, { fontSize: '11px', opacity: '0.5', marginRight: '2px' });
-    presetRow.appendChild(presetLabel);
-
-    const PRESET_ALLES = ToolboxConfigManager._buildPresetAlles(fallbackConfig);
-
-    function makePresetBtn(label, getJson) {
-      const btn = document.createElement('button');
-      btn.textContent = label;
-      Object.assign(btn.style, {
-        padding: '3px 10px', border: '1px solid #4a4a4a',
-        borderRadius: '3px', background: '#333', color: '#bbb',
-        cursor: 'pointer', fontSize: '11px', fontFamily: 'Roboto, sans-serif',
-      });
-      btn.addEventListener('mouseenter', () => btn.style.background = '#404040');
-      btn.addEventListener('mouseleave', () => btn.style.background = '#333');
-      btn.onclick = () => { textarea.value = JSON.stringify(getJson(), null, 2); };
-      return btn;
-    }
-
-    presetRow.appendChild(makePresetBtn('Alles', () => PRESET_ALLES));
-    presetRow.appendChild(makePresetBtn('9. Klasse', () => fallbackConfig ?? PRESET_ALLES));
-    box.appendChild(presetRow);
+    
 
     const textarea = document.createElement('textarea');
     textarea.value = currentJson;
