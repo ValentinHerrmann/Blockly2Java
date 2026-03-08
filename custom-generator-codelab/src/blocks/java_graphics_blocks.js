@@ -19,10 +19,20 @@ const C_MOVE  = '#1565c0';   // navy blue   – movement / transforms
 const C_CTRL  = '#4e342e';   // brown       – control / events
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared helper – build a shadow-number value input
+// Shared helper – build inputs for a "new Xxx" constructor block.
+// First param is inline with the block label; remaining params are right-aligned.
+// params: [ [inputName, fieldLabel, typeCheck?], ... ]  (typeCheck defaults to 'Number')
 // ─────────────────────────────────────────────────────────────────────────────
-function numInput(block, name, label, def = 0) {
-  return block.appendValueInput(name).setCheck('Number').appendField(label);
+function buildObjInputs(block, label, params) {
+  if (params.length === 0) {
+    block.appendDummyInput().appendField(label);
+    return;
+  }
+  const [[n0, l0, c0 = 'Number'], ...rest] = params;
+  block.appendValueInput(n0).setCheck(c0).appendField(label + ' ' + l0);
+  for (const [n, l, c = 'Number'] of rest) {
+    block.appendValueInput(n).setAlign(Blockly.inputs.Align.RIGHT).setCheck(c).appendField(l);
+  }
 }
 
 // =============================================================================
@@ -31,10 +41,10 @@ function numInput(block, name, label, def = 0) {
 
 Blockly.Blocks['gfx_new_world'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Welt');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Welt', [
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+    ]);
     this.setOutput(true, 'World');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt einen neuen Grafikbereich. Gibt die World zurück (für spätere Methoden-Aufrufe).');
@@ -43,10 +53,10 @@ Blockly.Blocks['gfx_new_world'] = {
 
 Blockly.Blocks['gfx_new_world_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Welt');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Welt', [
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -60,11 +70,11 @@ Blockly.Blocks['gfx_new_world_stmt'] = {
 
 Blockly.Blocks['gfx_new_circle'] = {
   init: function () {
-    this.appendDummyInput().appendField('neuer Kreis');
-    numInput(this, 'X',      'x:');
-    numInput(this, 'Y',      'y:');
-    numInput(this, 'RADIUS', 'Radius:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neuer Kreis', [
+      ['X',      'x:'],
+      ['Y',      'y:'],
+      ['RADIUS', 'Radius:'],
+    ]);
     this.setOutput(true, 'Circle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt einen Kreis mit Mittelpunkt (x, y) und dem angegebenen Radius.');
@@ -73,11 +83,11 @@ Blockly.Blocks['gfx_new_circle'] = {
 
 Blockly.Blocks['gfx_new_circle_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neuer Kreis');
-    numInput(this, 'X',      'x:');
-    numInput(this, 'Y',      'y:');
-    numInput(this, 'RADIUS', 'Radius:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neuer Kreis', [
+      ['X',      'x:'],
+      ['Y',      'y:'],
+      ['RADIUS', 'Radius:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -91,12 +101,12 @@ Blockly.Blocks['gfx_new_circle_stmt'] = {
 
 Blockly.Blocks['gfx_new_ellipse'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Ellipse');
-    numInput(this, 'X',        'x:');
-    numInput(this, 'Y',        'y:');
-    numInput(this, 'RADIUS_X', 'rx:');
-    numInput(this, 'RADIUS_Y', 'ry:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Ellipse', [
+      ['X',        'x:'],
+      ['Y',        'y:'],
+      ['RADIUS_X', 'rx:'],
+      ['RADIUS_Y', 'ry:'],
+    ]);
     this.setOutput(true, 'Ellipse');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt eine Ellipse mit Mittelpunkt (x, y) und den Halbachsen rx/ry.');
@@ -105,12 +115,12 @@ Blockly.Blocks['gfx_new_ellipse'] = {
 
 Blockly.Blocks['gfx_new_ellipse_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Ellipse');
-    numInput(this, 'X',        'x:');
-    numInput(this, 'Y',        'y:');
-    numInput(this, 'RADIUS_X', 'rx:');
-    numInput(this, 'RADIUS_Y', 'ry:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Ellipse', [
+      ['X',        'x:'],
+      ['Y',        'y:'],
+      ['RADIUS_X', 'rx:'],
+      ['RADIUS_Y', 'ry:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -124,12 +134,12 @@ Blockly.Blocks['gfx_new_ellipse_stmt'] = {
 
 Blockly.Blocks['gfx_new_rect'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Rechteck');
-    numInput(this, 'TOP',    'oben:');
-    numInput(this, 'LEFT',   'links:');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Rechteck', [
+      ['TOP',    'oben:'],
+      ['LEFT',   'links:'],
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+    ]);
     this.setOutput(true, 'Rectangle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Rechteck (oben-links-Ecke + Breite/Höhe).');
@@ -138,12 +148,12 @@ Blockly.Blocks['gfx_new_rect'] = {
 
 Blockly.Blocks['gfx_new_rect_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Rechteck');
-    numInput(this, 'TOP',    'oben:');
-    numInput(this, 'LEFT',   'links:');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Rechteck', [
+      ['TOP',    'oben:'],
+      ['LEFT',   'links:'],
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -157,13 +167,13 @@ Blockly.Blocks['gfx_new_rect_stmt'] = {
 
 Blockly.Blocks['gfx_new_rrect'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues abger. Rechteck');
-    numInput(this, 'TOP',    'oben:');
-    numInput(this, 'LEFT',   'links:');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    numInput(this, 'CORNER', 'Ecke:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues abger. Rechteck', [
+      ['TOP',    'oben:'],
+      ['LEFT',   'links:'],
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+      ['CORNER', 'Ecke:'],
+    ]);
     this.setOutput(true, 'RoundedRectangle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Rechteck mit abgerundeten Ecken.');
@@ -172,13 +182,13 @@ Blockly.Blocks['gfx_new_rrect'] = {
 
 Blockly.Blocks['gfx_new_rrect_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues abger. Rechteck');
-    numInput(this, 'TOP',    'oben:');
-    numInput(this, 'LEFT',   'links:');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    numInput(this, 'CORNER', 'Ecke:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues abger. Rechteck', [
+      ['TOP',    'oben:'],
+      ['LEFT',   'links:'],
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+      ['CORNER', 'Ecke:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -192,14 +202,14 @@ Blockly.Blocks['gfx_new_rrect_stmt'] = {
 
 Blockly.Blocks['gfx_new_triangle'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Dreieck');
-    numInput(this, 'X1', 'x1:');
-    numInput(this, 'Y1', 'y1:');
-    numInput(this, 'X2', 'x2:');
-    numInput(this, 'Y2', 'y2:');
-    numInput(this, 'X3', 'x3:');
-    numInput(this, 'Y3', 'y3:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Dreieck', [
+      ['X1', 'x1:'],
+      ['Y1', 'y1:'],
+      ['X2', 'x2:'],
+      ['Y2', 'y2:'],
+      ['X3', 'x3:'],
+      ['Y3', 'y3:'],
+    ]);
     this.setOutput(true, 'Triangle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Dreieck mit drei Eckpunkten.');
@@ -208,14 +218,14 @@ Blockly.Blocks['gfx_new_triangle'] = {
 
 Blockly.Blocks['gfx_new_triangle_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Dreieck');
-    numInput(this, 'X1', 'x1:');
-    numInput(this, 'Y1', 'y1:');
-    numInput(this, 'X2', 'x2:');
-    numInput(this, 'Y2', 'y2:');
-    numInput(this, 'X3', 'x3:');
-    numInput(this, 'Y3', 'y3:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Dreieck', [
+      ['X1', 'x1:'],
+      ['Y1', 'y1:'],
+      ['X2', 'x2:'],
+      ['Y2', 'y2:'],
+      ['X3', 'x3:'],
+      ['Y3', 'y3:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -229,12 +239,12 @@ Blockly.Blocks['gfx_new_triangle_stmt'] = {
 
 Blockly.Blocks['gfx_new_line'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Linie');
-    numInput(this, 'X1', 'x1:');
-    numInput(this, 'Y1', 'y1:');
-    numInput(this, 'X2', 'x2:');
-    numInput(this, 'Y2', 'y2:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Linie', [
+      ['X1', 'x1:'],
+      ['Y1', 'y1:'],
+      ['X2', 'x2:'],
+      ['Y2', 'y2:'],
+    ]);
     this.setOutput(true, 'Line');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt eine Linie zwischen zwei Punkten.');
@@ -243,12 +253,12 @@ Blockly.Blocks['gfx_new_line'] = {
 
 Blockly.Blocks['gfx_new_line_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Linie');
-    numInput(this, 'X1', 'x1:');
-    numInput(this, 'Y1', 'y1:');
-    numInput(this, 'X2', 'x2:');
-    numInput(this, 'Y2', 'y2:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Linie', [
+      ['X1', 'x1:'],
+      ['Y1', 'y1:'],
+      ['X2', 'x2:'],
+      ['Y2', 'y2:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -262,12 +272,12 @@ Blockly.Blocks['gfx_new_line_stmt'] = {
 
 Blockly.Blocks['gfx_new_text'] = {
   init: function () {
-    this.appendDummyInput().appendField('neuer Text');
-    numInput(this, 'X',    'x:');
-    numInput(this, 'Y',    'y:');
-    numInput(this, 'SIZE', 'Größe:');
-    this.appendValueInput('TEXT').setCheck('String').appendField('Text:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neuer Text', [
+      ['X',    'x:'],
+      ['Y',    'y:'],
+      ['SIZE', 'Größe:'],
+      ['TEXT', 'Text:', 'String'],
+    ]);
     this.setOutput(true, 'Text');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Text-Objekt an Position (x, y) mit der angegebenen Schriftgröße.');
@@ -276,12 +286,12 @@ Blockly.Blocks['gfx_new_text'] = {
 
 Blockly.Blocks['gfx_new_text_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neuer Text');
-    numInput(this, 'X',    'x:');
-    numInput(this, 'Y',    'y:');
-    numInput(this, 'SIZE', 'Größe:');
-    this.appendValueInput('TEXT').setCheck('String').appendField('Text:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neuer Text', [
+      ['X',    'x:'],
+      ['Y',    'y:'],
+      ['SIZE', 'Größe:'],
+      ['TEXT', 'Text:', 'String'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -295,10 +305,10 @@ Blockly.Blocks['gfx_new_text_stmt'] = {
 
 Blockly.Blocks['gfx_new_turtle'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Schildkröte');
-    numInput(this, 'X', 'x:');
-    numInput(this, 'Y', 'y:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Schildkröte', [
+      ['X', 'x:'],
+      ['Y', 'y:'],
+    ]);
     this.setOutput(true, 'Turtle');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt eine Turtle an Position (x, y). Die Turtle zeichnet beim Vorwärtsgehen.');
@@ -307,10 +317,10 @@ Blockly.Blocks['gfx_new_turtle'] = {
 
 Blockly.Blocks['gfx_new_turtle_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Schildkröte');
-    numInput(this, 'X', 'x:');
-    numInput(this, 'Y', 'y:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neue Schildkröte', [
+      ['X', 'x:'],
+      ['Y', 'y:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -347,14 +357,14 @@ Blockly.Blocks['gfx_new_group_stmt'] = {
 
 Blockly.Blocks['gfx_new_bitmap'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Bitmap');
-    numInput(this, 'COLS',   'Spalten:');
-    numInput(this, 'ROWS',   'Zeilen:');
-    numInput(this, 'LEFT',   'links:');
-    numInput(this, 'TOP',    'oben:');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Bitmap', [
+      ['COLS',   'Spalten:'],
+      ['ROWS',   'Zeilen:'],
+      ['LEFT',   'links:'],
+      ['TOP',    'oben:'],
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+    ]);
     this.setOutput(true, 'Bitmap');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Bitmap-Raster (Spalten×Zeilen Felder) an der angegebenen Position.');
@@ -363,14 +373,14 @@ Blockly.Blocks['gfx_new_bitmap'] = {
 
 Blockly.Blocks['gfx_new_bitmap_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Bitmap');
-    numInput(this, 'COLS',   'Spalten:');
-    numInput(this, 'ROWS',   'Zeilen:');
-    numInput(this, 'LEFT',   'links:');
-    numInput(this, 'TOP',    'oben:');
-    numInput(this, 'WIDTH',  'Breite:');
-    numInput(this, 'HEIGHT', 'Höhe:');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Bitmap', [
+      ['COLS',   'Spalten:'],
+      ['ROWS',   'Zeilen:'],
+      ['LEFT',   'links:'],
+      ['TOP',    'oben:'],
+      ['WIDTH',  'Breite:'],
+      ['HEIGHT', 'Höhe:'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);
@@ -384,9 +394,9 @@ Blockly.Blocks['gfx_new_bitmap_stmt'] = {
 
 Blockly.Blocks['gfx_new_polygon'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Polygon geschlossen:');
-    this.appendValueInput('CLOSE').setCheck('Boolean');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Polygon', [
+      ['CLOSE', 'geschlossen:', 'Boolean'],
+    ]);
     this.setOutput(true, 'Polygon');
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt ein Polygon (geschlossen/gefüllt wenn true, offenene Linie wenn false). Punkte mit addPoint() hinzufügen.');
@@ -395,9 +405,9 @@ Blockly.Blocks['gfx_new_polygon'] = {
 
 Blockly.Blocks['gfx_new_polygon_stmt'] = {
   init: function () {
-    this.appendDummyInput().appendField('neues Polygon geschlossen:');
-    this.appendValueInput('CLOSE').setCheck('Boolean');
-    this.setInputsInline(true);
+    buildObjInputs(this, 'neues Polygon', [
+      ['CLOSE', 'geschlossen:', 'Boolean'],
+    ]);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_OBJ);

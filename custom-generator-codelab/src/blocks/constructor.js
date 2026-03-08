@@ -24,8 +24,8 @@ Blockly.Blocks["defconstructor"] = {
   mutationToDom: function () {
     let container = document.createElement('mutation');
 
-    for (let i = 0; i < this.arguments_.length; i++) {
-      const name = this.arguments_[i];
+    for (const element of this.arguments_) {
+      const name = element;
       const argument = document.createElement('arg');
       argument.setAttribute('name', name);
 
@@ -76,7 +76,7 @@ Blockly.Blocks["defconstructor"] = {
     while (itemBlock) {
       const name = itemBlock.getFieldValue('NAME');
       this.arguments_.push(name);
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+      itemBlock = itemBlock.nextConnection?.targetBlock();
     }
     // Delete workspace variables for params that no longer exist.
     for (const oldName of oldArguments) {
@@ -226,7 +226,7 @@ Blockly.Blocks['callconstructor'] = {
   },
 
   loadExtraState: function (state) {
-    const value = state && state.constructorValue;
+    const value = state?.constructorValue;
     if (value && value !== 'NONE') {
       this.updateShape_(value);
     }
