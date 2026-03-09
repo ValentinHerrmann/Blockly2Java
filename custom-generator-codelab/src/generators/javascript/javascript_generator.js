@@ -438,7 +438,7 @@ const GFX_CLASS_PARENTS = {
 
 function getClassParent(className) {
   // 0. Built-in graphics library hierarchy.
-  if (Object.prototype.hasOwnProperty.call(GFX_CLASS_PARENTS, className)) {
+  if (Object.hasOwn(GFX_CLASS_PARENTS, className)) {
     return GFX_CLASS_PARENTS[className];
   }
   // 1. Super-call type hints (fastest, populated at generation time).

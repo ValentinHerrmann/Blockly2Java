@@ -383,7 +383,7 @@
     },
     {
       "name": "Grafik: Objekte",
-      "active": false,
+      "active": true,
       "blocks": [
         {
           "type": "gfx_extends",
@@ -397,7 +397,7 @@
     },
     {
       "name": "Grafik: Erscheinung",
-      "active": false,
+      "active": true,
       "blocks": [
         {
           "type": "gfx_color_const",
@@ -463,7 +463,7 @@
     },
     {
       "name": "Grafik: Bewegung",
-      "active": false,
+      "active": true,
       "blocks": [
         {
           "type": "gfx_move",
@@ -499,7 +499,7 @@
         },
         {
           "type": "gfx_polygon_add_point",
-          "active": true
+          "active": false
         }
       ]
     },
@@ -539,7 +539,7 @@
     },
     {
       "name": "Grafik: Steuerung",
-      "active": false,
+      "active": true,
       "blocks": [
         {
           "type": "gfx_event_handler",

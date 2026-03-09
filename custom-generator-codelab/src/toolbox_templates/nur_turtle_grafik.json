@@ -499,7 +499,7 @@
         },
         {
           "type": "gfx_polygon_add_point",
-          "active": true
+          "active": false
         }
       ]
     },

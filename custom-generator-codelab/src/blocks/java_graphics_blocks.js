@@ -364,10 +364,119 @@ Blockly.Blocks['gfx_new_turtle'] = {
 
 Blockly.Blocks['gfx_new_group'] = {
   init: function () {
-    this.appendDummyInput().appendField('neue Gruppe');
+    this.argCount_ = 0;
+    // Prepare for mutator-managed shape inputs. Initial header created;
+    // actual inputs will be built by updateShapeInputs_.
+    this.argCount_ = 0;
+    this.appendDummyInput('TOP_LINE').appendField('neue Gruppe');
     this.setOutput(true, 'Group');
     this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine leere Gruppe. Objekte können danach mit add() hinzugefügt werden.');
+    this.setTooltip('Erstellt eine Gruppe aus beliebig vielen Shapes. Die Gruppe kann per add() erweitert werden.');
+    // Inputs for shapes should attach to the right (not embedded in the label).
+    this.setInputsInline(false);
+    this.setMutator(new Blockly.icons.MutatorIcon(['call_arg_input'], this));
+    this._updateShapeInputs();
+  },
+  mutationToDom: function () {
+    const container = document.createElement('mutation');
+    container.setAttribute('args', String(this.argCount_ || 0));
+    return container;
+  },
+  domToMutation: function (xmlElement) {
+    this.argCount_ = Number.parseInt(xmlElement.getAttribute('args') || '0', 10);
+    this._updateShapeInputs();
+  },
+
+  decompose: function (workspace) {
+    const container = workspace.newBlock('call_arg_container');
+    container.initSvg();
+    let connection = container.getInput('STACK').connection;
+    for (let i = 0; i < this.argCount_; i++) {
+      const argBlock = workspace.newBlock('call_arg_input');
+      argBlock.initSvg();
+      connection.connect(argBlock.previousConnection);
+      connection = argBlock.nextConnection;
+    }
+    return container;
+  },
+
+  compose: function (containerBlock) {
+    // Save existing connections so attached blocks survive.
+    const savedConns = [];
+    for (let i = 0; i < this.argCount_; i++) {
+      const inp = this.getInput('SHAPE' + i);
+      savedConns[i] = inp?.connection?.targetConnection;
+    }
+
+    // Count new items in mutator container.
+    let newCount = 0;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK');
+    while (itemBlock) {
+      newCount++;
+      itemBlock = itemBlock.nextConnection?.targetBlock();
+    }
+    this.argCount_ = newCount;
+    this._updateShapeInputs();
+
+    // Reconnect surviving blocks.
+    for (let i = 0; i < savedConns.length && i < this.argCount_; i++) {
+      if (savedConns[i]?.getSourceBlock()?.workspace) {
+        this.getInput('SHAPE' + i).connection.connect(savedConns[i]);
+      }
+    }
+  },
+
+  _updateShapeInputs: function () {
+    // Remove existing SHAPE/SEP/OPEN/CLOSE inputs and TOP_LINE; keep only TOP_LINE placeholder for rebuilding.
+    // Remove named inputs up to a reasonable max to avoid relying on getInputList.
+    const max = 32;
+    // Remove OPEN, CLOSE if present
+    if (this.getInput('OPEN')) this.removeInput('OPEN');
+    if (this.getInput('CLOSE')) this.removeInput('CLOSE');
+    for (let i = 0; i < max; i++) {
+      if (this.getInput('SHAPE' + i)) this.removeInput('SHAPE' + i);
+      if (this.getInput('SEP' + i)) this.removeInput('SEP' + i);
+    }
+    // Remove existing TOP_LINE; we'll recreate it attached to first input when needed.
+    if (this.getInput('TOP_LINE')) this.removeInput('TOP_LINE');
+
+    // If no args, show simple header label only.
+    if (!this.argCount_ || this.argCount_ === 0) {
+      this.appendDummyInput('TOP_LINE').appendField('neue Gruppe');
+      return;
+    }
+
+    // Create the first input with the label so its connector sits at the top row.
+    this.appendValueInput('SHAPE0').setCheck(null).appendField('neue Gruppe');
+    // Remaining inputs attach to the right and are right-aligned.
+    for (let j = 1; j < this.argCount_; j++) {
+      this.appendValueInput('SHAPE' + j).setAlign(Blockly.inputs.Align.RIGHT).setCheck(null);
+    }
+  },
+  
+  // Add simple context-menu entries to add/remove shape inputs.
+  customContextMenu: function (options) {
+    const addOption = {
+      text: 'Add shape input',
+      enabled: true,
+      callback: () => {
+        this.argCount_ = (this.argCount_ || 0) + 1;
+        this._updateShapeInputs();
+      },
+    };
+    options.push(addOption);
+
+    if (this.argCount_ && this.argCount_ > 0) {
+      const remOption = {
+        text: 'Remove last shape input',
+        enabled: true,
+        callback: () => {
+          this.argCount_ = Math.max(0, (this.argCount_ || 0) - 1);
+          this._updateShapeInputs();
+        },
+      };
+      options.push(remOption);
+    }
   },
   onchange: _makeAutoNameOnchange('group'),
 };

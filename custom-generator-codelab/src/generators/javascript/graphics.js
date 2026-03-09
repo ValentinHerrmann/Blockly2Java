@@ -126,8 +126,17 @@ export function gfx_new_turtle(block, generator) {
   return [`new Turtle(${x}, ${y})`, Order.NEW];
 }
 
-export function gfx_new_group(block, _generator) {
-  return [`new Group()`, Order.NEW];
+export function gfx_new_group(block, generator) {
+  // Collect any SHAPE inputs created by the block's mutation.
+  const parts = [];
+  let i = 0;
+  while (block.getInput('SHAPE' + i)) {
+    const val = generator.valueToCode(block, 'SHAPE' + i, Order.NONE) || 'null';
+    parts.push(val);
+    i++;
+  }
+  const argStr = parts.length ? parts.join(', ') : '';
+  return [`new Group(${argStr})`, Order.NEW];
 }
 
 export function gfx_new_bitmap(block, generator) {
