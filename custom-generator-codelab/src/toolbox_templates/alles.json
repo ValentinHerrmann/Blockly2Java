@@ -69,7 +69,7 @@
     },
     {
       "name": "Listen",
-      "active": true,
+      "active": false,
       "blocks": [
         { "type": "lists_create_with", "active": true },
         { "type": "lists_repeat",      "active": true },
