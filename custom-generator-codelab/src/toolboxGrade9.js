@@ -847,7 +847,7 @@ export const toolbox = {
         },
         {
             'kind': 'category',
-            'name': 'Grafik: Schildkröte',
+            'name': 'Grafik: Turtle',
             'colour': '#2e7d32',
             'contents': [
                 // Konstruktoren

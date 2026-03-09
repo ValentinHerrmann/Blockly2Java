@@ -139,7 +139,7 @@
       ]
     },
     {
-      "name": "Grafik: Schildkröte",
+      "name": "Grafik: Turtle",
       "active": true,
       "blocks": [
         { "type": "java_local_var_set",    "active": true  },

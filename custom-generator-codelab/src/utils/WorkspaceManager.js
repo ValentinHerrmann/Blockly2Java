@@ -189,7 +189,7 @@ export const FULL_ACTIVE_CONFIG = {
       ],
     },
     {
-      name: 'Grafik: Schildkröte',
+      name: 'Grafik: Turtle',
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
         { type: 'java_local_var_set',    active: true  }, // Wrapper-Block
@@ -349,7 +349,7 @@ export class WorkspaceManager {
     Blockly.Events.disable();
     ws.clear();
     Blockly.serialization.workspaces.load(
-      JSON.parse(JSON.stringify(emptyTemplate)),
+      structuredClone(emptyTemplate),
       ws,
       false,
     );
@@ -419,7 +419,7 @@ export class WorkspaceManager {
     // ── Blockly workspace JSON files (from localStorage) -----------------
     for (let i = 0; i < globalThis.localStorage.length; i++) {
       const key = globalThis.localStorage.key(i);
-      if (!key || !key.endsWith('.json')) continue;
+      if (!key?.endsWith('.json')) continue;
       const raw = globalThis.localStorage.getItem(key);
       if (!raw) continue;
       let pretty = raw;
@@ -461,7 +461,7 @@ export class WorkspaceManager {
     a.download = `${baseName}.b2j`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(url);
   }
 
@@ -549,7 +549,7 @@ export class WorkspaceManager {
     for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
       if (zipEntry.dir) continue;
       // Normalise path separators.
-      const normalised = zipPath.replace(/\\/g, '/');
+      const normalised = zipPath.replaceAll('\\', '/');
       const basename   = normalised.split('/').pop();
 
       if (normalised === 'blockly-config.json') {

@@ -24,7 +24,7 @@ function _makeAutoNameOnchange(prefix) {
     if (event.type !== Blockly.Events.BLOCK_MOVE &&
         event.type !== Blockly.Events.BLOCK_CREATE) return;
     const parent = this.getParent();
-    if (!parent || parent.type !== 'java_local_var_set') return;
+    if (parent?.type !== 'java_local_var_set') return;
     const varField = parent.getField('VAR');
     if (!varField) return;
     const varModel = varField.getVariable();
@@ -347,7 +347,7 @@ Blockly.Blocks['gfx_new_text'] = {
 
 Blockly.Blocks['gfx_new_turtle'] = {
   init: function () {
-    buildObjInputs(this, 'neue Schildkröte', [
+    buildObjInputs(this, 'neue Turtle', [
       ['X', 'x:'],
       ['Y', 'y:'],
     ]);
@@ -355,7 +355,7 @@ Blockly.Blocks['gfx_new_turtle'] = {
     this.setColour(C_OBJ);
     this.setTooltip('Erstellt eine Turtle an Position (x, y). Die Turtle zeichnet beim Vorwärtsgehen.');
   },
-  onchange: _makeAutoNameOnchange('grafik'),
+  onchange: _makeAutoNameOnchange('turtle'),
 };
 
 // =============================================================================
@@ -700,7 +700,7 @@ Blockly.Blocks['gfx_define_direction'] = {
 // Turtle-specific
 Blockly.Blocks['gfx_turtle_turn'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('drehe Schildkröte');
+    this.appendValueInput('OBJ').setCheck(null).appendField('drehe Turtle');
     this.appendValueInput('ANGLE').setCheck('Number').appendField('um');
     this.appendDummyInput().appendField('Grad');
     this.setInputsInline(true);

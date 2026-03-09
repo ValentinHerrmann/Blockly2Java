@@ -143,7 +143,7 @@ export class ToolboxConfigManager {
   static isCategoryActive(categoryName) {
     if (!this.lastConfig?.categories) return true;
     const entry = this.lastConfig?.categories?.find(c => c.name === categoryName);
-    return !entry || entry.active !== false;
+    return entry?.active !== false;
   }
 
   /**
@@ -173,10 +173,10 @@ export class ToolboxConfigManager {
     // Remember the last applied config in memory and in localStorage so it
     // survives page reloads / browser session restarts.
     this.lastConfig = config;
-    if (config !== null) {
-      globalThis.localStorage?.setItem(this.STORAGE_KEY, JSON.stringify(config));
-    } else {
+    if (config === null) {
       globalThis.localStorage?.removeItem(this.STORAGE_KEY);
+    } else {
+      globalThis.localStorage?.setItem(this.STORAGE_KEY, JSON.stringify(config));
     }
 
     // ── Store subcategory configs for flyout callbacks ────────────────────
@@ -206,7 +206,7 @@ export class ToolboxConfigManager {
     try {
       // Deep-clone so Blockly always sees new object references and performs
       // a full re-render rather than silently skipping an "unchanged" def.
-      workspace.updateToolbox(JSON.parse(JSON.stringify(filtered)));
+      workspace.updateToolbox(structuredClone(filtered));
       // Reset any open flyout so the UI immediately reflects the new config.
       workspace.getToolbox()?.clearSelection?.();
       console.info(
@@ -626,7 +626,7 @@ export class ToolboxConfigManager {
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       // Sanitize id to produce a valid HTML id attribute (no spaces or special chars).
-      const safeId = `b2j-ce-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+      const safeId = `b2j-ce-${id.replaceAll(/[^a-zA-Z0-9_-]/g, '_')}`;
       cb.id = safeId;
       cb.checked = initialActive;
       Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor });
@@ -1018,7 +1018,7 @@ export class ToolboxConfigManager {
     // Strip trailing separators (cosmetic clean-up).
     while (
       filteredContents.length > 0 &&
-      filteredContents[filteredContents.length - 1].kind?.toLowerCase() === 'sep'
+      filteredContents.at(-1).kind?.toLowerCase() === 'sep'
     ) {
       filteredContents.pop();
     }
