@@ -633,6 +633,13 @@ function _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFrom
   const SETTER_TYPES = new Set([
     'variables_set', 'java_static_attr_set', 'java_normal_attr_set', 'java_local_var_set',
   ]);
+  // Blocks that accept any type as input (Java auto-converts to String via +),
+  // so being a child of these blocks does not constrain the variable's own type.
+  const TYPE_AGNOSTIC_PARENTS = new Set([
+    'text_join',   // string concatenation: any type is valid
+    'text_print',  // System.out.println(Object) accepts any type
+    'text_append', // the appended value can be any type
+  ]);
   const getterBlocks = [
     ...workSpace.getBlocksByType('variables_get', true),
     ...workSpace.getBlocksByType('java_static_attr_get', true),
@@ -651,7 +658,9 @@ function _searchGetterContextVar(workSpace, varId, useCompares, varsAssignedFrom
       if (SETTER_TYPES.has(parent.type) && parent.getFieldValue('VAR') !== varId) {
         varsAssignedFromThis.push(parent.getFieldValue('VAR'));
       }
-      varType = getType(parent.type);
+      if (!TYPE_AGNOSTIC_PARENTS.has(parent.type)) {
+        varType = getType(parent.type);
+      }
     }
     if (varType !== 'var') return varType;
   }
