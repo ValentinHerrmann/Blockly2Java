@@ -853,7 +853,7 @@ export const toolbox = {
                 // Konstruktoren
                 {
                     'kind': 'block', 'type': 'java_local_var_set',
-                    'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
+                    'fields': { 'VAR': { 'name': 'turtle', 'type': 'local' } },
                     'inputs': {
                         'VALUE': { 'block': {
                             'type': 'gfx_new_turtle',

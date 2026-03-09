@@ -29,6 +29,7 @@ import { GitDialog } from './utils/GitDialog';
 import { ToolboxConfigManager } from './utils/ToolboxConfigManager';
 import { WorkspaceManager, FULL_ACTIVE_CONFIG } from './utils/WorkspaceManager';
 import { BlocklyOverlayManager } from './utils/BlocklyOverlayManager';
+import { templates as TOOLBOX_TEMPLATES } from './toolbox_templates/index.js';
 
 // Module-level state
 export let ws;
@@ -57,9 +58,10 @@ function init() {
   UiManager.setupLayout(ws);
 
   // Restore a toolbox config that was applied in a previous session,
-  // or apply the grade-9 default when the page is opened for the first time.
+  // or apply the 'Alles' template when the page is opened for the first time.
   const storedToolboxConfig = ToolboxConfigManager.loadStored();
-  ToolboxConfigManager.applyConfig(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
+  const allesTemplate = TOOLBOX_TEMPLATES.find(t => t.id === 'alles')?.config ?? FULL_ACTIVE_CONFIG;
+  ToolboxConfigManager.applyConfig(storedToolboxConfig ?? allesTemplate, ws);
 
   // Load the initial state from storage and run the code.
   // Restore previously selected IDE file (if any) so a refresh keeps selection.

@@ -69,6 +69,51 @@ function buildObjInputs(block, label, params) {
   }
 }
 
+// Helper for method-like statement blocks:
+//   Layout:  [OBJ▸] .methodName( [param1▸] … )
+//   params[0] = OBJ receiver, displayed BEFORE the dot-method label.
+//   params[1..] = method arguments, displayed AFTER the label.
+//   label should include the opening parenthesis, e.g. 'setzeFüllfarbe('.
+// params: [ [inputName, typeCheck?], ... ]   (first entry = OBJ receiver)
+function buildMethodInputs(block, label, params) {
+  if (!params || params.length === 0) {
+    block.appendDummyInput().appendField(label + ')');
+    block.setInputsInline(true);
+    return;
+  }
+  const [[n0, c0 = null], ...rest] = params;
+  // OBJ receiver before the dot-method label
+  block.appendValueInput(n0).setCheck(c0);
+  if (rest.length === 0) {
+    // No arguments: label appears as a trailing dummy field
+    block.appendDummyInput('CLOSE').appendField('.' + label + ')');
+  } else {
+    // First argument carries the .methodName( label
+    const [[n1, c1 = null], ...rest2] = rest;
+    block.appendValueInput(n1).setCheck(c1).appendField('.' + label);
+    for (const [n, c = null] of rest2) {
+      block.appendValueInput(n).setCheck(c);
+    }
+    block.appendDummyInput('CLOSE').appendField(')');
+  }
+  block.setInputsInline(true);
+}
+
+// Place a default variables_get shadow into the given input (if present).
+function setDefaultVarShadow(block, inputName, varName = 'grafik') {
+  const inp = block.getInput(inputName);
+  if (!inp?.connection) return;
+  try {
+    // Use Blockly's XML utility so the element is in the correct namespace
+    // and survives serialization/toolbox refresh cycles.
+    const xmlText = `<shadow type="variables_get"><field name="VAR">${varName}</field></shadow>`;
+    const shadowDom = (Blockly.utils?.xml?.textToDom ?? Blockly.Xml.textToDom)(xmlText);
+    inp.connection.setShadowDom(shadowDom);
+  } catch (e) {
+    // ignore if workspace not ready or API differs
+  }
+}
+
 // =============================================================================
 // UNIFIED SHAPE BLOCK  (Circle / Ellipse / Rectangle / RoundedRectangle /
 //                       Triangle / Line  – selected via dropdown)
@@ -525,9 +570,11 @@ Blockly.Blocks['gfx_new_polygon'] = {
 
 Blockly.Blocks['gfx_set_fill_color'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Füllfarbe von');
-    this.appendValueInput('COLOR').setCheck(null).appendField('auf');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setzeFüllfarbe(', [
+      ['OBJ'],
+      ['COLOR'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -537,10 +584,12 @@ Blockly.Blocks['gfx_set_fill_color'] = {
 
 Blockly.Blocks['gfx_set_fill_color_alpha'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Füllfarbe von');
-    this.appendValueInput('COLOR').setCheck(null).appendField('auf');
-    this.appendValueInput('ALPHA').setCheck('Number').appendField('Alpha:');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setzeFüllfarbe(', [
+      ['OBJ'],
+      ['COLOR'],
+      ['ALPHA'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -550,9 +599,11 @@ Blockly.Blocks['gfx_set_fill_color_alpha'] = {
 
 Blockly.Blocks['gfx_set_border_color'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Randfarbe von');
-    this.appendValueInput('COLOR').setCheck(null).appendField('auf');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setzeRandfarbe(', [
+      ['OBJ'],
+      ['COLOR'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -562,9 +613,11 @@ Blockly.Blocks['gfx_set_border_color'] = {
 
 Blockly.Blocks['gfx_set_border_width'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Randbreite von');
-    this.appendValueInput('WIDTH').setCheck('Number').appendField('auf');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setzeRandbreite(', [
+      ['OBJ'],
+      ['WIDTH'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -574,9 +627,11 @@ Blockly.Blocks['gfx_set_border_width'] = {
 
 Blockly.Blocks['gfx_set_alpha'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Transparenz von');
-    this.appendValueInput('ALPHA').setCheck('Number').appendField('auf');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setzeTransparenz(', [
+      ['OBJ'],
+      ['ALPHA'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -586,9 +641,11 @@ Blockly.Blocks['gfx_set_alpha'] = {
 
 Blockly.Blocks['gfx_set_visible'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Sichtbarkeit von');
-    this.appendValueInput('VISIBLE').setCheck('Boolean').appendField('auf');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setzeSichtbarkeit(', [
+      ['OBJ'],
+      ['VISIBLE'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -598,8 +655,10 @@ Blockly.Blocks['gfx_set_visible'] = {
 
 Blockly.Blocks['gfx_bring_to_front'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('in den Vordergrund:');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'bringToFront(', [
+      ['OBJ'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -609,8 +668,10 @@ Blockly.Blocks['gfx_bring_to_front'] = {
 
 Blockly.Blocks['gfx_send_to_back'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('in den Hintergrund:');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'sendToBack(', [
+      ['OBJ'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -621,9 +682,11 @@ Blockly.Blocks['gfx_send_to_back'] = {
 // setText / setAlignment only for Text objects
 Blockly.Blocks['gfx_set_text_content'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Text-Inhalt von');
-    this.appendValueInput('TEXT').setCheck('String').appendField('auf');
-    this.setInputsInline(true);
+    buildMethodInputs(this, 'setText(', [
+      ['OBJ'],
+      ['TEXT'],
+    ]);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(C_PROP);
@@ -633,14 +696,16 @@ Blockly.Blocks['gfx_set_text_content'] = {
 
 Blockly.Blocks['gfx_set_alignment'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Ausrichtung von');
-    this.appendDummyInput()
-      .appendField('auf')
+    this.appendValueInput('OBJ').setCheck(null);
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
+    this.appendDummyInput('ALIGN_D')
+      .appendField('.setAlignment(')
       .appendField(new Blockly.FieldDropdown([
         ['links',  'Alignment.left'],
         ['mitte',  'Alignment.center'],
         ['rechts', 'Alignment.right'],
-      ]), 'ALIGN');
+      ]), 'ALIGN')
+      .appendField(')');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -652,8 +717,8 @@ Blockly.Blocks['gfx_set_alignment'] = {
 // Static defaults
 Blockly.Blocks['gfx_default_fill_color'] = {
   init: function () {
-    this.appendDummyInput().appendField('Standard-Füllfarbe (alle Formen)');
-    this.appendValueInput('COLOR').setCheck(null).appendField('auf');
+    this.appendValueInput('COLOR').setCheck(null).appendField('setDefaultFillColor(');
+    this.appendDummyInput('CLOSE').appendField(')');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -664,8 +729,8 @@ Blockly.Blocks['gfx_default_fill_color'] = {
 
 Blockly.Blocks['gfx_default_visibility'] = {
   init: function () {
-    this.appendDummyInput().appendField('Standard-Sichtbarkeit (alle Formen)');
-    this.appendValueInput('VISIBLE').setCheck('Boolean').appendField('auf');
+    this.appendValueInput('VISIBLE').setCheck('Boolean').appendField('setDefaultVisibility(');
+    this.appendDummyInput('CLOSE').appendField(')');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -681,6 +746,7 @@ Blockly.Blocks['gfx_default_visibility'] = {
 Blockly.Blocks['gfx_move'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('bewege');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.appendValueInput('DX').setCheck('Number').appendField('um dx:');
     this.appendValueInput('DY').setCheck('Number').appendField('dy:');
     this.setInputsInline(true);
@@ -694,6 +760,7 @@ Blockly.Blocks['gfx_move'] = {
 Blockly.Blocks['gfx_rotate'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('rotiere');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.appendValueInput('ANGLE').setCheck('Number').appendField('um');
     this.appendDummyInput().appendField('Grad');
     this.setInputsInline(true);
@@ -707,6 +774,7 @@ Blockly.Blocks['gfx_rotate'] = {
 Blockly.Blocks['gfx_rotate_around'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('rotiere');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.appendValueInput('ANGLE').setCheck('Number').appendField('um');
     this.appendDummyInput().appendField('Grad um Punkt');
     this.appendValueInput('CX').setCheck('Number').appendField('cx:');
@@ -722,6 +790,7 @@ Blockly.Blocks['gfx_rotate_around'] = {
 Blockly.Blocks['gfx_scale'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('skaliere');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.appendValueInput('FACTOR').setCheck('Number').appendField('Faktor:');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
@@ -734,6 +803,7 @@ Blockly.Blocks['gfx_scale'] = {
 Blockly.Blocks['gfx_scale_around'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('skaliere');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.appendValueInput('FACTOR').setCheck('Number').appendField('Faktor:');
     this.appendDummyInput().appendField('um Punkt');
     this.appendValueInput('CX').setCheck('Number').appendField('cx:');
@@ -749,6 +819,7 @@ Blockly.Blocks['gfx_scale_around'] = {
 Blockly.Blocks['gfx_mirror_x'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('spiegele X-Achse:');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -760,6 +831,7 @@ Blockly.Blocks['gfx_mirror_x'] = {
 Blockly.Blocks['gfx_mirror_y'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('spiegele Y-Achse:');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -771,6 +843,7 @@ Blockly.Blocks['gfx_mirror_y'] = {
 Blockly.Blocks['gfx_forward'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('vorwärts');
+    setDefaultVarShadow(this, 'OBJ', 'turtle');
     this.appendValueInput('LENGTH').setCheck('Number').appendField('um');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
@@ -783,6 +856,7 @@ Blockly.Blocks['gfx_forward'] = {
 Blockly.Blocks['gfx_define_center'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('Zentrum von');
+    setDefaultVarShadow(this, 'OBJ', 'turtle');
     this.appendValueInput('X').setCheck('Number').appendField('setzen auf x:');
     this.appendValueInput('Y').setCheck('Number').appendField('y:');
     this.setInputsInline(true);
@@ -796,6 +870,7 @@ Blockly.Blocks['gfx_define_center'] = {
 Blockly.Blocks['gfx_define_direction'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('Richtung von');
+    setDefaultVarShadow(this, 'OBJ', 'turtle');
     this.appendValueInput('ANGLE').setCheck('Number').appendField('setzen auf');
     this.appendDummyInput().appendField('Grad');
     this.setInputsInline(true);
@@ -810,6 +885,7 @@ Blockly.Blocks['gfx_define_direction'] = {
 Blockly.Blocks['gfx_turtle_turn'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('drehe Turtle');
+    setDefaultVarShadow(this, 'OBJ', 'turtle');
     this.appendValueInput('ANGLE').setCheck('Number').appendField('um');
     this.appendDummyInput().appendField('Grad');
     this.setInputsInline(true);
@@ -823,6 +899,7 @@ Blockly.Blocks['gfx_turtle_turn'] = {
 Blockly.Blocks['gfx_turtle_pen_up'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('Stift heben:');
+    setDefaultVarShadow(this, 'OBJ', 'turtle');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -834,6 +911,7 @@ Blockly.Blocks['gfx_turtle_pen_up'] = {
 Blockly.Blocks['gfx_turtle_pen_down'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('Stift senken:');
+    setDefaultVarShadow(this, 'OBJ', 'turtle');
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -846,6 +924,7 @@ Blockly.Blocks['gfx_turtle_pen_down'] = {
 Blockly.Blocks['gfx_line_set_points'] = {
   init: function () {
     this.appendValueInput('OBJ').setCheck(null).appendField('setze Linienpunkte von');
+    setDefaultVarShadow(this, 'OBJ', 'grafik');
     this.appendValueInput('X1').setCheck('Number').appendField('x1:');
     this.appendValueInput('Y1').setCheck('Number').appendField('y1:');
     this.appendValueInput('X2').setCheck('Number').appendField('x2:');

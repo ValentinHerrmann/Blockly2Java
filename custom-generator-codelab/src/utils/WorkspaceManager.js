@@ -27,6 +27,7 @@ import { BlocklyOverlayManager } from './BlocklyOverlayManager.js';
 import emptyTemplate from '../emptyTemplate.json';
 import * as Blockly from 'blockly/core';
 import { load } from '../serialization.js';
+import { templates as TOOLBOX_TEMPLATES } from '../toolbox_templates/index.js';
 
 /**
  * Toolbox config that enables every category, subcategory and block.
@@ -337,7 +338,8 @@ export class WorkspaceManager {
 
     // Apply the full-active config so the blank workspace has an explicit
     // blockly-config.json (all categories on) rather than implicit defaults.
-    ToolboxConfigManager.applyConfig(FULL_ACTIVE_CONFIG, ws);
+    const allesTemplate = TOOLBOX_TEMPLATES.find(t => t.id === 'alles')?.config ?? FULL_ACTIVE_CONFIG;
+    ToolboxConfigManager.applyConfig(allesTemplate, ws);
 
     // ── 2. Disconnect git ────────────────────────────────────────────────
     GitService.clearConfig();
@@ -442,7 +444,8 @@ export class WorkspaceManager {
     // ── Toolbox config (blockly-config.json) ─────────────────────────────
     // Always export a config; fall back to the full-active preset so that
     // every downloaded archive contains an explicit, editable config file.
-    const toolboxConfig = ToolboxConfigManager.lastConfig ?? FULL_ACTIVE_CONFIG;
+    const allesTemplate = TOOLBOX_TEMPLATES.find(t => t.id === 'alles')?.config ?? FULL_ACTIVE_CONFIG;
+    const toolboxConfig = ToolboxConfigManager.lastConfig ?? allesTemplate;
     try {
       zip.file('blockly-config.json', JSON.stringify(toolboxConfig, null, 2));
     } catch { /* skip */ }
