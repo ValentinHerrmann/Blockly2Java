@@ -5,27 +5,27 @@ WORKDIR /app
 COPY package*.json ./
 RUN mkdir -p custom-generator-codelab
 COPY custom-generator-codelab/package*.json ./custom-generator-codelab/
-RUN mkdir -p custom-generator-codelab
-COPY custom-generator-codelab/package*.json ./custom-generator-codelab/
 RUN npm ci
 
 # Copy source and build
 COPY . .
-RUN npm run build && \
-	addgroup -S nodejs && adduser -S nodeuser -G nodejs
+RUN npm run build
 
-# Copy built app from builder stage
+# --- Production stage ---
+FROM node:18-alpine AS production
+WORKDIR /app
+
+# Copy built output from builder
 COPY --from=builder /app .
 
 # Install production dependencies, set permissions, and switch user
 RUN npm ci --only=production || true && \
-	chmod -R 755 /app
-
-EXPOSE 8080
-
-USER nodeuser
+    addgroup -S nodejs && adduser -S nodeuser -G nodejs && \
+    chmod -R 755 /app
 
 ENV NODE_ENV=production
 EXPOSE 80
+
+USER nodeuser
 
 CMD ["npm","start"]
