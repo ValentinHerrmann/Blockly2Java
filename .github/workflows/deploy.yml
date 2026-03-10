@@ -1,0 +1,114 @@
+name: Build and Deploy Docker image
+
+on:
+  pull_request:
+    types: [ 'ready_for_review' ]
+    branches: [ 'onlineide' ]
+    
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          set -e
+          REGISTRY="${{ secrets.DOCKER_REGISTRY }}"
+          IMAGE_NAME="${{ secrets.DOCKER_IMAGE }}"
+          if [ -z "$REGISTRY" ] || [ -z "$IMAGE_NAME" ]; then
+            echo "ERROR: DOCKER_REGISTRY and DOCKER_IMAGE secrets must be set" >&2
+            exit 1
+          fi
+          FULL_IMAGE="$REGISTRY/$IMAGE_NAME:${{ github.sha }}"
+          docker build -t "$FULL_IMAGE" .
+          docker push "$FULL_IMAGE"
+
+      - name: Deploy on server via SSH (pull image and restart container)
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            set -e
+            REGISTRY="${{ secrets.DOCKER_REGISTRY }}"
+            IMAGE_NAME="${{ secrets.DOCKER_IMAGE }}"
+            IMAGE_TAG="${{ github.sha }}"
+            FULL_IMAGE="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+            CONTAINER_NAME="${{ secrets.DEPLOY_CONTAINER_NAME }}"
+            if [ -z "$CONTAINER_NAME" ]; then
+              echo "ERROR: secret DEPLOY_CONTAINER_NAME must be set" >&2
+              exit 1
+            fi
+
+            # Pull latest image
+            docker pull "$FULL_IMAGE"
+
+            # Stop and remove existing container
+            if docker ps -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+              docker stop "$CONTAINER_NAME" || true
+            fi
+            if docker ps -a -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+              docker rm "$CONTAINER_NAME" || true
+            fi
+
+            # Choose internal port
+            PORT="${{ secrets.DEPLOY_APP_PORT }}"
+            PORT=${PORT:-3000}
+
+            # Run container bound to localhost
+            docker run -d --restart unless-stopped --name "$CONTAINER_NAME" -p 127.0.0.1:${PORT}:80 -e NODE_ENV=production "$FULL_IMAGE"
+
+            # Configure nginx to proxy to the container. Requires sudo.
+            SERVER_NAME="${{ secrets.DEPLOY_SERVER_NAME }}"
+            if [ -z "$SERVER_NAME" ]; then
+              SERVER_NAME="_"
+            fi
+
+            NGINX_CONF="/etc/nginx/sites-available/${CONTAINER_NAME}.conf"
+            sudo tee "$NGINX_CONF" > /dev/null <<NGINX_EOF
+            server {
+              listen 80;
+              server_name ${SERVER_NAME};
+
+              client_max_body_size 50M;
+              location / {
+                proxy_pass http://127.0.0.1:${PORT};
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
+            }
+            NGINX_EOF
+
+            sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/${CONTAINER_NAME}.conf
+            sudo nginx -t && sudo systemctl reload nginx
+
+            # Optionally obtain/renew TLS via certbot
+            if [ "${{ secrets.DEPLOY_ENABLE_HTTPS }}" = "true" ]; then
+              if [ -z "${{ secrets.CERTBOT_EMAIL }}" ]; then
+                echo "CERTBOT_EMAIL not set; skipping certbot" >&2
+              else
+                sudo certbot --nginx -n --agree-tos --email "${{ secrets.CERTBOT_EMAIL }}" -d "$SERVER_NAME" || true
+              fi
+            fi
