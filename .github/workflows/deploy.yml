@@ -9,6 +9,8 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
+    environment: b2j-dev
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -50,23 +52,27 @@ jobs:
             REGISTRY="${{ secrets.DOCKER_REGISTRY }}"
             IMAGE_NAME="${{ secrets.DOCKER_IMAGE }}"
             IMAGE_TAG="${{ github.sha }}"
-            IMAGE_TAG="${{ github.sha }}"
+
             if [ -z "$REGISTRY" ]; then
               echo "ERROR: secret DOCKER_REGISTRY must be set" >&2
               exit 1
             fi
             if [ -z "$IMAGE_NAME" ]; then
               echo "ERROR: secret DOCKER_IMAGE must be set" >&2
+              exit 1
+            fi
+
+            FULL_IMAGE="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
 
             # Log in to container registry if credentials are provided
-            REGISTRY_USERNAME="${{ secrets.DOCKER_REGISTRY_USERNAME }}"
-            REGISTRY_PASSWORD="${{ secrets.DOCKER_REGISTRY_PASSWORD }}"
+            REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
+            REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
             if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then
               echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
             else
               echo "No registry credentials provided; assuming server is already logged into $REGISTRY" >&2
             fi
-            fi
+
             CONTAINER_NAME="${{ secrets.DEPLOY_CONTAINER_NAME }}"
             if [ -z "$CONTAINER_NAME" ]; then
               echo "ERROR: secret DEPLOY_CONTAINER_NAME must be set" >&2
@@ -98,25 +104,25 @@ jobs:
             fi
 
             NGINX_CONF="/etc/nginx/sites-available/${CONTAINER_NAME}.conf"
-            sudo tee "$NGINX_CONF" > /dev/null <<'NGINX_EOF'
-            server {
-              listen 80;
-              server_name ${SERVER_NAME};
+            sudo tee "$NGINX_CONF" > /dev/null <<NGINX_EOF
+server {
+  listen 80;
+  server_name ${SERVER_NAME};
 
-              client_max_body_size 50M;
-              location / {
-                proxy_pass http://127.0.0.1:${PORT};
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection 'upgrade';
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-              }
-            }
-            NGINX_EOF
+  client_max_body_size 50M;
+  location / {
+    proxy_pass http://127.0.0.1:${PORT};
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host \$host;
+    proxy_cache_bypass \$http_upgrade;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+}
+NGINX_EOF
 
             sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/${CONTAINER_NAME}.conf
             sudo nginx -t && sudo systemctl reload nginx
