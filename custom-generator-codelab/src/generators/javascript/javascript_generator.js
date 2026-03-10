@@ -259,6 +259,7 @@ export function getType(var_type) {
     case 'text_changeCase': 
     case 'text_trim': 
     case 'text_print':
+    case 'text_println':
     case 'text_append':
       return TYPES.STRING;
     case 'lists_create_empty': 

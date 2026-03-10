@@ -109,6 +109,7 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'text_replace',      active: true  },
         { type: 'text_reverse',      active: true  },
         { type: 'text_print',        active: true  },
+        { type: 'text_println',      active: true  },
         { type: 'text_prompt_ext',   active: false }, // Klasse 9: GUI-basiert, zu komplex
       ],
     },
@@ -145,6 +146,12 @@ export const FULL_ACTIVE_CONFIG = {
       blocks: [
         { type: 'gfx_extends',          active: true  },
         { type: 'java_local_var_set',   active: true  }, // deckt alle Wrapper-Blöcke ab
+        { type: 'gfx_new_world',        active: true  },
+        { type: 'gfx_new_shape',        active: true  },
+        { type: 'gfx_new_polygon',      active: true  },
+        { type: 'gfx_new_text',         active: true  },
+        { type: 'gfx_new_group',        active: true  },
+        { type: 'gfx_group_add',        active: true  },
       ],
     },
     {
@@ -188,6 +195,7 @@ export const FULL_ACTIVE_CONFIG = {
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
         { type: 'java_local_var_set',    active: true  }, // Wrapper-Block
+        { type: 'gfx_new_turtle',       active: true  },
         { type: 'gfx_forward',           active: true  },
         { type: 'gfx_turtle_turn',       active: true  },
         { type: 'gfx_define_direction',  active: true  },

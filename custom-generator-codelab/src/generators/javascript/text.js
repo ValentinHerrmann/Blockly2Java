@@ -139,7 +139,7 @@ export function text_isEmpty(block, generator) {
   // Is the string null or array empty?
   const text = generator.valueToCode(block, 'VALUE',
       Order.MEMBER) || "\"\"";
-  return ["!" + text + ".isEmpty()", Order.LOGICAL_NOT];
+  return [text + ".isEmpty()", Order.LOGICAL_NOT];
 };
 
 export function text_indexOf(block, generator) {
@@ -313,6 +313,12 @@ export function text_trim(block, generator) {
 export function text_print(block, generator) {
   // Print statement in Java.
   const msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
+  return 'System.out.print(' + msg + ');\n';
+};
+
+export function text_println(block, generator) {
+  // Print statement in Java.
+  const msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   return 'System.out.println(' + msg + ');\n';
 };
 
@@ -326,7 +332,7 @@ export function text_prompt_ext(block, generator) {
     // External message.
     msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   }
-  let code = 'javax.swing.JOptionPane.showInputDialog(null, ' + msg + ')';
+  let code = 'Input.readString(' + msg + ')';
   const toNumber = block.getFieldValue('TYPE') === 'NUMBER';
   if (toNumber) {
     code = 'Double.parseDouble(' + code + ')';

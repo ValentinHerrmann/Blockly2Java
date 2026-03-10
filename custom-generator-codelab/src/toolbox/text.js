@@ -8,6 +8,44 @@ export const textCategory = {
             'type': 'text',
         },
         {
+            'kind': 'BLOCK',
+            'type': 'text_println',
+            'inputs': {
+                'TEXT': {
+                    'shadow': {
+                        'type': 'text',
+                        'fields': { 'TEXT': 'abc' },
+                    },
+                },
+            },
+        },
+        {
+            'kind': 'BLOCK',
+            'type': 'text_print',
+            'inputs': {
+                'TEXT': {
+                    'shadow': {
+                        'type': 'text',
+                        'fields': { 'TEXT': 'abc' },
+                    },
+                },
+            },
+        },
+        {
+            'kind': 'BLOCK',
+            'type': 'text_prompt_ext',
+            'inputs': {
+                'TEXT': {
+                    'shadow': {
+                        'type': 'text',
+                        'fields': { 'TEXT': 'abc' },
+                    },
+                },
+            },
+        },
+
+
+        {
             'kind': 'block',
             'type': 'text_multiline',
         },
@@ -170,30 +208,6 @@ export const textCategory = {
                 'TEXT': {
                     'shadow': {
                         'type': 'text',
-                    },
-                },
-            },
-        },
-        {
-            'kind': 'BLOCK',
-            'type': 'text_print',
-            'inputs': {
-                'TEXT': {
-                    'shadow': {
-                        'type': 'text',
-                        'fields': { 'TEXT': 'abc' },
-                    },
-                },
-            },
-        },
-        {
-            'kind': 'BLOCK',
-            'type': 'text_prompt_ext',
-            'inputs': {
-                'TEXT': {
-                    'shadow': {
-                        'type': 'text',
-                        'fields': { 'TEXT': 'abc' },
                     },
                 },
             },

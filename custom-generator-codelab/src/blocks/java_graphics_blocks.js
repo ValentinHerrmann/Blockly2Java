@@ -285,6 +285,7 @@ function makeShapeBlock(isStatement) {
 
 Blockly.Blocks['gfx_new_shape']      = makeShapeBlock(false);
 
+
 // =============================================================================
 // 1.  WORLD
 // =============================================================================
@@ -988,7 +989,7 @@ Blockly.Blocks['gfx_polygon_add_point'] = {
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour(C_MOVE);
+    this.setColour(C_OBJ);
     this.setTooltip('Fügt einen weiteren Punkt zum Polygon hinzu.');
   },
 };
@@ -1000,7 +1001,10 @@ Blockly.Blocks['gfx_polygon_add_point'] = {
 // World getters (value blocks)
 Blockly.Blocks['gfx_get_world'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Welt von');
+
+    buildMethodInputs(this, 'welt(', [
+      ['OBJ'],
+    ]);
     this.setInputsInline(true);
     this.setOutput(true, 'World');
     this.setColour(C_CTRL);
@@ -1010,7 +1014,9 @@ Blockly.Blocks['gfx_get_world'] = {
 
 Blockly.Blocks['gfx_get_width'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Breite der Welt');
+    buildMethodInputs(this, 'breite(', [
+      ['OBJ'],
+    ]);
     this.setInputsInline(true);
     this.setOutput(true, 'Number');
     this.setColour(C_CTRL);
@@ -1020,7 +1026,9 @@ Blockly.Blocks['gfx_get_width'] = {
 
 Blockly.Blocks['gfx_get_height'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Höhe der Welt');
+    buildMethodInputs(this, 'höhe(', [
+      ['OBJ'],
+    ]);
     this.setInputsInline(true);
     this.setOutput(true, 'Number');
     this.setColour(C_CTRL);
@@ -1030,9 +1038,9 @@ Blockly.Blocks['gfx_get_height'] = {
 
 Blockly.Blocks['gfx_set_cursor'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Cursor von');
+    this.appendValueInput('OBJ').setCheck(null);
     this.appendDummyInput()
-      .appendField('auf')
+      .appendField('.setzeCursorTyp(')
       .appendField(new Blockly.FieldDropdown([
         ['Standard',       'default'],
         ['Zeiger (Hand)',  'pointer'],
@@ -1040,11 +1048,12 @@ Blockly.Blocks['gfx_set_cursor'] = {
         ['Fadenkreuz',     'crosshair'],
         ['Verschieben',    'move'],
         ['Verboten',       'not-allowed'],
-      ]), 'CURSOR');
+      ]), 'CURSOR')
+      .appendField(')');;
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour(C_CTRL);
+    this.setColour(C_PROP);
     this.setTooltip('Ändert das Mauszeigersymbol im Grafikbereich (world.setCursor(…)).');
   },
 };
@@ -1052,12 +1061,14 @@ Blockly.Blocks['gfx_set_cursor'] = {
 // Group operations
 Blockly.Blocks['gfx_group_add'] = {
   init: function () {
-    this.appendValueInput('GROUP').setCheck(null).appendField('füge zu Gruppe');
-    this.appendValueInput('OBJ').setCheck(null).appendField('hinzu:');
+    buildMethodInputs(this, 'fügeHinzu(', [
+      ['GROUP'],
+      ['OBJ'],
+    ]);
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour(C_CTRL);
+    this.setColour(C_OBJ);
     this.setTooltip('Fügt ein Grafikobjekt zu einer Gruppe hinzu.');
   },
 };
@@ -1115,7 +1126,9 @@ Blockly.Blocks['gfx_is_key_up'] = {
 // Shape position getters
 Blockly.Blocks['gfx_get_x'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('x-Position von');
+    buildMethodInputs(this, 'xPosition(', [
+      ['OBJ']
+    ]);
     this.setInputsInline(true);
     this.setOutput(true, 'Number');
     this.setColour(C_CTRL);
@@ -1125,7 +1138,9 @@ Blockly.Blocks['gfx_get_x'] = {
 
 Blockly.Blocks['gfx_get_y'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('y-Position von');
+    buildMethodInputs(this, 'yPosition(', [
+      ['OBJ']
+    ]);
     this.setInputsInline(true);
     this.setOutput(true, 'Number');
     this.setColour(C_CTRL);
@@ -1136,12 +1151,14 @@ Blockly.Blocks['gfx_get_y'] = {
 // World controls
 Blockly.Blocks['gfx_world_set_background'] = {
   init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Hintergrundfarbe von');
-    this.appendValueInput('COLOR').setCheck(null).appendField('setzen auf');
+    buildMethodInputs(this, 'setzeHintergrundfarbe(', [
+      ['OBJ']
+    ]);
+    this.appendValueInput('COLOR').setCheck(null);
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour(C_CTRL);
+    this.setColour(C_PROP);
     this.setTooltip('Setzt die Hintergrundfarbe der World (world.setBackgroundColor(color)).');
   },
 };
@@ -1168,60 +1185,60 @@ Blockly.Blocks['gfx_world_start'] = {
   },
 };
 
-// Mouse state – value blocks (used inside act() without a receiver)
-Blockly.Blocks['gfx_is_mouse_down'] = {
-  init: function () {
-    this.appendDummyInput().appendField('Maus gedrückt');
-    this.setOutput(true, 'Boolean');
-    this.setColour(C_CTRL);
-    this.setTooltip('Gibt true zurück, wenn die Maustaste gerade gedrückt ist (isMouseDown()). Innerhalb von act() verwenden.');
-  },
-};
+// // Mouse state – value blocks (used inside act() without a receiver)
+// Blockly.Blocks['gfx_is_mouse_down'] = {
+//   init: function () {
+//     this.appendDummyInput().appendField('Maus gedrückt');
+//     this.setOutput(true, 'Boolean');
+//     this.setColour(C_CTRL);
+//     this.setTooltip('Gibt true zurück, wenn die Maustaste gerade gedrückt ist (isMouseDown()). Innerhalb von act() verwenden.');
+//   },
+// };
 
-Blockly.Blocks['gfx_get_mouse_x'] = {
-  init: function () {
-    this.appendDummyInput().appendField('Maus x');
-    this.setOutput(true, 'Number');
-    this.setColour(C_CTRL);
-    this.setTooltip('Gibt die aktuelle x-Koordinate des Mauszeigers zurück (getMouseX()). Innerhalb von act() verwenden.');
-  },
-};
+// Blockly.Blocks['gfx_get_mouse_x'] = {
+//   init: function () {
+//     this.appendDummyInput().appendField('Maus x');
+//     this.setOutput(true, 'Number');
+//     this.setColour(C_CTRL);
+//     this.setTooltip('Gibt die aktuelle x-Koordinate des Mauszeigers zurück (getMouseX()). Innerhalb von act() verwenden.');
+//   },
+// };
 
-Blockly.Blocks['gfx_get_mouse_y'] = {
-  init: function () {
-    this.appendDummyInput().appendField('Maus y');
-    this.setOutput(true, 'Number');
-    this.setColour(C_CTRL);
-    this.setTooltip('Gibt die aktuelle y-Koordinate des Mauszeigers zurück (getMouseY()). Innerhalb von act() verwenden.');
-  },
-};
+// Blockly.Blocks['gfx_get_mouse_y'] = {
+//   init: function () {
+//     this.appendDummyInput().appendField('Maus y');
+//     this.setOutput(true, 'Number');
+//     this.setColour(C_CTRL);
+//     this.setTooltip('Gibt die aktuelle y-Koordinate des Mauszeigers zurück (getMouseY()). Innerhalb von act() verwenden.');
+//   },
+// };
 
-// Bitmap pixel operations
-Blockly.Blocks['gfx_bitmap_set_pixel'] = {
-  init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Pixel setzen in');
-    this.appendValueInput('COL').setCheck('Number').appendField('Spalte:');
-    this.appendValueInput('ROW').setCheck('Number').appendField('Zeile:');
-    this.appendValueInput('COLOR').setCheck(null).appendField('Farbe:');
-    this.setInputsInline(true);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(C_CTRL);
-    this.setTooltip('Setzt die Farbe eines Pixels im Bitmap (bitmap.setPixel(col, row, color)).');
-  },
-};
+// // Bitmap pixel operations
+// Blockly.Blocks['gfx_bitmap_set_pixel'] = {
+//   init: function () {
+//     this.appendValueInput('OBJ').setCheck(null).appendField('Pixel setzen in');
+//     this.appendValueInput('COL').setCheck('Number').appendField('Spalte:');
+//     this.appendValueInput('ROW').setCheck('Number').appendField('Zeile:');
+//     this.appendValueInput('COLOR').setCheck(null).appendField('Farbe:');
+//     this.setInputsInline(true);
+//     this.setPreviousStatement(true, null);
+//     this.setNextStatement(true, null);
+//     this.setColour(C_CTRL);
+//     this.setTooltip('Setzt die Farbe eines Pixels im Bitmap (bitmap.setPixel(col, row, color)).');
+//   },
+// };
 
-Blockly.Blocks['gfx_bitmap_get_pixel'] = {
-  init: function () {
-    this.appendValueInput('OBJ').setCheck(null).appendField('Farbe von Pixel in');
-    this.appendValueInput('COL').setCheck('Number').appendField('Spalte:');
-    this.appendValueInput('ROW').setCheck('Number').appendField('Zeile:');
-    this.setInputsInline(true);
-    this.setOutput(true, 'String');
-    this.setColour(C_CTRL);
-    this.setTooltip('Gibt die Farbe eines Pixels als Farbstring zurück (bitmap.getPixel(col, row)).');
-  },
-};
+// Blockly.Blocks['gfx_bitmap_get_pixel'] = {
+//   init: function () {
+//     this.appendValueInput('OBJ').setCheck(null).appendField('Farbe von Pixel in');
+//     this.appendValueInput('COL').setCheck('Number').appendField('Spalte:');
+//     this.appendValueInput('ROW').setCheck('Number').appendField('Zeile:');
+//     this.setInputsInline(true);
+//     this.setOutput(true, 'String');
+//     this.setColour(C_CTRL);
+//     this.setTooltip('Gibt die Farbe eines Pixels als Farbstring zurück (bitmap.getPixel(col, row)).');
+//   },
+// };
 
 // ── Graphics inheritance block ──────────────────────────────────────────────
 // Declares that the current class extends one of the graphics library classes.

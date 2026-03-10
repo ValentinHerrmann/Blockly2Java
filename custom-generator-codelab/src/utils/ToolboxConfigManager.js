@@ -322,6 +322,8 @@ export class ToolboxConfigManager {
     math_atan2:               'Atan2',
     // Text
     text:                     'Textkonstante',
+    text_print:               'Ausgeben (System.out.print)',
+    text_println:             'Ausgeben (System.out.println)',
     text_multiline:           'Mehrzeiliger Text',
     text_join:                'Texte verbinden',
     text_append:              'Text anhängen',
@@ -335,7 +337,6 @@ export class ToolboxConfigManager {
     text_count:               'Vorkommen zählen',
     text_replace:             'Ersetzen',
     text_reverse:             'Umkehren (Text)',
-    text_print:               'Ausgeben (System.out.print)',
     text_prompt_ext:          'Eingabe (prompt)',
     // Listen
     lists_create_with:        'Liste erstellen',

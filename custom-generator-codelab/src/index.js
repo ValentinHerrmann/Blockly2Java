@@ -13,6 +13,7 @@ import './blocks/constructor.js';
 import './blocks/java_method_blocks.js';
 import './blocks/java_object_call_blocks.js';
 import './blocks/java_graphics_blocks.js';
+import './blocks/text.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 

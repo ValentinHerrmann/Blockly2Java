@@ -11,7 +11,7 @@ export const graphicsCategories = [
             // ── World ──────────────────────────────────────────────────────
             {
                 'kind': 'block', 'type': 'java_local_var_set',
-                'fields': { 'VAR': { 'name': 'world1', 'type': 'local' } },
+                'fields': { 'VAR': { 'name': 'world', 'type': 'local' } },
                 'inputs': {
                     'VALUE': { 'block': {
                         'type': 'gfx_new_world',
@@ -33,7 +33,7 @@ export const graphicsCategories = [
             // ── Polygon ───────────────────────────────────────────────────
             {
                 'kind': 'block', 'type': 'java_local_var_set',
-                'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
+                'fields': { 'VAR': { 'name': 'polygon', 'type': 'local' } },
                 'inputs': {
                     'VALUE': { 'block': {
                         'type': 'gfx_new_polygon',
@@ -41,6 +41,15 @@ export const graphicsCategories = [
                             'CLOSE': { 'shadow': { 'type': 'logic_boolean', 'fields': { 'BOOL': 'TRUE' } } },
                         },
                     }},
+                },
+            },
+            // Polygon
+            {
+                'kind': 'block', 'type': 'gfx_polygon_add_point',
+                'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'polygon', 'type': 'local' } } } },
+                    'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
+                    'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                 },
             },
             // ── Text ──────────────────────────────────────────────────────
@@ -67,24 +76,30 @@ export const graphicsCategories = [
                     'VALUE': { 'block': { 'type': 'gfx_new_group' } },
                 },
             },
-            // ── Bitmap ────────────────────────────────────────────────────
-            {
-                'kind': 'block', 'type': 'java_local_var_set',
-                'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
+            { 'kind': 'block', 'type': 'gfx_group_add',
                 'inputs': {
-                    'VALUE': { 'block': {
-                        'type': 'gfx_new_bitmap',
-                        'inputs': {
-                            'COLS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
-                            'ROWS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
-                            'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
-                            'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
-                            'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                            'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
-                        },
-                    }},
+                    'GROUP': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'group1', 'type': 'local' } } } },
+                    'OBJ':   { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik',  'type': 'local' } } } },
                 },
             },
+            // ── Bitmap ────────────────────────────────────────────────────
+            // {
+            //     'kind': 'block', 'type': 'java_local_var_set',
+            //     'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } },
+            //     'inputs': {
+            //         'VALUE': { 'block': {
+            //             'type': 'gfx_new_bitmap',
+            //             'inputs': {
+            //                 'COLS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
+            //                 'ROWS':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 10  } } },
+            //                 'LEFT':   { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
+            //                 'TOP':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
+            //                 'WIDTH':  { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
+            //                 'HEIGHT': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 200 } } },
+            //             },
+            //         }},
+            //     },
+            // },
         ],
     },
     {
@@ -112,6 +127,12 @@ export const graphicsCategories = [
                 'inputs': { 
                     'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
                     'COLOR': { 'shadow': { 'type': 'colour_picker', 'fields': { 'COLOUR': '#ff0000' } } },
+                },
+            },
+            { 'kind': 'block', 'type': 'gfx_world_set_background',
+                'inputs': {
+                    'OBJ':   { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'world', 'type': 'local' } } } },
+                    'COLOR': { 'shadow': { 'type': 'colour_picker', 'fields': { 'COLOUR': '#ffffff' } } },
                 },
             },
             {
@@ -152,6 +173,10 @@ export const graphicsCategories = [
             },
             { 'kind': 'block', 'type': 'gfx_set_alignment',
                 'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'text', 'type': 'local' } } } } },
+            },
+            // World-Methoden
+            { 'kind': 'block', 'type': 'gfx_set_cursor',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'world', 'type': 'local' } } } } },
             },
             // Globale Standards
             { 'kind': 'block', 'type': 'gfx_default_fill_color' ,
@@ -229,15 +254,6 @@ export const graphicsCategories = [
                     'Y2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
                 },
             },
-            // Polygon
-            {
-                'kind': 'block', 'type': 'gfx_polygon_add_point',
-                'inputs': {
-                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'polygon', 'type': 'local' } } } },
-                    'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                    'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                },
-            },
         ],
     },
     {
@@ -307,6 +323,48 @@ export const graphicsCategories = [
     },
     {
         'kind': 'category',
+        'name': 'Grafik: Getter',
+        'colour': '#4e342e',
+        'contents': [
+            { 'kind': 'block', 'type': 'gfx_get_world',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } } },
+            },
+            { 'kind': 'block', 'type': 'gfx_get_width',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'world', 'type': 'local' } } } } },
+            },
+            { 'kind': 'block', 'type': 'gfx_get_height',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'world', 'type': 'local' } } } } },
+            },
+            { 'kind': 'block', 'type': 'gfx_get_x',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } } },
+            },
+            { 'kind': 'block', 'type': 'gfx_get_y',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } } },
+            },
+            // { 'kind': 'block', 'type': 'gfx_get_collision_pairs',
+            //     'inputs': {
+            //         'GROUP1': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'group1', 'type': 'local' } } } },
+            //         'GROUP2': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'group2', 'type': 'local' } } } },
+            //         'MAX_ONE': { 'shadow': { 'type': 'logic_boolean', 'fields': { 'BOOL': 'FALSE' } } },
+            //     },
+            // },
+            // { 'kind': 'block', 'type': 'gfx_get_colliding_shapes',
+            //     'inputs': {
+            //         'GROUP': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'group1', 'type': 'local' } } } },
+            //         'SHAPE': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik',  'type': 'local' } } } },
+            //     },
+            // },
+            // { 'kind': 'block', 'type': 'gfx_bitmap_get_pixel',
+            //     'inputs': {
+            //         'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
+            //         'COL': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
+            //         'ROW': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
+            //     },
+            // },
+        ],
+    },
+    {
+        'kind': 'category',
         'name': 'Grafik: Steuerung',
         'colour': '#4e342e',
         'contents': [
@@ -315,17 +373,13 @@ export const graphicsCategories = [
                 'kind': 'block', 'type': 'gfx_event_handler',
                 'fields': { 'EVENT': 'act' },
             },
-            // World-Methoden
-            { 'kind': 'block', 'type': 'gfx_get_world' },
-            { 'kind': 'block', 'type': 'gfx_get_width' },
-            { 'kind': 'block', 'type': 'gfx_get_height' },
-            { 'kind': 'block', 'type': 'gfx_set_cursor' },
-            { 'kind': 'block', 'type': 'gfx_world_set_background' },
-            { 'kind': 'block', 'type': 'gfx_world_stop' },
-            { 'kind': 'block', 'type': 'gfx_world_start' },
+            { 'kind': 'block', 'type': 'gfx_world_stop',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'world', 'type': 'local' } } } } },
+            },
+            { 'kind': 'block', 'type': 'gfx_world_start',
+                'inputs': { 'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'world', 'type': 'local' } } } } },
+            },
             // Objekt-Position
-            { 'kind': 'block', 'type': 'gfx_get_x' },
-            { 'kind': 'block', 'type': 'gfx_get_y' },
             // Tastatur-Zustand (innerhalb von act() verwenden)
             {
                 'kind': 'block', 'type': 'gfx_is_key_down',
@@ -336,33 +390,19 @@ export const graphicsCategories = [
                 'fields': { 'KEY': 'ArrowRight' },
             },
             // Maus-Zustand (innerhalb von act() verwenden)
-            { 'kind': 'block', 'type': 'gfx_is_mouse_down' },
-            { 'kind': 'block', 'type': 'gfx_get_mouse_x' },
-            { 'kind': 'block', 'type': 'gfx_get_mouse_y' },
+            //{ 'kind': 'block', 'type': 'gfx_is_mouse_down' },
+            //{ 'kind': 'block', 'type': 'gfx_get_mouse_x' },
+            //{ 'kind': 'block', 'type': 'gfx_get_mouse_y' },
             // Gruppe / Kollision
-            { 'kind': 'block', 'type': 'gfx_group_add' },
-            {
-                'kind': 'block', 'type': 'gfx_get_collision_pairs',
-                'inputs': {
-                    'MAX_ONE': { 'shadow': { 'type': 'logic_boolean', 'fields': { 'BOOL': 'FALSE' } } },
-                },
-            },
-            { 'kind': 'block', 'type': 'gfx_get_colliding_shapes' },
             // Bitmap-Pixel
-            {
-                'kind': 'block', 'type': 'gfx_bitmap_set_pixel',
-                'inputs': {
-                    'COL': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                    'ROW': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                },
-            },
-            {
-                'kind': 'block', 'type': 'gfx_bitmap_get_pixel',
-                'inputs': {
-                    'COL': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                    'ROW': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                },
-            },
+            // {
+            //     'kind': 'block', 'type': 'gfx_bitmap_set_pixel',
+            //     'inputs': {
+            //         'COL': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
+            //         'ROW': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
+            //     },
+            // },
+            
         ],
     },
 ];
