@@ -34,10 +34,10 @@
  *       ]
  *     },
  *     {
- *       "name": "K-Methoden", // dynamic flyout category for static methods
+ *       "name": "Klassen-Methoden", // dynamic flyout category for static methods
  *       "active": true,
  *       "subcategories": [
- *         { "name": "K-Methoden", "active": true  },
+ *         { "name": "Klassen-Methoden", "active": true  },
  *         { "name": "Externe Klassen-Methoden", "active": true }
  *       ]
  *     },
@@ -452,7 +452,7 @@ export class ToolboxConfigManager {
       }
       if (state.subcats) {
         // Carry over any per-block configs that were in the reference config
-        // for subcategories of dynamic categories (e.g. Methoden, K-Methoden).
+        // for subcategories of dynamic categories (e.g. Methoden, Klassen-Methoden).
         const refCat = (referenceConfig?.categories ?? []).find(c => c.name === catName);
         entry.subcategories = [...state.subcats].map(([name, active]) => {
           const refSub = (refCat?.subcategories ?? []).find(s => s.name === name);

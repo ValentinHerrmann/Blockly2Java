@@ -26,7 +26,7 @@ export const javaCategories = [
     },
     {
         'kind': 'category',
-        'name': 'K-Methoden',
+        'name': 'Klassen-Methoden',
         'colour': '#bf4040',
         'custom': 'JAVA_METHOD_STATIC',
     },

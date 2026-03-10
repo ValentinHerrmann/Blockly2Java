@@ -272,11 +272,11 @@ export const FULL_ACTIVE_CONFIG = {
       ],
     },
     {
-      name: 'K-Methoden',
+      name: 'Klassen-Methoden',
       active: true,
       subcategories: [
         {
-          name: 'K-Methoden',
+          name: 'Klassen-Methoden',
           active: true,
           blocks: [
             { type: 'java_static_method_noreturn', active: true },

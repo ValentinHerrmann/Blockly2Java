@@ -332,10 +332,10 @@ export function text_prompt_ext(block, generator) {
     // External message.
     msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   }
-  let code = 'Input.readString(' + msg + ')';
   const toNumber = block.getFieldValue('TYPE') === 'NUMBER';
+  let code = 'Input.readString(' + msg + ')';
   if (toNumber) {
-    code = 'Double.parseDouble(' + code + ')';
+    code = 'Input.readDouble(' + msg + ')';
   }
   return [code, Order.FUNCTION_CALL];
 };

@@ -442,9 +442,9 @@ export function methodFlyoutCategory(workspace) {
 
   const GROUP_NAMES = [
     'Objekt-Methoden',
-    'K-Methoden',
+    'Klassen-Methoden',
     'Methoden auf Objekten',
-    'Externe K-Methoden',
+    'Externe Klassen-Methoden',
   ];
   for (let i = 0; i < METHOD_GROUPS.length; i++) {
     const groupName = GROUP_NAMES[i];
@@ -583,10 +583,10 @@ export function normalMethodFlyoutCategory(workspace) {
 export function staticMethodFlyoutCategory(workspace) {
   return _methodFlyoutCategoryFor(
     workspace,
-    'K-Methoden',
+    'Klassen-Methoden',
     [
-      { name: 'K-Methoden', group: METHOD_GROUPS[1] },
-      { name: 'Externe K-Methoden', group: METHOD_GROUPS[3] },
+      { name: 'Klassen-Methoden', group: METHOD_GROUPS[1] },
+      { name: 'Externe Klassen-Methoden', group: METHOD_GROUPS[3] },
     ],
     true,
   );
