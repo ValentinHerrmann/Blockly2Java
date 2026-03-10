@@ -7,7 +7,7 @@
 import * as Blockly from 'blockly';
 import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
-import {toolbox} from './toolboxGrade9';
+import {toolbox} from './toolbox.js';
 import { normalMethodFlyoutCategory, staticMethodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
 import './blocks/constructor.js';
 import './blocks/java_method_blocks.js';

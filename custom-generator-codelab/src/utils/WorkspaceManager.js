@@ -34,24 +34,18 @@ import { templates as TOOLBOX_TEMPLATES } from '../toolbox_templates/index.js';
  * Applied when creating a blank workspace so the exported blockly-config.json
  * is a fully-explicit, editable template rather than relying on implicit defaults.
  *
- * Block types mirror the contents of toolboxGrade9.js.
+ * Block types mirror the contents of toolbox.js.
  * Methoden/Klassen-Methoden subcategory blocks are the def-block types
  * controlled by the flyout:
  *   Objekt-Methoden            → java_method_noreturn, java_method_return
  *   Klassen-Methoden (statisch)→ java_static_method_noreturn, java_static_method_return
- */
-/**
- * Default config matching the old grade-9 instruction set.
- * The full toolbox (toolboxGrade9.js) now contains every block from the
- * upstream toolbox.js; blocks that were excluded for grade 9 are set to
- * active: false here so they are hidden by default but can be re-enabled
- * by editing the exported blockly-config.json.
  */
 export const FULL_ACTIVE_CONFIG = {
   version: 1,
   description:
     'Standard Blockly2Java-Toolbox – erweiterter Satz, Klasse-9-Elemente aktiv. ' +
     'Auf false gesetzte Blöcke können aktiviert werden.',
+  template: 'alles',
   categories: [
     {
       name: 'Logik',

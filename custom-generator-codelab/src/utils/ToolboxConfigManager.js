@@ -70,7 +70,7 @@
  *    category-level active flag and the subcategories array.
  */
 
-import { toolbox as FULL_TOOLBOX } from '../toolboxGrade9.js';
+import { toolbox as FULL_TOOLBOX } from '../toolbox.js';
 import { templates as TEMPLATE_LIST } from '../toolbox_templates/index.js';
 
 export class ToolboxConfigManager {
