@@ -171,6 +171,7 @@ export const graphicsCategories = [
             {
                 'kind': 'block', 'type': 'gfx_move',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
                     'DX': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 5 } } },
                     'DY': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                 },
@@ -178,12 +179,14 @@ export const graphicsCategories = [
             {
                 'kind': 'block', 'type': 'gfx_rotate',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
                     'ANGLE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 5 } } },
                 },
             },
             {
                 'kind': 'block', 'type': 'gfx_rotate_around',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
                     'ANGLE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 5   } } },
                     'CX':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 400 } } },
                     'CY':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 300 } } },
@@ -192,23 +195,34 @@ export const graphicsCategories = [
             {
                 'kind': 'block', 'type': 'gfx_scale',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
                     'FACTOR': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 1.1 } } },
                 },
             },
             {
                 'kind': 'block', 'type': 'gfx_scale_around',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } },
                     'FACTOR': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 1.1 } } },
                     'CX':     { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 400 } } },
                     'CY':     { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 300 } } },
                 },
             },
-            { 'kind': 'block', 'type': 'gfx_mirror_x' },
-            { 'kind': 'block', 'type': 'gfx_mirror_y' },
+            { 'kind': 'block', 'type': 'gfx_mirror_x',
+                'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } }, 
+                }
+            },
+            { 'kind': 'block', 'type': 'gfx_mirror_y',
+                'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'grafik', 'type': 'local' } } } }, 
+                }
+            },
             // Line
             {
                 'kind': 'block', 'type': 'gfx_line_set_points',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'linie', 'type': 'local' } } } },
                     'X1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
                     'Y1': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0   } } },
                     'X2': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
@@ -219,6 +233,7 @@ export const graphicsCategories = [
             {
                 'kind': 'block', 'type': 'gfx_polygon_add_point',
                 'inputs': {
+                    'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'polygon', 'type': 'local' } } } },
                     'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                     'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                 },
