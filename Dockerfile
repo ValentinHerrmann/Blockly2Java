@@ -1,15 +1,21 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Install dependencies
+# Install build dependencies and install root packages (allow scripts to run as root)
 COPY package*.json ./
-RUN mkdir -p custom-generator-codelab
+RUN apk add --no-cache bash build-base python3 libc6-compat git && mkdir -p custom-generator-codelab
 COPY custom-generator-codelab/package*.json ./custom-generator-codelab/
-RUN npm ci
+RUN npm ci --unsafe-perm
 
 # Copy source and build
 COPY . .
-ENV NODE_OPTIONS=--max_old_space_size=1536
+# Remove any pre-existing build artifacts from the repository to force a fresh build
+# If SKIP_ONLINE_IDE_BUILD is set, assume a prebuilt `build/` may be supplied and keep it
+ARG SKIP_ONLINE_IDE_BUILD=0
+RUN if [ "$SKIP_ONLINE_IDE_BUILD" = "1" ]; then echo "Keeping existing custom-generator-codelab/build (SKIP_ONLINE_IDE_BUILD=1)"; else rm -rf custom-generator-codelab/build || true; fi
+# Ensure project files are writable for any npm scripts that create node_modules or artifacts
+RUN chmod -R a+rwX /app || true
+ENV NODE_OPTIONS=--max_old_space_size=2048
 RUN npm run build
 
 # --- Production stage ---
