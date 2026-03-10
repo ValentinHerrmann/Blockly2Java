@@ -50,7 +50,23 @@ jobs:
             REGISTRY="${{ secrets.DOCKER_REGISTRY }}"
             IMAGE_NAME="${{ secrets.DOCKER_IMAGE }}"
             IMAGE_TAG="${{ github.sha }}"
-            FULL_IMAGE="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+            IMAGE_TAG="${{ github.sha }}"
+            if [ -z "$REGISTRY" ]; then
+              echo "ERROR: secret DOCKER_REGISTRY must be set" >&2
+              exit 1
+            fi
+            if [ -z "$IMAGE_NAME" ]; then
+              echo "ERROR: secret DOCKER_IMAGE must be set" >&2
+
+            # Log in to container registry if credentials are provided
+            REGISTRY_USERNAME="${{ secrets.DOCKER_REGISTRY_USERNAME }}"
+            REGISTRY_PASSWORD="${{ secrets.DOCKER_REGISTRY_PASSWORD }}"
+            if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then
+              echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
+            else
+              echo "No registry credentials provided; assuming server is already logged into $REGISTRY" >&2
+            fi
+            fi
             CONTAINER_NAME="${{ secrets.DEPLOY_CONTAINER_NAME }}"
             if [ -z "$CONTAINER_NAME" ]; then
               echo "ERROR: secret DEPLOY_CONTAINER_NAME must be set" >&2
@@ -82,7 +98,7 @@ jobs:
             fi
 
             NGINX_CONF="/etc/nginx/sites-available/${CONTAINER_NAME}.conf"
-            sudo tee "$NGINX_CONF" > /dev/null <<NGINX_EOF
+            sudo tee "$NGINX_CONF" > /dev/null <<'NGINX_EOF'
             server {
               listen 80;
               server_name ${SERVER_NAME};

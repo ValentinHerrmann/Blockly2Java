@@ -1,10 +1,31 @@
 Deployment workflow and required secrets
-
 This repo includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that:
 - builds a Docker image for the app
-- saves the image to `image.tar`
-- copies the tar to your server via SCP
-- loads the image on the server and (re)starts a container
+- pushes the image to a container registry
+- SSHes to your server and pulls the image from the registry
+- loads the image and (re)starts a container
+
+Required repository secrets (add under Settings → Secrets):
+- `DEPLOY_HOST` — server hostname or IP (e.g. example.com)
+- `DEPLOY_USER` — SSH username on the server
+- `SSH_PRIVATE_KEY` — private key (PEM) matching an authorized key for `DEPLOY_USER`
+- `DEPLOY_PORT` — SSH port (optional, default behavior if empty may vary)
+- `DOCKER_REGISTRY` — registry host (e.g. `ghcr.io` or `docker.io`)
+- `DOCKER_IMAGE` — image name to tag in the registry (e.g. myorg/myapp)
+- `REGISTRY_USERNAME` — username for the registry (or `OWNER` for GHCR)
+- `REGISTRY_PASSWORD` — password/token for the registry
+- `DEPLOY_CONTAINER_NAME` — name of the container to run on the server
+- `DEPLOY_APP_PORT` — internal host port to bind the container to (default: `3000`)
+- `DEPLOY_SERVER_NAME` — nginx `server_name` to use for the site (e.g. `example.com`). If empty, nginx will use the default server.
+
+Optional HTTPS secrets
+- `DEPLOY_ENABLE_HTTPS` — set to `true` to attempt obtaining TLS certs via `certbot`
+- `CERTBOT_EMAIL` — email for certbot registration (required when `DEPLOY_ENABLE_HTTPS=true`)
+This repo includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that:
+- builds a Docker image for the app
+- The workflow runs on `pull_request` events when a pull request is marked **Ready for review**, and on manual runs via the **Run workflow** button (`workflow_dispatch`). Adjust the `on:` block in `.github/workflows/deploy.yml` if you prefer different triggers.
+- The remote `docker run` command binds container port `80` to `127.0.0.1:$DEPLOY_APP_PORT` on the server. Change `DEPLOY_APP_PORT` or the `docker run` flags in `.github/workflows/deploy.yml` if you need a different port binding.
+- nginx is configured to reverse-proxy the configured `DEPLOY_SERVER_NAME` to `http://127.0.0.1:$DEPLOY_APP_PORT`, so the app is served via the domain without exposing the container port directly.
 
 Required repository secrets (add under Settings → Secrets):
 - `DEPLOY_HOST` — server hostname or IP (e.g. example.com)
