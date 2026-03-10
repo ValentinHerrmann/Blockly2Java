@@ -77,13 +77,13 @@ jobs:
             FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:$IMAGE_TAG"
 
             # Log in to container registry if credentials are provided
-            REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
-            REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
-            if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then
-              echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
-            else
-              echo "No registry credentials provided; assuming server is already logged into $REGISTRY" >&2
-            fi
+            # REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
+            # REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
+            #if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then
+            #  echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
+            #else
+            #  echo "No registry credentials provided; assuming server is already logged into $REGISTRY" >&2
+            #fi
 
             CONTAINER_NAME="${{ vars.DEPLOY_CONTAINER_NAME }}"
             if [ -z "$CONTAINER_NAME" ]; then
