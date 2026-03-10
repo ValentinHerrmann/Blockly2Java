@@ -35,7 +35,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (sha + :tmp)
         run: |
           set -e
           REGISTRY="${{ vars.DOCKER_REGISTRY }}"
@@ -46,8 +46,10 @@ jobs:
             exit 1
           fi
           FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:${{ github.sha }}"
-          docker build -t "$FULL_IMAGE" .
+          TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:tmp"
+          docker build -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
           docker push "$FULL_IMAGE"
+          docker push "$TMP_IMAGE"
 
       - name: Deploy on server via SSH (pull image and restart container)
         uses: appleboy/ssh-action@v0.1.7
@@ -89,8 +91,12 @@ jobs:
               exit 1
             fi
 
-            # Pull latest image
+            # Pull latest image (sha) and the :tmp tag, then tag :tmp locally as b2j-dev:tmp
+            TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:tmp"
+            docker pull "$TMP_IMAGE" || true
             docker pull "$FULL_IMAGE"
+            # Ensure a convenient local reference exists
+            docker tag "$TMP_IMAGE" b2j-dev:tmp || true
 
             # Stop and remove existing container
             if docker ps -q --filter "name=$CONTAINER_NAME" | grep -q .; then
