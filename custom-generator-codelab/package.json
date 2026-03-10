@@ -11,10 +11,11 @@
     "setup:submodule": "bash setup.sh --build-from-submodule || node setup.js --build-from-submodule",
     "setup:dummy": "bash setup.sh --copy-from-dummy || node setup.js --copy-from-dummy",
     "setup:external": "bash setup.sh --build-from-source || node setup.js --build-from-source",
-    "prestart": "test -d public/lib || npm run setup",
-    "prebuild": "test -d public/lib || npm run setup",
+    "prestart": "test -d build || npm run setup",
+    "prebuild": "test -d build || npm run setup",
     "dev": "npm run setup && webpack serve --mode development",
-    "start": "webpack serve --open --mode development",
+    "start": "serve -s build -l 80",
+    "serve": "serve -s build -l 80",
     "build": "webpack --mode production",
     "build:all": "npm run setup && npm run build",
     "deploy": "npm run build:all",
@@ -36,6 +37,7 @@
     "webpack-dev-server": "^4.15.1"
   },
   "dependencies": {
+    "serve": "^14.1.2",
     "@blockly/continuous-toolbox": "^5.0.10",
     "@isomorphic-git/lightning-fs": "^4.6.2",
     "async_hooks": "^1.0.0",

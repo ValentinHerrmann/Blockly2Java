@@ -74,7 +74,6 @@ jobs:
               exit 1
             fi
 
-            FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:$IMAGE_TAG"
 
             # Log in to container registry if credentials are provided
             # REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
@@ -94,9 +93,6 @@ jobs:
             # Pull latest image (sha) and the :tmp tag, then tag :tmp locally as b2j-dev:tmp
             TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:tmp"
             docker pull "$TMP_IMAGE" || true
-            docker pull "$FULL_IMAGE"
-            # Ensure a convenient local reference exists
-            docker tag "$TMP_IMAGE" b2j-dev:tmp || true
 
             # Stop and remove existing container
             if docker ps -q --filter "name=$CONTAINER_NAME" | grep -q .; then
@@ -108,9 +104,9 @@ jobs:
 
             # Choose internal port
             PORT="${{ vars.DEPLOY_APP_PORT }}"
-            PORT=${PORT:-3000}
+            PORT=${PORT:-8080}
 
             # Run container bound to localhost
-            docker run -d --restart unless-stopped --name "$CONTAINER_NAME" -p 127.0.0.1:${PORT}:80 -e NODE_ENV=production "$FULL_IMAGE"
+            docker run -d --restart unless-stopped --name "$CONTAINER_NAME" -p 127.0.0.1:${PORT}:80 -e NODE_ENV=production "$TMP_IMAGE"
 
             # Nginx configuration has been removed from this workflow and will be handled externally.
