@@ -54,7 +54,7 @@ jobs:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
+          port: ${{ vars.DEPLOY_PORT }}
           script: |
             set -e
             REGISTRY="${{ vars.DOCKER_REGISTRY }}"
