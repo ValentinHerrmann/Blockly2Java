@@ -868,28 +868,42 @@ export const toolbox = {
                 {
                     'kind': 'block', 'type': 'gfx_forward',
                     'inputs': {
+                        'OBJ': { 'shadow': { 'type': 'variables_get', 'fields': { 'VAR': 'turtle' } } },
                         'LENGTH': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 50 } } },
                     },
                 },
                 {
                     'kind': 'block', 'type': 'gfx_turtle_turn',
                     'inputs': {
+                        'OBJ': { 'shadow': { 'type': 'variables_get', 'fields': { 'VAR': 'turtle' } } },
                         'ANGLE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 90 } } },
                     },
                 },
                 {
                     'kind': 'block', 'type': 'gfx_define_direction',
                     'inputs': {
+                        'OBJ': { 'shadow': { 'type': 'variables_get', 'fields': { 'VAR': 'turtle' } } },
                         'ANGLE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                     },
                 },
                 // Stift
-                { 'kind': 'block', 'type': 'gfx_turtle_pen_up' },
-                { 'kind': 'block', 'type': 'gfx_turtle_pen_down' },
+                {
+                    'kind': 'block', 'type': 'gfx_turtle_pen_up',
+                    'inputs': {
+                        'OBJ': { 'shadow': { 'type': 'variables_get', 'fields': { 'VAR': 'turtle' } } },
+                    },
+                },
+                {
+                    'kind': 'block', 'type': 'gfx_turtle_pen_down',
+                    'inputs': {
+                        'OBJ': { 'shadow': { 'type': 'variables_get', 'fields': { 'VAR': 'turtle' } } },
+                    },
+                },
                 // Zentrum (zusammengesetzte Objekte)
                 {
                     'kind': 'block', 'type': 'gfx_define_center',
                     'inputs': {
+                        'OBJ': { 'shadow': { 'type': 'variables_get', 'fields': { 'VAR': 'turtle' } } },
                         'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                         'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                     },

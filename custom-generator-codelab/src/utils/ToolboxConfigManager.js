@@ -787,7 +787,7 @@ export class ToolboxConfigManager {
     let catItemEls = [];
     function renderCategoryList() {
       // Clear existing items (preserve header at index 0)
-      while (catCol.children.length > 1) catCol.removeChild(catCol.lastChild);
+      while (catCol.children.length > 1) catCol.lastChild.remove();
       catItemEls = [];
       for (const [catName, state] of catState) {
         const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
