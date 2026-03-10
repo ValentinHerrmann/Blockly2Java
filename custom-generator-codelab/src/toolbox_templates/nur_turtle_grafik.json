@@ -1,6 +1,7 @@
 {
   "version": 1,
   "description": "Nur mit Turtle-Grafik",
+  "template": "nur_turtle_grafik",
   "categories": [
     {
       "name": "Logik",

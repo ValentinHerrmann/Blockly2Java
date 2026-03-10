@@ -158,14 +158,78 @@ export class ToolboxConfigManager {
   static applyConfig(configJson, workspace) {
     if (!workspace) return;
 
-    let config = null;
+    let rawConfig = null;
     if (configJson != null) {
       try {
-        config = typeof configJson === 'string' ? JSON.parse(configJson) : configJson;
+        rawConfig = typeof configJson === 'string' ? JSON.parse(configJson) : configJson;
       } catch (err) {
         console.warn('[ToolboxConfigManager] Failed to parse blockly-config.json:', err);
-        config = null;
+        rawConfig = null;
       }
+    }
+
+    // If the config references a template, merge the template (defaults)
+    // with the user-provided config (overrides). Missing values are filled
+    // from the template.
+    let config = null;
+    if (rawConfig == null) {
+      config = null;
+    } else if (typeof rawConfig.template === 'string') {
+      const tpl = TEMPLATE_LIST.find(t => t.id === rawConfig.template);
+      if (!tpl) {
+        console.warn('[ToolboxConfigManager] Unknown template:', rawConfig.template);
+        config = rawConfig;
+      } else {
+        const templateConfig = structuredClone(tpl.config ?? {});
+
+        const mergeBlocks = (baseBlocks = [], overrideBlocks = []) => {
+          const map = new Map();
+          for (const b of baseBlocks) map.set(b.type, { ...b });
+          for (const b of overrideBlocks) map.set(b.type, { ...(map.get(b.type) || {}), ...b });
+          return Array.from(map.values());
+        };
+
+        const mergeSubcats = (baseSub = [], overrideSub = []) => {
+          const baseMap = new Map(baseSub.map(s => [s.name, structuredClone(s)]));
+          for (const o of overrideSub) {
+            const b = baseMap.get(o.name);
+            if (b) {
+              const merged = { ...b, ...o };
+              if (b.blocks || o.blocks) merged.blocks = mergeBlocks(b.blocks, o.blocks || []);
+              baseMap.set(o.name, merged);
+            } else {
+              baseMap.set(o.name, structuredClone(o));
+            }
+          }
+          return Array.from(baseMap.values());
+        };
+
+        const mergeCategories = (baseCats = [], overrideCats = []) => {
+          const baseMap = new Map(baseCats.map(c => [c.name, structuredClone(c)]));
+          for (const o of overrideCats) {
+            const b = baseMap.get(o.name);
+            if (b) {
+              const merged = { ...b, ...o };
+              if (b.subcategories || o.subcategories) merged.subcategories = mergeSubcats(b.subcategories || [], o.subcategories || []);
+              if (b.blocks || o.blocks) merged.blocks = mergeBlocks(b.blocks || [], o.blocks || []);
+              baseMap.set(o.name, merged);
+            } else {
+              baseMap.set(o.name, structuredClone(o));
+            }
+          }
+          // Preserve template category ordering: start from template order
+          return baseCats.map(c => baseMap.get(c.name)).filter(Boolean)
+            .concat(Array.from(baseMap.values()).filter(c => !baseCats.find(b => b.name === c.name)));
+        };
+
+        const merged = { ...templateConfig, ...rawConfig };
+        merged.categories = mergeCategories(templateConfig.categories || [], rawConfig.categories || []);
+        // Ensure the template marker remains visible on the merged config
+        merged.template = rawConfig.template;
+        config = merged;
+      }
+    } else {
+      config = rawConfig;
     }
 
     const filtered = this.buildFilteredToolbox(config);

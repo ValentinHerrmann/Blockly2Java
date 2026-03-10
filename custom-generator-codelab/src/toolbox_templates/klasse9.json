@@ -1,6 +1,7 @@
 {
   "version": 1,
   "description": "Standard Blockly2Java-Toolbox – erweiterter Satz, Klasse-9-Elemente aktiv. Auf false gesetzte Blöcke können aktiviert werden.",
+  "template": "klasse9",
   "categories": [
     {
       "name": "Logik",
@@ -232,8 +233,8 @@
           "name": "Externe Klassen-Methoden",
           "active": true,
           "blocks": [
-            { "type": "java_ext_static_call_noreturn", "active": true },
-            { "type": "java_ext_static_call_return",   "active": true }
+            { "type": "java_ext_static_call_noreturn", "active": false },
+            { "type": "java_ext_static_call_return",   "active": false }
           ]
         }
       ]
@@ -244,8 +245,8 @@
       "blocks": [
         { "type": "defconstructor",  "active": true },
         { "type": "callconstructor", "active": true },
-        { "type": "java_extends",    "active": true },
-        { "type": "java_super_call", "active": true }
+        { "type": "java_extends",    "active": false },
+        { "type": "java_super_call", "active": false }
       ]
     }
   ]
