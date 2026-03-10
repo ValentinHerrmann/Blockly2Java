@@ -108,7 +108,9 @@ jobs:
 
             # Optionally obtain/renew TLS via certbot
             if [ "${{ secrets.DEPLOY_ENABLE_HTTPS }}" = "true" ]; then
-              if [ -z "${{ secrets.CERTBOT_EMAIL }}" ]; then
+              if [ -z "$SERVER_NAME" ] || [ "$SERVER_NAME" = "_" ]; then
+                echo "DEPLOY_SERVER_NAME not set to a valid hostname; skipping certbot" >&2
+              elif [ -z "${{ secrets.CERTBOT_EMAIL }}" ]; then
                 echo "CERTBOT_EMAIL not set; skipping certbot" >&2
               else
                 sudo certbot --nginx -n --agree-tos --email "${{ secrets.CERTBOT_EMAIL }}" -d "$SERVER_NAME" || true
