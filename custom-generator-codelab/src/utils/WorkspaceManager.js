@@ -27,30 +27,25 @@ import { BlocklyOverlayManager } from './BlocklyOverlayManager.js';
 import emptyTemplate from '../emptyTemplate.json';
 import * as Blockly from 'blockly/core';
 import { load } from '../serialization.js';
+import { templates as TOOLBOX_TEMPLATES } from '../toolbox_templates/index.js';
 
 /**
  * Toolbox config that enables every category, subcategory and block.
  * Applied when creating a blank workspace so the exported blockly-config.json
  * is a fully-explicit, editable template rather than relying on implicit defaults.
  *
- * Block types mirror the contents of toolboxGrade9.js.
+ * Block types mirror the contents of toolbox.js.
  * Methoden/Klassen-Methoden subcategory blocks are the def-block types
  * controlled by the flyout:
  *   Objekt-Methoden            → java_method_noreturn, java_method_return
  *   Klassen-Methoden (statisch)→ java_static_method_noreturn, java_static_method_return
- */
-/**
- * Default config matching the old grade-9 instruction set.
- * The full toolbox (toolboxGrade9.js) now contains every block from the
- * upstream toolbox.js; blocks that were excluded for grade 9 are set to
- * active: false here so they are hidden by default but can be re-enabled
- * by editing the exported blockly-config.json.
  */
 export const FULL_ACTIVE_CONFIG = {
   version: 1,
   description:
     'Standard Blockly2Java-Toolbox – erweiterter Satz, Klasse-9-Elemente aktiv. ' +
     'Auf false gesetzte Blöcke können aktiviert werden.',
+  template: 'alles',
   categories: [
     {
       name: 'Logik',
@@ -114,6 +109,7 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'text_replace',      active: true  },
         { type: 'text_reverse',      active: true  },
         { type: 'text_print',        active: true  },
+        { type: 'text_println',      active: true  },
         { type: 'text_prompt_ext',   active: false }, // Klasse 9: GUI-basiert, zu komplex
       ],
     },
@@ -142,6 +138,96 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'colour_random', active: true },
         { type: 'colour_rgb',    active: true },
         { type: 'colour_blend',  active: true },
+      ],
+    },
+    {
+      name: 'Grafik: Objekte',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'gfx_extends',          active: true  },
+        { type: 'java_local_var_set',   active: true  }, // deckt alle Wrapper-Blöcke ab
+        { type: 'gfx_new_world',        active: true  },
+        { type: 'gfx_new_shape',        active: true  },
+        { type: 'gfx_new_polygon',      active: true  },
+        { type: 'gfx_new_text',         active: true  },
+        { type: 'gfx_new_group',        active: true  },
+        { type: 'gfx_group_add',        active: true  },
+      ],
+    },
+    {
+      name: 'Grafik: Erscheinung',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'gfx_color_const',          active: true },
+        { type: 'gfx_set_fill_color',        active: true },
+        { type: 'gfx_set_fill_color_alpha',  active: true },
+        { type: 'gfx_set_border_color',      active: true },
+        { type: 'gfx_set_border_width',      active: true },
+        { type: 'gfx_set_alpha',             active: true },
+        { type: 'gfx_set_visible',           active: true },
+        { type: 'gfx_bring_to_front',        active: true },
+        { type: 'gfx_send_to_back',          active: true },
+        { type: 'gfx_set_text_content',      active: true },
+        { type: 'gfx_set_alignment',         active: true },
+        { type: 'gfx_default_fill_color',    active: true },
+        { type: 'gfx_default_visibility',    active: true },
+        { type: 'colour_picker',             active: true },
+        { type: 'colour_rgb',                active: true },
+      ],
+    },
+    {
+      name: 'Grafik: Bewegung',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'gfx_move',              active: true },
+        { type: 'gfx_rotate',            active: true },
+        { type: 'gfx_rotate_around',     active: true },
+        { type: 'gfx_scale',             active: true },
+        { type: 'gfx_scale_around',      active: true },
+        { type: 'gfx_mirror_x',          active: true },
+        { type: 'gfx_mirror_y',          active: true },
+        { type: 'gfx_line_set_points',   active: true },
+        { type: 'gfx_polygon_add_point', active: true },
+      ],
+    },
+    {
+      name: 'Grafik: Turtle',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'java_local_var_set',    active: true  }, // Wrapper-Block
+        { type: 'gfx_new_turtle',       active: true  },
+        { type: 'gfx_forward',           active: true  },
+        { type: 'gfx_turtle_turn',       active: true  },
+        { type: 'gfx_define_direction',  active: true  },
+        { type: 'gfx_turtle_pen_up',     active: true  },
+        { type: 'gfx_turtle_pen_down',   active: true  },
+        { type: 'gfx_define_center',     active: true  },
+      ],
+    },
+    {
+      name: 'Grafik: Steuerung',
+      active: false, // nur bei Grafik-Aufgaben benötigt
+      blocks: [
+        { type: 'gfx_event_handler',          active: true },
+        { type: 'gfx_get_world',              active: true },
+        { type: 'gfx_get_width',              active: true },
+        { type: 'gfx_get_height',             active: true },
+        { type: 'gfx_set_cursor',             active: true },
+        { type: 'gfx_world_set_background',   active: true },
+        { type: 'gfx_world_stop',             active: true },
+        { type: 'gfx_world_start',            active: true },
+        { type: 'gfx_get_x',                  active: true },
+        { type: 'gfx_get_y',                  active: true },
+        { type: 'gfx_is_key_down',            active: true },
+        { type: 'gfx_is_key_up',              active: true },
+        { type: 'gfx_is_mouse_down',          active: true },
+        { type: 'gfx_get_mouse_x',            active: true },
+        { type: 'gfx_get_mouse_y',            active: true },
+        { type: 'gfx_group_add',              active: true },
+        { type: 'gfx_get_collision_pairs',    active: true },
+        { type: 'gfx_get_colliding_shapes',   active: true },
+        { type: 'gfx_bitmap_set_pixel',       active: true },
+        { type: 'gfx_bitmap_get_pixel',       active: true },
       ],
     },
     {
@@ -186,11 +272,11 @@ export const FULL_ACTIVE_CONFIG = {
       ],
     },
     {
-      name: 'K-Methoden',
+      name: 'Klassen-Methoden',
       active: true,
       subcategories: [
         {
-          name: 'K-Methoden',
+          name: 'Klassen-Methoden',
           active: true,
           blocks: [
             { type: 'java_static_method_noreturn', active: true },
@@ -254,7 +340,8 @@ export class WorkspaceManager {
 
     // Apply the full-active config so the blank workspace has an explicit
     // blockly-config.json (all categories on) rather than implicit defaults.
-    ToolboxConfigManager.applyConfig(FULL_ACTIVE_CONFIG, ws);
+    const allesTemplate = TOOLBOX_TEMPLATES.find(t => t.id === 'alles')?.config ?? FULL_ACTIVE_CONFIG;
+    ToolboxConfigManager.applyConfig(allesTemplate, ws);
 
     // ── 2. Disconnect git ────────────────────────────────────────────────
     GitService.clearConfig();
@@ -266,7 +353,7 @@ export class WorkspaceManager {
     Blockly.Events.disable();
     ws.clear();
     Blockly.serialization.workspaces.load(
-      JSON.parse(JSON.stringify(emptyTemplate)),
+      structuredClone(emptyTemplate),
       ws,
       false,
     );
@@ -336,7 +423,7 @@ export class WorkspaceManager {
     // ── Blockly workspace JSON files (from localStorage) -----------------
     for (let i = 0; i < globalThis.localStorage.length; i++) {
       const key = globalThis.localStorage.key(i);
-      if (!key || !key.endsWith('.json')) continue;
+      if (!key?.endsWith('.json')) continue;
       const raw = globalThis.localStorage.getItem(key);
       if (!raw) continue;
       let pretty = raw;
@@ -359,7 +446,8 @@ export class WorkspaceManager {
     // ── Toolbox config (blockly-config.json) ─────────────────────────────
     // Always export a config; fall back to the full-active preset so that
     // every downloaded archive contains an explicit, editable config file.
-    const toolboxConfig = ToolboxConfigManager.lastConfig ?? FULL_ACTIVE_CONFIG;
+    const allesTemplate = TOOLBOX_TEMPLATES.find(t => t.id === 'alles')?.config ?? FULL_ACTIVE_CONFIG;
+    const toolboxConfig = ToolboxConfigManager.lastConfig ?? allesTemplate;
     try {
       zip.file('blockly-config.json', JSON.stringify(toolboxConfig, null, 2));
     } catch { /* skip */ }
@@ -378,7 +466,7 @@ export class WorkspaceManager {
     a.download = `${baseName}.b2j`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(url);
   }
 
@@ -466,7 +554,7 @@ export class WorkspaceManager {
     for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
       if (zipEntry.dir) continue;
       // Normalise path separators.
-      const normalised = zipPath.replace(/\\/g, '/');
+      const normalised = zipPath.replaceAll('\\', '/');
       const basename   = normalised.split('/').pop();
 
       if (normalised === 'blockly-config.json') {

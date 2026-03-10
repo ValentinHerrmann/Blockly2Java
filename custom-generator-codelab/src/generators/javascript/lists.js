@@ -34,7 +34,7 @@ export function lists_create_with(block, generator) {
 export function lists_repeat(block, generator) {
   // Create a list with one element repeated in Java.
   const functionName = generator.provideFunction_('listsRepeat', `
-public List<Object> ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object value, int n) {
+public static List<Object> ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object value, int n) {
   List<Object> array = new ArrayList<>();
   for (int i = 0; i < n; i++) {
     array.add(value);
@@ -128,8 +128,8 @@ export function lists_getIndex(block, generator) {
     }
     case ('RANDOM'): {
       const functionName = generator.provideFunction_('listsGetRandomItem', `
-function ${generator.FUNCTION_NAME_PLACEHOLDER_}(list, remove) {
-  var x = new Random().nextInt(list.size());
+public static Object ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Object> list, boolean remove) {
+  int x = new Random().nextInt(list.size());
   if (remove) {
     return list.remove(x);
   } else {
@@ -285,7 +285,7 @@ export function lists_getSublist(block, generator) {
     const functionName = generator.provideFunction_(
         'subsequence' + wherePascalCase[where1] + wherePascalCase[where2],
         `
-      ArrayList<String> ${generator.FUNCTION_NAME_PLACEHOLDER_}(ArrayList<String> sequence${at1Param}${at2Param}) {
+      public static ArrayList<String> ${generator.FUNCTION_NAME_PLACEHOLDER_}(ArrayList<String> sequence${at1Param}${at2Param}) {
         int start = ${getSubstringIndex('sequence', where1, 'at1')};
         int end = ${getSubstringIndex('sequence', where2, 'at2')} + 1;
         return new ArrayList<>(sequence.subList(start, end));

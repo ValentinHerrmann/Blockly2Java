@@ -259,6 +259,7 @@ export function getType(var_type) {
     case 'text_changeCase': 
     case 'text_trim': 
     case 'text_print':
+    case 'text_println':
     case 'text_append':
       return TYPES.STRING;
     case 'lists_create_empty': 
@@ -273,6 +274,39 @@ export function getType(var_type) {
     case 'CLASS':
     case 'callconstructor':
       return TYPES.CLASS;
+    // Legacy graphics block names
+    case 'graphics_new_world':     return 'World';
+    case 'graphics_new_circle':    return 'Circle';
+    case 'graphics_new_rectangle': return 'Rectangle';
+    case 'graphics_new_line':      return 'Line';
+    case 'graphics_new_text':      return 'Text';
+    // New gfx_ graphics blocks
+    case 'gfx_new_world':     return 'World';
+    case 'gfx_new_circle':    return 'Circle';
+    case 'gfx_new_ellipse':   return 'Ellipse';
+    case 'gfx_new_rect':      return 'Rectangle';
+    case 'gfx_new_rrect':     return 'RoundedRectangle';
+    case 'gfx_new_triangle':  return 'Triangle';
+    case 'gfx_new_line':      return 'Line';
+    case 'gfx_new_text':      return 'Text';
+    case 'gfx_new_turtle':    return 'Turtle';
+    case 'gfx_new_group':     return 'Group';
+    case 'gfx_new_bitmap':    return 'Bitmap';
+    case 'gfx_new_polygon':   return 'Polygon';
+    case 'gfx_get_world':     return 'World';
+    case 'gfx_color_const':
+    case 'gfx_bitmap_get_pixel': return TYPES.STRING;
+    case 'gfx_is_key_down':
+    case 'gfx_is_key_up':
+    case 'gfx_is_mouse_down':   return TYPES.BOOLEAN;
+    case 'gfx_get_width':
+    case 'gfx_get_height':
+    case 'gfx_get_x':
+    case 'gfx_get_y':
+    case 'gfx_get_mouse_x':
+    case 'gfx_get_mouse_y':     return TYPES.INTEGER;
+    case 'gfx_get_collision_pairs':
+    case 'gfx_get_colliding_shapes': return TYPES.LIST;
     default:
       //return TYPES.OBJECT;
       break;
@@ -388,7 +422,26 @@ export function adjustStaticName(name) {
  *  2. The class's saved workspace JSON (looking for a java_extends block),
  *     so the hierarchy is available even before the sub-class has been generated.
  */
+/** Built-in graphics library class hierarchy (Shape is the common base). */
+const GFX_CLASS_PARENTS = {
+  'Circle':            'Shape',
+  'Ellipse':           'Shape',
+  'Rectangle':         'Shape',
+  'RoundedRectangle':  'Shape',
+  'Triangle':          'Shape',
+  'Line':              'Shape',
+  'Text':              'Shape',
+  'Turtle':            'Shape',
+  'Group':             'Shape',
+  'Bitmap':            'Shape',
+  'Polygon':           'Shape',
+};
+
 function getClassParent(className) {
+  // 0. Built-in graphics library hierarchy.
+  if (Object.hasOwn(GFX_CLASS_PARENTS, className)) {
+    return GFX_CLASS_PARENTS[className];
+  }
   // 1. Super-call type hints (fastest, populated at generation time).
   const raw = globalThis.localStorage?.getItem(LocalStorageManager.SUPER_CALL_TYPE_HINTS_KEY);
   if (raw) {
@@ -550,6 +603,10 @@ function _collectSetterTypes(workSpace, varId, GETTER_TYPES, varsAssignedToThis)
 
 /** Resolves the Java type of a value block used in an assignment. */
 function _resolveAssignedBlockType(workSpace, valueBlock) {
+  // Unified graphics shape block: type depends on the SHAPE dropdown field.
+  if (valueBlock.type === 'gfx_new_shape') {
+    return valueBlock.getFieldValue('SHAPE') || 'Shape';
+  }
   if (valueBlock.type === 'callconstructor') {
     const dv = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
     const si = dv.indexOf(':::');

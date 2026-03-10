@@ -7,11 +7,13 @@
 import * as Blockly from 'blockly';
 import {javaGenerator} from './generators/java';
 import {save, load} from './serialization';
-import {toolbox} from './toolboxGrade9';
-import * as CTR from './blocks/constructor.js';
+import {toolbox} from './toolbox.js';
 import { normalMethodFlyoutCategory, staticMethodFlyoutCategory, normalAttrFlyoutCategory, localVarFlyoutCategory, staticAttrFlyoutCategory, paramFlyoutCategory, allVariablesFlyoutCategory, allAttrFlyoutCategory } from './blocks/java_variable_blocks.js';
-import * as JAVA_METHODS from './blocks/java_method_blocks.js';
-import * as JAVA_OBJ_CALLS from './blocks/java_object_call_blocks.js';
+import './blocks/constructor.js';
+import './blocks/java_method_blocks.js';
+import './blocks/java_object_call_blocks.js';
+import './blocks/java_graphics_blocks.js';
+import './blocks/text.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
@@ -28,6 +30,7 @@ import { GitDialog } from './utils/GitDialog';
 import { ToolboxConfigManager } from './utils/ToolboxConfigManager';
 import { WorkspaceManager, FULL_ACTIVE_CONFIG } from './utils/WorkspaceManager';
 import { BlocklyOverlayManager } from './utils/BlocklyOverlayManager';
+import { templates as TOOLBOX_TEMPLATES } from './toolbox_templates/index.js';
 
 // Module-level state
 export let ws;
@@ -56,9 +59,10 @@ function init() {
   UiManager.setupLayout(ws);
 
   // Restore a toolbox config that was applied in a previous session,
-  // or apply the grade-9 default when the page is opened for the first time.
+  // or apply the 'Alles' template when the page is opened for the first time.
   const storedToolboxConfig = ToolboxConfigManager.loadStored();
-  ToolboxConfigManager.applyConfig(storedToolboxConfig ?? FULL_ACTIVE_CONFIG, ws);
+  const allesTemplate = TOOLBOX_TEMPLATES.find(t => t.id === 'alles')?.config ?? FULL_ACTIVE_CONFIG;
+  ToolboxConfigManager.applyConfig(storedToolboxConfig ?? allesTemplate, ws);
 
   // Load the initial state from storage and run the code.
   // Restore previously selected IDE file (if any) so a refresh keeps selection.

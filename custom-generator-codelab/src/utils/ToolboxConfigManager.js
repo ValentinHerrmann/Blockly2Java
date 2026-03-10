@@ -34,10 +34,10 @@
  *       ]
  *     },
  *     {
- *       "name": "K-Methoden", // dynamic flyout category for static methods
+ *       "name": "Klassen-Methoden", // dynamic flyout category for static methods
  *       "active": true,
  *       "subcategories": [
- *         { "name": "K-Methoden", "active": true  },
+ *         { "name": "Klassen-Methoden", "active": true  },
  *         { "name": "Externe Klassen-Methoden", "active": true }
  *       ]
  *     },
@@ -70,7 +70,8 @@
  *    category-level active flag and the subcategories array.
  */
 
-import { toolbox as FULL_TOOLBOX } from '../toolboxGrade9.js';
+import { toolbox as FULL_TOOLBOX } from '../toolbox.js';
+import { templates as TEMPLATE_LIST } from '../toolbox_templates/index.js';
 
 export class ToolboxConfigManager {
 
@@ -142,7 +143,7 @@ export class ToolboxConfigManager {
   static isCategoryActive(categoryName) {
     if (!this.lastConfig?.categories) return true;
     const entry = this.lastConfig?.categories?.find(c => c.name === categoryName);
-    return !entry || entry.active !== false;
+    return entry?.active !== false;
   }
 
   /**
@@ -157,14 +158,78 @@ export class ToolboxConfigManager {
   static applyConfig(configJson, workspace) {
     if (!workspace) return;
 
-    let config = null;
+    let rawConfig = null;
     if (configJson != null) {
       try {
-        config = typeof configJson === 'string' ? JSON.parse(configJson) : configJson;
+        rawConfig = typeof configJson === 'string' ? JSON.parse(configJson) : configJson;
       } catch (err) {
         console.warn('[ToolboxConfigManager] Failed to parse blockly-config.json:', err);
-        config = null;
+        rawConfig = null;
       }
+    }
+
+    // If the config references a template, merge the template (defaults)
+    // with the user-provided config (overrides). Missing values are filled
+    // from the template.
+    let config = null;
+    if (rawConfig == null) {
+      config = null;
+    } else if (typeof rawConfig.template === 'string') {
+      const tpl = TEMPLATE_LIST.find(t => t.id === rawConfig.template);
+      if (!tpl) {
+        console.warn('[ToolboxConfigManager] Unknown template:', rawConfig.template);
+        config = rawConfig;
+      } else {
+        const templateConfig = structuredClone(tpl.config ?? {});
+
+        const mergeBlocks = (baseBlocks = [], overrideBlocks = []) => {
+          const map = new Map();
+          for (const b of baseBlocks) map.set(b.type, { ...b });
+          for (const b of overrideBlocks) map.set(b.type, { ...(map.get(b.type) || {}), ...b });
+          return Array.from(map.values());
+        };
+
+        const mergeSubcats = (baseSub = [], overrideSub = []) => {
+          const baseMap = new Map(baseSub.map(s => [s.name, structuredClone(s)]));
+          for (const o of overrideSub) {
+            const b = baseMap.get(o.name);
+            if (b) {
+              const merged = { ...b, ...o };
+              if (b.blocks || o.blocks) merged.blocks = mergeBlocks(b.blocks, o.blocks || []);
+              baseMap.set(o.name, merged);
+            } else {
+              baseMap.set(o.name, structuredClone(o));
+            }
+          }
+          return Array.from(baseMap.values());
+        };
+
+        const mergeCategories = (baseCats = [], overrideCats = []) => {
+          const baseMap = new Map(baseCats.map(c => [c.name, structuredClone(c)]));
+          for (const o of overrideCats) {
+            const b = baseMap.get(o.name);
+            if (b) {
+              const merged = { ...b, ...o };
+              if (b.subcategories || o.subcategories) merged.subcategories = mergeSubcats(b.subcategories || [], o.subcategories || []);
+              if (b.blocks || o.blocks) merged.blocks = mergeBlocks(b.blocks || [], o.blocks || []);
+              baseMap.set(o.name, merged);
+            } else {
+              baseMap.set(o.name, structuredClone(o));
+            }
+          }
+          // Preserve template category ordering: start from template order
+          return baseCats.map(c => baseMap.get(c.name)).filter(Boolean)
+            .concat(Array.from(baseMap.values()).filter(c => !baseCats.find(b => b.name === c.name)));
+        };
+
+        const merged = { ...templateConfig, ...rawConfig };
+        merged.categories = mergeCategories(templateConfig.categories || [], rawConfig.categories || []);
+        // Ensure the template marker remains visible on the merged config
+        merged.template = rawConfig.template;
+        config = merged;
+      }
+    } else {
+      config = rawConfig;
     }
 
     const filtered = this.buildFilteredToolbox(config);
@@ -172,10 +237,10 @@ export class ToolboxConfigManager {
     // Remember the last applied config in memory and in localStorage so it
     // survives page reloads / browser session restarts.
     this.lastConfig = config;
-    if (config !== null) {
-      globalThis.localStorage?.setItem(this.STORAGE_KEY, JSON.stringify(config));
-    } else {
+    if (config === null) {
       globalThis.localStorage?.removeItem(this.STORAGE_KEY);
+    } else {
+      globalThis.localStorage?.setItem(this.STORAGE_KEY, JSON.stringify(config));
     }
 
     // ── Store subcategory configs for flyout callbacks ────────────────────
@@ -205,7 +270,7 @@ export class ToolboxConfigManager {
     try {
       // Deep-clone so Blockly always sees new object references and performs
       // a full re-render rather than silently skipping an "unchanged" def.
-      workspace.updateToolbox(JSON.parse(JSON.stringify(filtered)));
+      workspace.updateToolbox(structuredClone(filtered));
       // Reset any open flyout so the UI immediately reflects the new config.
       workspace.getToolbox()?.clearSelection?.();
       console.info(
@@ -257,6 +322,8 @@ export class ToolboxConfigManager {
     math_atan2:               'Atan2',
     // Text
     text:                     'Textkonstante',
+    text_print:               'Ausgeben (System.out.print)',
+    text_println:             'Ausgeben (System.out.println)',
     text_multiline:           'Mehrzeiliger Text',
     text_join:                'Texte verbinden',
     text_append:              'Text anhängen',
@@ -270,7 +337,6 @@ export class ToolboxConfigManager {
     text_count:               'Vorkommen zählen',
     text_replace:             'Ersetzen',
     text_reverse:             'Umkehren (Text)',
-    text_print:               'Ausgeben (System.out.print)',
     text_prompt_ext:          'Eingabe (prompt)',
     // Listen
     lists_create_with:        'Liste erstellen',
@@ -294,6 +360,9 @@ export class ToolboxConfigManager {
     callconstructor:          'Objekt erzeugen (new)',
     java_extends:             'Klasse erbt von (extends)',
     java_super_call:          'super(…) aufrufen',
+    // Grafik
+    gfx_extends:              'Grafik-Klasse erbt von',
+    gfx_event_handler:        'Ereignis-Methode (@Override)',
   };
 
   /**
@@ -319,15 +388,21 @@ export class ToolboxConfigManager {
    * @param {Object|null} fallbackConfig
    * @returns {Map<string, {active:boolean, blocks?:Map<string,boolean>, subcats?:Map<string,boolean>}>}
    */
-  static _buildEditorState(fallbackConfig) {
-    const baseConfig = this.lastConfig ?? fallbackConfig;
+  static _buildEditorState(fallbackConfig, explicitBaseConfig = null) {
+    const baseConfig = explicitBaseConfig ?? this.lastConfig ?? fallbackConfig;
+    // When the base config has a categories array, use allowlist semantics
+    // (unlisted category → inactive), matching buildFilteredToolbox behaviour.
+    // When there is no config at all, default everything to active.
+    const hasAllowlist = !!(baseConfig?.categories?.length);
     const catState = new Map();
 
     for (const catDef of (FULL_TOOLBOX.contents ?? [])) {
       if (catDef.kind?.toLowerCase() !== 'category') continue;
       const catName = catDef.name;
       const configEntry = baseConfig?.categories?.find(c => c.name === catName);
-      const isActive = !configEntry || configEntry.active !== false;
+      const isActive = hasAllowlist
+        ? (configEntry ? configEntry.active !== false : false)
+        : true;
 
       if (catDef.custom) {
         // Dynamic category – expose subcategory toggles.
@@ -377,7 +452,7 @@ export class ToolboxConfigManager {
       }
       if (state.subcats) {
         // Carry over any per-block configs that were in the reference config
-        // for subcategories of dynamic categories (e.g. Methoden, K-Methoden).
+        // for subcategories of dynamic categories (e.g. Methoden, Klassen-Methoden).
         const refCat = (referenceConfig?.categories ?? []).find(c => c.name === catName);
         entry.subcategories = [...state.subcats].map(([name, active]) => {
           const refSub = (refCat?.subcategories ?? []).find(s => s.name === name);
@@ -443,8 +518,10 @@ export class ToolboxConfigManager {
   static openVisualConfigEditor(workspace, fallbackConfig) {
     document.getElementById('b2j-config-editor-overlay')?.remove();
 
-    // Build checkbox state from current config (or fallback).
-    const catState = ToolboxConfigManager._buildEditorState(fallbackConfig);
+    // Determine the active config to show: prefer lastConfig, then stored, then fallback.
+    const activeConfig = this.lastConfig ?? ToolboxConfigManager.loadStored() ?? fallbackConfig;
+    // Build checkbox state from the active config.
+    let catState = ToolboxConfigManager._buildEditorState(fallbackConfig, activeConfig);
 
     // ── Category colour helper ──────────────────────────────────────────
     const STYLE_COLORS = {
@@ -614,7 +691,7 @@ export class ToolboxConfigManager {
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       // Sanitize id to produce a valid HTML id attribute (no spaces or special chars).
-      const safeId = `b2j-ce-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+      const safeId = `b2j-ce-${id.replaceAll(/[^a-zA-Z0-9_-]/g, '_')}`;
       cb.id = safeId;
       cb.checked = initialActive;
       Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor });
@@ -707,64 +784,96 @@ export class ToolboxConfigManager {
       }
     }
 
-    // ── Category list items ────────────────────────────────────────────────
-    const catItemEls = [];
-    for (const [catName, state] of catState) {
-      const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
-      if (!catDef) continue;
-      const color = getCatColor(catDef);
+    // ── Category list rendering (encapsulated so templates can re-render) ──
+    let catItemEls = [];
+    function renderCategoryList() {
+      // Clear existing items (preserve header at index 0)
+      while (catCol.children.length > 1) catCol.lastChild.remove();
+      catItemEls = [];
+      for (const [catName, state] of catState) {
+        const catDef = FULL_TOOLBOX.contents.find(c => c.name === catName);
+        if (!catDef) continue;
+        const color = getCatColor(catDef);
 
-      const item = document.createElement('div');
-      Object.assign(item.style, {
-        display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 10px',
-        cursor: 'pointer', userSelect: 'none', borderLeft: '3px solid transparent',
-      });
+        const item = document.createElement('div');
+        Object.assign(item.style, {
+          display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 10px',
+          cursor: 'pointer', userSelect: 'none', borderLeft: '3px solid transparent',
+        });
 
-      const dot = document.createElement('span');
-      Object.assign(dot.style, {
-        width: '8px', height: '8px', borderRadius: '50%',
-        background: color, flexShrink: '0', opacity: state.active ? '1' : '0.3',
-      });
-      const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.checked = state.active;
-      Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor: color });
-      const lbl = document.createElement('span');
-      lbl.textContent = catName;
-      Object.assign(lbl.style, {
-        fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        opacity: state.active ? '1' : '0.4',
-      });
+        const dot = document.createElement('span');
+        Object.assign(dot.style, {
+          width: '8px', height: '8px', borderRadius: '50%',
+          background: color, flexShrink: '0', opacity: state.active ? '1' : '0.3',
+        });
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = state.active;
+        Object.assign(cb.style, { cursor: 'pointer', flexShrink: '0', accentColor: color });
+        const lbl = document.createElement('span');
+        lbl.textContent = catName;
+        Object.assign(lbl.style, {
+          fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          opacity: state.active ? '1' : '0.4',
+        });
 
-      cb.addEventListener('change', () => {
-        state.active = cb.checked;
-        lbl.style.opacity = cb.checked ? '1' : '0.4';
-        dot.style.opacity = cb.checked ? '1' : '0.3';
-      });
+        cb.addEventListener('change', () => {
+          state.active = cb.checked;
+          lbl.style.opacity = cb.checked ? '1' : '0.4';
+          dot.style.opacity = cb.checked ? '1' : '0.3';
+        });
 
-      function selectItem(ci) {
-        if (selectedCatEl) {
-          selectedCatEl.style.background = '';
-          selectedCatEl.style.borderLeftColor = 'transparent';
+        function selectItem(ci) {
+          if (selectedCatEl) {
+            selectedCatEl.style.background = '';
+            selectedCatEl.style.borderLeftColor = 'transparent';
+          }
+          selectedCatName = ci.catName;
+          selectedCatEl = ci.item;
+          ci.item.style.background = '#2c3a4a';
+          ci.item.style.borderLeftColor = ci.color;
+          renderBlockList(ci.catName);
         }
-        selectedCatName = ci.catName;
-        selectedCatEl = ci.item;
-        ci.item.style.background = '#2c3a4a';
-        ci.item.style.borderLeftColor = ci.color;
-        renderBlockList(ci.catName);
+
+        const ci = { item, catName, color };
+        catItemEls.push(ci);
+
+        item.addEventListener('click', e => { if (e.target !== cb) selectItem(ci); });
+        item.addEventListener('mouseenter', () => { if (selectedCatName !== catName) item.style.background = '#2a2d2e'; });
+        item.addEventListener('mouseleave', () => { if (selectedCatName !== catName) item.style.background = ''; });
+
+        item.append(dot, cb, lbl);
+        catCol.appendChild(item);
       }
-
-      const ci = { item, catName, color };
-      catItemEls.push(ci);
-
-      item.addEventListener('click', e => { if (e.target !== cb) selectItem(ci); });
-      item.addEventListener('mouseenter', () => { if (selectedCatName !== catName) item.style.background = '#2a2d2e'; });
-      item.addEventListener('mouseleave', () => { if (selectedCatName !== catName) item.style.background = ''; });
-
-      item.append(dot, cb, lbl);
-      catCol.appendChild(item);
+      if (catItemEls.length > 0) catItemEls[0].item.click();
     }
 
-    // ── JSON fallback button ───────────────────────────────────────────────
+    // ── Template selector (left of JSON button) ──────────────────────────
+    const tplSelect = document.createElement('select');
+    Object.assign(tplSelect.style, { marginRight: '8px', background: '#2b2b2b', color: '#d4d4d4', border: '1px solid #3c3c3c', padding: '4px 8px', borderRadius: '4px' });
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = 'Custom';
+    tplSelect.appendChild(noneOpt);
+    for (const t of TEMPLATE_LIST) {
+      const o = document.createElement('option'); o.value = t.id; o.textContent = t.label; tplSelect.appendChild(o);
+    }
+    // Insert selector immediately before jsonBtn
+    hdrBtns.insertBefore(tplSelect, jsonBtn);
+
+    tplSelect.addEventListener('change', () => {
+      const id = tplSelect.value;
+      const tpl = TEMPLATE_LIST.find(t => t.id === id);
+      const selConfig = tpl?.config ?? null;
+      catState = ToolboxConfigManager._buildEditorState(fallbackConfig, selConfig);
+      // Apply the selected template immediately to the live workspace so the
+      // toolbox reflects the choice outside the modal as well.
+      if (selConfig != null) {
+        try { ToolboxConfigManager.applyConfig(selConfig, workspace); } catch (e) { /* ignore */ }
+      }
+      renderCategoryList();
+    });
+
+    // json fallback button opens the JSON editor as before
     jsonBtn.onclick = () => {
       overlay.remove();
       ToolboxConfigManager._openJsonEditor(workspace, fallbackConfig);
@@ -774,8 +883,8 @@ export class ToolboxConfigManager {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    // Select the first category automatically.
-    if (catItemEls.length > 0) catItemEls[0].item.click();
+    // Initial render of category list and selection.
+    renderCategoryList();
   }
 
   /**
@@ -785,9 +894,8 @@ export class ToolboxConfigManager {
     // Remove any stale dialog.
     document.getElementById('b2j-config-editor-overlay')?.remove();
 
-    const currentJson = this.lastConfig
-      ? JSON.stringify(this.lastConfig, null, 2)
-      : JSON.stringify(fallbackConfig ?? {}, null, 2);
+    const activeJsonConfig = this.lastConfig ?? ToolboxConfigManager.loadStored() ?? fallbackConfig ?? {};
+    const currentJson = JSON.stringify(activeJsonConfig, null, 2);
 
     // ── Overlay ──────────────────────────────────────────────────────────
     const overlay = document.createElement('div');
@@ -817,36 +925,7 @@ export class ToolboxConfigManager {
     });
     box.appendChild(title);
 
-    // ── Preset shortcuts ─────────────────────────────────────────────────
-    const presetRow = document.createElement('div');
-    Object.assign(presetRow.style, {
-      display: 'flex', alignItems: 'center', gap: '6px',
-      flexShrink: '0', fontFamily: 'Roboto, sans-serif',
-    });
-    const presetLabel = document.createElement('span');
-    presetLabel.textContent = 'Vorlage:';
-    Object.assign(presetLabel.style, { fontSize: '11px', opacity: '0.5', marginRight: '2px' });
-    presetRow.appendChild(presetLabel);
-
-    const PRESET_ALLES = ToolboxConfigManager._buildPresetAlles(fallbackConfig);
-
-    function makePresetBtn(label, getJson) {
-      const btn = document.createElement('button');
-      btn.textContent = label;
-      Object.assign(btn.style, {
-        padding: '3px 10px', border: '1px solid #4a4a4a',
-        borderRadius: '3px', background: '#333', color: '#bbb',
-        cursor: 'pointer', fontSize: '11px', fontFamily: 'Roboto, sans-serif',
-      });
-      btn.addEventListener('mouseenter', () => btn.style.background = '#404040');
-      btn.addEventListener('mouseleave', () => btn.style.background = '#333');
-      btn.onclick = () => { textarea.value = JSON.stringify(getJson(), null, 2); };
-      return btn;
-    }
-
-    presetRow.appendChild(makePresetBtn('Alles', () => PRESET_ALLES));
-    presetRow.appendChild(makePresetBtn('9. Klasse', () => fallbackConfig ?? PRESET_ALLES));
-    box.appendChild(presetRow);
+    
 
     const textarea = document.createElement('textarea');
     textarea.value = currentJson;
@@ -960,9 +1039,8 @@ export class ToolboxConfigManager {
 
       const entry = configMap.get(item.name);
 
-      // No config entry for this category → show unchanged (default-on).
+      // No config entry for this category → hide when a config is loaded (allowlist semantics).
       if (!entry) {
-        filteredContents.push(item);
         continue;
       }
 
@@ -992,8 +1070,8 @@ export class ToolboxConfigManager {
         if (block.kind?.toLowerCase() !== 'block') return true; // keep non-block items (labels, buttons…)
         // If this block type is in the config, honour its flag.
         if (blockMap.has(block.type)) return blockMap.get(block.type);
-        // Not mentioned → default-on.
-        return true;
+        // Not mentioned → default-off (allowlist semantics).
+        return false;
       });
 
       // If all blocks were removed, drop the whole category.
@@ -1005,7 +1083,7 @@ export class ToolboxConfigManager {
     // Strip trailing separators (cosmetic clean-up).
     while (
       filteredContents.length > 0 &&
-      filteredContents[filteredContents.length - 1].kind?.toLowerCase() === 'sep'
+      filteredContents.at(-1).kind?.toLowerCase() === 'sep'
     ) {
       filteredContents.pop();
     }

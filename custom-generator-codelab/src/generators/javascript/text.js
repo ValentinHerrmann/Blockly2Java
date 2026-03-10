@@ -92,7 +92,7 @@ export function text_join(block, generator) {
       const inputBlock0 = block.getInputTargetBlock('ADD0');
       const element = generator.valueToCode(block, 'ADD0',
           Order.NONE) || "\"\"";
-      return [smartForceString(element, inputBlock0 && inputBlock0.type), Order.ATOMIC];
+      return [smartForceString(element, inputBlock0?.type), Order.ATOMIC];
     }
     case 2: {
       const inputBlock0 = block.getInputTargetBlock('ADD0');
@@ -101,8 +101,8 @@ export function text_join(block, generator) {
           Order.NONE) || "\"\"";
       const element1 = generator.valueToCode(block, 'ADD1',
           Order.NONE) || "\"\"";
-      const code = smartForceString(element0, inputBlock0 && inputBlock0.type)
-          + ' + ' + smartForceString(element1, inputBlock1 && inputBlock1.type);
+      const code = smartForceString(element0, inputBlock0?.type)
+          + ' + ' + smartForceString(element1, inputBlock1?.type);
       return [code, Order.ADDITION];
     }
     default: {
@@ -139,7 +139,7 @@ export function text_isEmpty(block, generator) {
   // Is the string null or array empty?
   const text = generator.valueToCode(block, 'VALUE',
       Order.MEMBER) || "\"\"";
-  return ["!" + text + ".isEmpty()", Order.LOGICAL_NOT];
+  return [text + ".isEmpty()", Order.FUNCTION_CALL];
 };
 
 export function text_indexOf(block, generator) {
@@ -186,7 +186,7 @@ export function text_charAt(block, generator) {
     case 'RANDOM': {
       const functionName =
           generator.provideFunction_('textRandomLetter', `
-public Character ${generator.FUNCTION_NAME_PLACEHOLDER_}(String text) {
+public static Character ${generator.FUNCTION_NAME_PLACEHOLDER_}(String text) {
   int x = new Random().nextInt(text.length());
   return text.charAt(x);
 }
@@ -195,7 +195,7 @@ public Character ${generator.FUNCTION_NAME_PLACEHOLDER_}(String text) {
       return [code, Order.FUNCTION_CALL];
     }
   }
-  throw Error('Unhandled option (text_charAt).');
+  throw new Error('Unhandled option (text_charAt).');
 };
 
 export function text_getSubstring(block, generator) {
@@ -225,7 +225,7 @@ export function text_getSubstring(block, generator) {
         at1 = "0";
         break;
       default:
-        throw Error('Unhandled option (text_getSubstring).');
+        throw new Error('Unhandled option (text_getSubstring).');
     }
     let at2;
     switch (where2) {
@@ -240,7 +240,7 @@ export function text_getSubstring(block, generator) {
         at2 = text + ".length()";
         break;
       default:
-        throw Error('Unhandled option (text_getSubstring).');
+        throw new Error('Unhandled option (text_getSubstring).');
     }
     code = text + ".substring(" + at1 + ", " + at2 + ")";
   } else {
@@ -251,7 +251,7 @@ export function text_getSubstring(block, generator) {
     const at2Param = (where2 === 'FROM_END' || where2 === 'FROM_START') ? ', at2' : '';
     const functionName = generator.provideFunction_(
         'subsequence' + wherePascalCase[where1] + wherePascalCase[where2], `
-public String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String sequence${at1Param}${at2Param}) {
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String sequence${at1Param}${at2Param}) {
   int start = ${getSubstringIndex('sequence', where1, 'at1')};
   int end = ${getSubstringIndex('sequence', where2, 'at2')} + 1;
   return sequence.substring(start, end);
@@ -282,7 +282,7 @@ export function text_changeCase(block, generator) {
   } else {
     const functionName =
         generator.provideFunction_('textToTitleCase', `
-public String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String str) {
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String str) {
   String[] words = str.split("\\s+");
   StringBuilder sb = new StringBuilder();
   for (String word : words) {
@@ -313,6 +313,12 @@ export function text_trim(block, generator) {
 export function text_print(block, generator) {
   // Print statement in Java.
   const msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
+  return 'System.out.print(' + msg + ');\n';
+};
+
+export function text_println(block, generator) {
+  // Print statement in Java.
+  const msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   return 'System.out.println(' + msg + ');\n';
 };
 
@@ -326,10 +332,10 @@ export function text_prompt_ext(block, generator) {
     // External message.
     msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   }
-  let code = 'javax.swing.JOptionPane.showInputDialog(null, ' + msg + ')';
   const toNumber = block.getFieldValue('TYPE') === 'NUMBER';
+  let code = 'Input.readString(' + msg + ')';
   if (toNumber) {
-    code = 'Double.parseDouble(' + code + ')';
+    code = 'Input.readDouble(' + msg + ')';
   }
   return [code, Order.FUNCTION_CALL];
 };
@@ -340,7 +346,7 @@ export function text_count(block, generator) {
   const text = generator.valueToCode(block, 'TEXT', Order.NONE) || "\"\"";
   const sub = generator.valueToCode(block, 'SUB', Order.NONE) || "\"\"";
   const functionName = generator.provideFunction_('textCount', `
-public int ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle) {
+public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle) {
   if (needle.length() == 0) {
     return haystack.length() + 1;
   } else {
@@ -357,7 +363,7 @@ export function text_replace(block, generator) {
   const from = generator.valueToCode(block, 'FROM', Order.NONE) || "\"\"";
   const to = generator.valueToCode(block, 'TO', Order.NONE) || "\"\"";
   const functionName = generator.provideFunction_('textReplace', `
-public String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle, String replacement) {
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String haystack, String needle, String replacement) {
   needle = java.util.regex.Pattern.quote(needle);
   return haystack.replaceAll(needle, replacement);
 }

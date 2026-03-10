@@ -23,8 +23,8 @@ const NORMAL_METHOD_COLOUR = '#995599';  // purple-ish – instance methods (add
 const paramMixin = {
   mutationToDom: function () {
     const container = document.createElement('mutation');
-    for (let i = 0; i < this.arguments_.length; i++) {
-      const name = this.arguments_[i];
+    for (const element of this.arguments_) {
+      const name = element;
       const arg = document.createElement('arg');
       arg.setAttribute('name', name);
       if (!this.workspace.getVariable(name, 'param')) {
@@ -69,7 +69,7 @@ const paramMixin = {
     this.arguments_ = [];
     while (itemBlock) {
       this.arguments_.push(itemBlock.getFieldValue('NAME'));
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+      itemBlock = itemBlock.nextConnection?.targetBlock();
     }
 
     // Delete workspace variables for params that no longer exist.
@@ -244,7 +244,7 @@ const callArgMixin = {
 
   domToMutation: function (xmlElement) {
     this.methodName_ = xmlElement.getAttribute('method') || '';
-    this.argCount_ = parseInt(xmlElement.getAttribute('args') || '0', 10);
+    this.argCount_ = Number.parseInt(xmlElement.getAttribute('args') || '0', 10);
     this.argNames_ = [];
     for (let i = 0; i < this.argCount_; i++) {
       this.argNames_.push(xmlElement.getAttribute('name' + i) || ('arg ' + (i + 1)));
@@ -270,21 +270,21 @@ const callArgMixin = {
     const savedConns = [];
     for (let i = 0; i < this.argCount_; i++) {
       const inp = this.getInput('ARG' + i);
-      savedConns[i] = inp && inp.connection && inp.connection.targetConnection;
+      savedConns[i] = inp?.connection?.targetConnection;
     }
 
     let newCount = 0;
     let itemBlock = containerBlock.getInputTargetBlock('STACK');
     while (itemBlock) {
       newCount++;
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+      itemBlock = itemBlock.nextConnection?.targetBlock()
     }
     this.argCount_ = newCount;
     this.updateArgInputs_();
 
     // Reconnect surviving blocks.
     for (let i = 0; i < savedConns.length && i < this.argCount_; i++) {
-      if (savedConns[i] && savedConns[i].getSourceBlock().workspace) {
+      if (savedConns[i]?.getSourceBlock().workspace) {
         this.getInput('ARG' + i).connection.connect(savedConns[i]);
       }
     }
@@ -307,14 +307,14 @@ const callArgMixin = {
         .appendField(new Blockly.FieldLabel(name),        'NAME');
     } else {
       // Attach ALL header labels to ARG0 so its connector sits at the top row.
-      const label0 = (this.argNames_ && this.argNames_[0]) || 'arg 1';
+      const label0 = (this.argNames_?.[0]) || 'arg 1';
       this.appendValueInput('ARG0')
         .appendField(header)
         .appendField(new Blockly.FieldLabel(name),        'NAME')
         .appendField('( ' + label0 + (this.argCount_ > 1 ? ' ,' : ' ) '));
       // Remaining args stack below, right-aligned.
       for (let j = 1; j < this.argCount_; j++) {
-        const label = (this.argNames_ && this.argNames_[j]) || ('arg ' + (j + 1));
+        const label = (this.argNames_?.[j]) || ('arg ' + (j + 1));
         this.appendValueInput('ARG' + j)
           .setAlign(Blockly.inputs.Align.RIGHT)
           .appendField(label + (j + 1 === this.argCount_ ? ' )' : ' ,'));

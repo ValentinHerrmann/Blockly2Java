@@ -1,6 +1,3 @@
-import { icons } from 'blockly/core';
-import { prototype } from 'blockly/core';
-
 import * as Blockly from 'blockly/core';
 import {getClassName} from '../generators/javascript/javascript_generator';
 import LocalStorageManager from '../utils/LocalStorageManager';
@@ -24,8 +21,8 @@ Blockly.Blocks["defconstructor"] = {
   mutationToDom: function () {
     let container = document.createElement('mutation');
 
-    for (let i = 0; i < this.arguments_.length; i++) {
-      const name = this.arguments_[i];
+    for (const element of this.arguments_) {
+      const name = element;
       const argument = document.createElement('arg');
       argument.setAttribute('name', name);
 
@@ -76,7 +73,7 @@ Blockly.Blocks["defconstructor"] = {
     while (itemBlock) {
       const name = itemBlock.getFieldValue('NAME');
       this.arguments_.push(name);
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+      itemBlock = itemBlock.nextConnection?.targetBlock();
     }
     // Delete workspace variables for params that no longer exist.
     for (const oldName of oldArguments) {
@@ -226,7 +223,7 @@ Blockly.Blocks['callconstructor'] = {
   },
 
   loadExtraState: function (state) {
-    const value = state && state.constructorValue;
+    const value = state?.constructorValue;
     if (value && value !== 'NONE') {
       this.updateShape_(value);
     }
@@ -331,7 +328,7 @@ Blockly.Blocks['callconstructor'] = {
     const sepIdx = value.indexOf(':::');
     const className = sepIdx >= 0 ? value.slice(0, sepIdx) : value;
     const argsStr  = sepIdx >= 0 ? value.slice(sepIdx + 3) : '';
-    this.arguments_ = argsStr ? argsStr.split(',').filter(a => a) : [];
+    this.arguments_ = argsStr ? argsStr.split(',').filter(Boolean) : [];
 
     this.setOutput(true, className);
 
@@ -409,7 +406,7 @@ Blockly.Blocks['java_extends'] = {
   },
 
   loadExtraState: function (state) {
-    const saved = (state && state.parentClass) || 'NONE';
+    const saved = (state?.parentClass) || 'NONE';
     if (saved && saved !== 'NONE') {
       // The dynamic dropdown may not include the saved value until options are
       // computed; force-set the field value after deserialization.
@@ -540,6 +537,6 @@ Blockly.Blocks['java_super_call'] = {
   },
 
   loadExtraState: function (state) {
-    this.updateShape_((state && state.argNames) || []);
+    this.updateShape_((state?.argNames) || []);
   },
 };
