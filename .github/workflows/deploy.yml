@@ -40,11 +40,12 @@ jobs:
           set -e
           REGISTRY="${{ vars.DOCKER_REGISTRY }}"
           IMAGE_NAME="${{ vars.DOCKER_IMAGE }}"
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           if [ -z "$REGISTRY" ] || [ -z "$IMAGE_NAME" ]; then
-            echo "ERROR: DOCKER_REGISTRY and DOCKER_IMAGE secrets must be set" >&2
+            echo "ERROR: DOCKER_REGISTRY and DOCKER_IMAGE vars must be set" >&2
             exit 1
           fi
-          FULL_IMAGE="$REGISTRY/$IMAGE_NAME:${{ github.sha }}"
+          FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:${{ github.sha }}"
           docker build -t "$FULL_IMAGE" .
           docker push "$FULL_IMAGE"
 
@@ -59,18 +60,19 @@ jobs:
             set -e
             REGISTRY="${{ vars.DOCKER_REGISTRY }}"
             IMAGE_NAME="${{ vars.DOCKER_IMAGE }}"
+            OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             IMAGE_TAG="${{ github.sha }}"
 
             if [ -z "$REGISTRY" ]; then
-              echo "ERROR: secret DOCKER_REGISTRY must be set" >&2
+              echo "ERROR: var DOCKER_REGISTRY must be set" >&2
               exit 1
             fi
             if [ -z "$IMAGE_NAME" ]; then
-              echo "ERROR: secret DOCKER_IMAGE must be set" >&2
+              echo "ERROR: var DOCKER_IMAGE must be set" >&2
               exit 1
             fi
 
-            FULL_IMAGE="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+            FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:$IMAGE_TAG"
 
             # Log in to container registry if credentials are provided
             REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
