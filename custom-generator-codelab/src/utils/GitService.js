@@ -2,6 +2,7 @@ import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 import LightningFS from '@isomorphic-git/lightning-fs';
 import LocalStorageManager from './LocalStorageManager.js';
+import { ToolboxConfigManager } from './ToolboxConfigManager.js';
 
 
 /**
@@ -477,6 +478,7 @@ export class GitService {
     // ── Export current workspace into the virtual filesystem ──────────────
     await this._exportJsonFiles(fs);
     await this._exportJavaFiles(fs, { stripTopLevelCode });
+    await this._exportToolboxConfig(fs);
     await this._exportMetadataFile(fs);
 
     // ── Stage all changed / new / deleted files ──────────────────────────
@@ -511,6 +513,24 @@ export class GitService {
       headers: this._authHeaders(config.username, config.password),
       onAuth: () => ({ username: config.username, password: config.password }),
     });
+  }
+
+  /**
+   * Writes the current toolbox config to the repo root as
+   * `blockly-config.json`. Uses the active in-memory config when
+   * available, falls back to the stored config, and finally to an
+   * explicit "all blocks active" preset.
+   * @param {LightningFS} fs
+   */
+  static async _exportToolboxConfig(fs) {
+    try {
+      const stored = ToolboxConfigManager.lastConfig ?? ToolboxConfigManager.loadStored();
+      const config = stored ?? ToolboxConfigManager._buildPresetAlles(null);
+      const content = JSON.stringify(config, null, 2);
+      await fs.promises.writeFile(`${this.REPO_DIR}/blockly-config.json`, new TextEncoder().encode(content));
+    } catch {
+      /* ignore write failures */
+    }
   }
 
   // ── Metadata file helper ──────────────────────────────────────────────────
