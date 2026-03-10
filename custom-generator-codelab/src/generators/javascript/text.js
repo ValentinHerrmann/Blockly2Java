@@ -92,7 +92,7 @@ export function text_join(block, generator) {
       const inputBlock0 = block.getInputTargetBlock('ADD0');
       const element = generator.valueToCode(block, 'ADD0',
           Order.NONE) || "\"\"";
-      return [smartForceString(element, inputBlock0 && inputBlock0.type), Order.ATOMIC];
+      return [smartForceString(element, inputBlock0?.type), Order.ATOMIC];
     }
     case 2: {
       const inputBlock0 = block.getInputTargetBlock('ADD0');
@@ -101,8 +101,8 @@ export function text_join(block, generator) {
           Order.NONE) || "\"\"";
       const element1 = generator.valueToCode(block, 'ADD1',
           Order.NONE) || "\"\"";
-      const code = smartForceString(element0, inputBlock0 && inputBlock0.type)
-          + ' + ' + smartForceString(element1, inputBlock1 && inputBlock1.type);
+      const code = smartForceString(element0, inputBlock0?.type)
+          + ' + ' + smartForceString(element1, inputBlock1?.type);
       return [code, Order.ADDITION];
     }
     default: {
@@ -139,7 +139,7 @@ export function text_isEmpty(block, generator) {
   // Is the string null or array empty?
   const text = generator.valueToCode(block, 'VALUE',
       Order.MEMBER) || "\"\"";
-  return [text + ".isEmpty()", Order.LOGICAL_NOT];
+  return [text + ".isEmpty()", Order.FUNCTION_CALL];
 };
 
 export function text_indexOf(block, generator) {
@@ -195,7 +195,7 @@ public static Character ${generator.FUNCTION_NAME_PLACEHOLDER_}(String text) {
       return [code, Order.FUNCTION_CALL];
     }
   }
-  throw Error('Unhandled option (text_charAt).');
+  throw new Error('Unhandled option (text_charAt).');
 };
 
 export function text_getSubstring(block, generator) {
@@ -225,7 +225,7 @@ export function text_getSubstring(block, generator) {
         at1 = "0";
         break;
       default:
-        throw Error('Unhandled option (text_getSubstring).');
+        throw new Error('Unhandled option (text_getSubstring).');
     }
     let at2;
     switch (where2) {
@@ -240,7 +240,7 @@ export function text_getSubstring(block, generator) {
         at2 = text + ".length()";
         break;
       default:
-        throw Error('Unhandled option (text_getSubstring).');
+        throw new Error('Unhandled option (text_getSubstring).');
     }
     code = text + ".substring(" + at1 + ", " + at2 + ")";
   } else {
