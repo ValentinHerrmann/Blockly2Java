@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [ 'ready_for_review' ]
     branches: [ 'onlineide' ]
-    
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
