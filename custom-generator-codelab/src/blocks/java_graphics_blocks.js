@@ -96,7 +96,7 @@ function buildMethodInputs(block, label, params) {
     block.appendValueInput(n1).setCheck(c1).appendField('.' + label);
     setShadowForInput(block, n1, c1);
     for (const [n, c = null] of rest2) {
-      block.appendValueInput(n).setCheck(c);
+      block.appendValueInput(n).appendField(',').setCheck(c); // separator between args
       setShadowForInput(block, n, c);
     }
     block.appendDummyInput('CLOSE').appendField(')');
