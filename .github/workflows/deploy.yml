@@ -203,11 +203,11 @@ jobs:
             # Write nginx configuration to proxy requests to the local container port
             if [ -n "$TLS_CERT_PATH" ] && [ -n "$TLS_KEY_PATH" ] && [ -f "$TLS_CERT_PATH" ] && [ -f "$TLS_KEY_PATH" ]; then
               echo "Using TLS cert/key: $TLS_CERT_PATH $TLS_KEY_PATH"
-              sudo tee "${NGINX_CONF}" > /dev/null <<'EOF'
+              sudo tee "${NGINX_CONF}" > /dev/null <<EOF
             server {
               listen 80;
               server_name ${HOST};
-              return 301 https://$host$request_uri;
+              return 301 https://\$host\$request_uri;
             }
 
             server {
@@ -219,24 +219,24 @@ jobs:
               ssl_ciphers HIGH:!aNULL:!MD5;
               location / {
                 proxy_pass http://127.0.0.1:${PORT};
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
               }
             }
             EOF
             else
-              sudo tee "${NGINX_CONF}" > /dev/null <<'EOF'
+              sudo tee "${NGINX_CONF}" > /dev/null <<EOF
             server {
               listen 80;
               server_name ${HOST};
               location / {
                 proxy_pass http://127.0.0.1:${PORT};
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
               }
             }
             EOF
