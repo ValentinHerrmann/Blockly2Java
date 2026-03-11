@@ -22,12 +22,24 @@ jobs:
       - name: Install IDE dependencies
         run: |
           cd custom-generator-codelab
-          npm ci || npm install
+          npm ci
 
       - name: Build IDE (produces custom-generator-codelab/build)
         run: |
           cd custom-generator-codelab
           npm run build
+
+      - name: Verify build output
+        run: |
+          echo "Checking for custom-generator-codelab/build..."
+          if [ ! -d custom-generator-codelab/build ]; then
+            echo "ERROR: build output missing: custom-generator-codelab/build" >&2
+            echo "Repository files:" >&2
+            ls -la || true
+            echo "custom-generator-codelab files:" >&2
+            ls -la custom-generator-codelab || true
+            exit 1
+          fi
 
       - name: Upload IDE build artifact
         uses: actions/upload-artifact@v4
