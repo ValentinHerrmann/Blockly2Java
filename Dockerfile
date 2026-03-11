@@ -40,7 +40,7 @@ RUN npm ci --only=production || true && \
     chmod -R 755 /app
 
 ENV NODE_ENV=production
-EXPOSE 80
+EXPOSE 8080
 
 USER nodeuser
 
