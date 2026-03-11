@@ -133,6 +133,20 @@ jobs:
             OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             IMAGE_TAG="${{ github.sha }}"
 
+            # Quick remote checks to validate SSH session and environment
+            echo "SSH connected to: $(hostname)";
+            uname -a || true
+            if command -v docker >/dev/null 2>&1; then docker --version || true; else echo "docker not installed"; fi
+            if command -v nginx >/dev/null 2>&1; then nginx -v || true; else echo "nginx not installed yet"; fi
+
+            # Hostname for nginx server_name (provided as a repo var)
+            HOST="${{ vars.DEPLOY_HOST }}"
+            HOST=${HOST:-_}
+
+            # Optional TLS certificate/key paths (repo vars). If set and files exist, nginx will be configured for HTTPS and HTTP->HTTPS redirect.
+            TLS_CERT_PATH="${{ vars.DEPLOY_TLS_CERT_PATH }}"
+            TLS_KEY_PATH="${{ vars.DEPLOY_TLS_KEY_PATH }}"
+
             if [ -z "$REGISTRY" ]; then
               echo "ERROR: var DOCKER_REGISTRY must be set" >&2
               exit 1
@@ -177,4 +191,92 @@ jobs:
             # Run container bound to localhost
             docker run -d --restart unless-stopped --name "$CONTAINER_NAME" -p 127.0.0.1:${PORT}:${PORT} -e NODE_ENV=production "$TMP_IMAGE"
 
-            # Nginx configuration has been removed from this workflow and will be handled externally.
+            # Ensure nginx is installed and configure a reverse proxy to the container
+            if ! command -v nginx >/dev/null 2>&1; then
+              echo "nginx not found, installing..."
+              sudo apt-get update -y
+              sudo apt-get install -y nginx
+            fi
+
+            NGINX_CONF="/etc/nginx/sites-available/${CONTAINER_NAME}"
+
+            # Write nginx configuration to proxy requests to the local container port
+            if [ -n "$TLS_CERT_PATH" ] && [ -n "$TLS_KEY_PATH" ] && [ -f "$TLS_CERT_PATH" ] && [ -f "$TLS_KEY_PATH" ]; then
+              echo "Using TLS cert/key: $TLS_CERT_PATH $TLS_KEY_PATH"
+              sudo tee "${NGINX_CONF}" > /dev/null <<'EOF'
+            server {
+              listen 80;
+              server_name ${HOST};
+              return 301 https://$host$request_uri;
+            }
+
+            server {
+              listen 443 ssl;
+              server_name ${HOST};
+              ssl_certificate ${TLS_CERT_PATH};
+              ssl_certificate_key ${TLS_KEY_PATH};
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_ciphers HIGH:!aNULL:!MD5;
+              location / {
+                proxy_pass http://127.0.0.1:${PORT};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
+            }
+            EOF
+            else
+              sudo tee "${NGINX_CONF}" > /dev/null <<'EOF'
+            server {
+              listen 80;
+              server_name ${HOST};
+              location / {
+                proxy_pass http://127.0.0.1:${PORT};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
+            }
+            EOF
+            fi
+
+            # Enable site and restart nginx if config is valid
+            sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/${CONTAINER_NAME}
+            sudo nginx -t
+            sudo systemctl reload nginx || sudo service nginx restart || true
+
+            # Health checks: first check the app container, then nginx
+            APP_OK=0
+            for i in $(seq 1 10); do
+              if curl -sSf http://127.0.0.1:${PORT}/ >/dev/null 2>&1; then
+                APP_OK=1; break
+              fi
+              sleep 1
+            done
+            if [ "$APP_OK" -ne 1 ]; then
+              echo "ERROR: app did not respond on container port ${PORT}" >&2
+              exit 1
+            fi
+
+            NG_OK=0
+            if [ -n "$TLS_CERT_PATH" ] && [ -n "$TLS_KEY_PATH" ] && [ -f "$TLS_CERT_PATH" ] && [ -f "$TLS_KEY_PATH" ]; then
+              for i in $(seq 1 10); do
+                if curl -sSf -H "Host: ${HOST}" https://127.0.0.1/ --insecure >/dev/null 2>&1; then
+                  NG_OK=1; break
+                fi
+                sleep 1
+              done
+            else
+              for i in $(seq 1 10); do
+                if curl -sSf -H "Host: ${HOST}" http://127.0.0.1/ >/dev/null 2>&1; then
+                  NG_OK=1; break
+                fi
+                sleep 1
+              done
+            fi
+            if [ "$NG_OK" -ne 1 ]; then
+              echo "ERROR: nginx did not respond as expected" >&2
+              exit 1
+            fi
