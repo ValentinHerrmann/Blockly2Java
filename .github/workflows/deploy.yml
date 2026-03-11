@@ -22,12 +22,24 @@ jobs:
       - name: Install IDE dependencies
         run: |
           cd custom-generator-codelab
-          npm ci
+          npm ci || npm install
 
       - name: Build IDE (produces custom-generator-codelab/build)
         run: |
           cd custom-generator-codelab
           npm run build
+
+      - name: Normalize build directory
+        run: |
+          # Webpack outputs to `dist` for production builds and `build` for dev.
+          # Ensure `build` exists so subsequent steps can rely on it.
+          if [ -d custom-generator-codelab/dist ] && [ ! -d custom-generator-codelab/build ]; then
+            echo "Found dist output, copying to build/..."
+            rm -rf custom-generator-codelab/build || true
+            mkdir -p custom-generator-codelab/build
+            cp -r custom-generator-codelab/dist/* custom-generator-codelab/build/ || true
+          fi
+          echo "build directory contents:" && ls -la custom-generator-codelab/build || true
 
       - name: Verify build output
         run: |
