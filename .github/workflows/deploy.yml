@@ -115,7 +115,7 @@ jobs:
           fi
           FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:${{ github.sha }}"
           TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:tmp"
-          DOCKER_BUILDKIT=1 docker build --build-arg SKIP_ONLINE_IDE_BUILD=1 -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
+          DOCKER_BUILDKIT=1 docker build --pull --no-cache --build-arg SKIP_ONLINE_IDE_BUILD=1 -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
           docker push "$FULL_IMAGE"
           docker push "$TMP_IMAGE"
 

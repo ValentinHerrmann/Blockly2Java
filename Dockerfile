@@ -18,6 +18,15 @@ RUN chmod -R a+rwX /app || true
 ENV NODE_OPTIONS=--max_old_space_size=2048
 RUN npm run build
 
+# Normalize build output: webpack production outputs to `dist`, but the runtime
+# expects `custom-generator-codelab/build`. Copy `dist` into `build` when
+# present so the container always serves the correct app artifacts.
+RUN if [ -d custom-generator-codelab/dist ]; then \
+            rm -rf custom-generator-codelab/build || true; \
+            mkdir -p custom-generator-codelab/build && \
+            cp -r custom-generator-codelab/dist/* custom-generator-codelab/build/ || true; \
+        fi
+
 # --- Production stage ---
 FROM node:18-alpine AS production
 WORKDIR /app
