@@ -22,7 +22,7 @@ jobs:
       - name: Install IDE dependencies
         run: |
           cd custom-generator-codelab
-          npm ci
+          npm ci || npm install
 
       - name: Build IDE (produces custom-generator-codelab/build)
         run: |
