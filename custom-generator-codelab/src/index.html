@@ -30,9 +30,9 @@
     <script>
       (function () {
         var origin = 'https://onlineide.dev.blockly2java.de';
-        var host = window.location.hostname || '';
+        var host = globalThis.location.hostname || '';
         if (host !== 'localhost' && host !== '') {
-            origin = window.location.protocol + '//' + host + (window.location.port ? ':' + window.location.port : '');
+            origin = globalThis.location.protocol + '//' + host + (globalThis.location.port ? ':' + globalThis.location.port : '');
             
         }
         var s = document.createElement('script');
