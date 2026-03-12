@@ -27,8 +27,25 @@
 
     <!-- online-ide-embedded.js is a Vite bundle that includes all dependencies
          (monaco-editor, p5, pako, jszip, upng, markdownit, howler, fonts) -->
-    <script type="module" crossorigin src="/online-ide-embedded.js"></script>
-    <link rel="stylesheet" href="/online-ide-embedded.css">
+    <script>
+      (function () {
+        var origin = 'https://onlineide.dev.blockly2java.de';
+        var host = window.location.hostname || '';
+        if (host !== 'localhost' && host !== '') {
+            origin = window.location.protocol + '//' + host + (window.location.port ? ':' + window.location.port : '');
+            
+        }
+        var s = document.createElement('script');
+        s.type = 'module';
+        s.crossOrigin = 'anonymous';
+        s.src = origin + '/online-ide-embedded.js';
+        document.head.appendChild(s);
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = origin + '/online-ide-embedded.css';
+        document.head.appendChild(l);
+      })();
+    </script>
   </head>
 
 
