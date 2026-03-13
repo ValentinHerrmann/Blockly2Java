@@ -13,7 +13,7 @@
 import * as Blockly from 'blockly/core';
 // import * as stringUtils from 'blockly/core/utils/string.js';
 // import {NameType} from 'blockly/core/names.js';
-import {Order, adjustStaticName} from './javascript_generator.js';
+import {Order, adjustStaticName, getVarCodeName} from './javascript_generator.js';
 
 
 export function controls_repeat_ext(block, generator) {
@@ -29,7 +29,17 @@ export function controls_repeat_ext(block, generator) {
   let branch = generator.statementToCode(block, 'DO');
   branch = generator.addLoopTrap(branch, block);
   let code = '';
-  const loopVar = generator.nameDB_.getDistinctName('i', Blockly.Names.NameType.VARIABLE);
+  // Prefer an explicit variable field on the block (our custom override).
+  const varFieldId = block.getFieldValue && block.getFieldValue('VAR');
+  let loopVar;
+  if (varFieldId) {
+    // Mark this variable id as declared so other generators don't redeclare it.
+    if (!generator.declaredLocalVarIds_) generator.declaredLocalVarIds_ = new Set();
+    try { generator.declaredLocalVarIds_.add(varFieldId); } catch (e) { /* ignore */ }
+    loopVar = adjustStaticName(getVarCodeName(block.workspace, generator, varFieldId));
+  } else {
+    loopVar = generator.nameDB_.getDistinctName('i', Blockly.Names.NameType.VARIABLE);
+  }
   let endVar = repeats;
   if (!repeats.match(/^\w+$/) && !Blockly.utils.string.isNumber(repeats)) {
     endVar = generator.nameDB_.getDistinctName('repeat_end', Blockly.Names.NameType.VARIABLE);
