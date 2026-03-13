@@ -189,10 +189,34 @@ function setupListeners(workspace) {
 
   // When blocks are created (e.g. the user drops a new for-loop), ensure the
   // loop iteration variable is converted to a typed local variable.
+  // Also handle changes to the loop variable field so the invariant is maintained
+  // if the user reassigns the VAR field to a non-local variable.
   workspace.addChangeListener((e) => {
+    // Handle initial creation of loop blocks.
     if (e.type === Blockly.Events.BLOCK_CREATE || e.type === 'create') {
       ensureForLoopVarsAreLocal(workspace);
+      return;
     }
+
+    // Handle changes to the VAR field on existing loop blocks.
+    const isBlockChange =
+      e.type === Blockly.Events.BLOCK_CHANGE || e.type === 'change';
+    if (!isBlockChange) return;
+
+    if (e.element !== 'field' || e.name !== 'VAR' || !e.blockId) return;
+
+    const block = workspace.getBlockById(e.blockId);
+    if (!block) return;
+
+    // Only react for loop blocks that use a VAR field as their iteration variable.
+    const loopTypes = new Set([
+      'controls_for',
+      'controls_forEach',
+      'controls_repeat_ext',
+    ]);
+    if (!loopTypes.has(block.type)) return;
+
+    ensureForLoopVarsAreLocal(workspace);
   });
 
   // Intercept assignments to globalThis.online_ide_access.
