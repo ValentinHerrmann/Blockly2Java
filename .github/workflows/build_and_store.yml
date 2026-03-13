@@ -1,37 +1,191 @@
-name: (on push) Build and Push to B2J_dist 
+name: Build and Deploy Docker image
 
-on: #[push]
-  # Allows you to run this workflow manually from the Actions tab
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  release:
+    types: [created]
   workflow_dispatch:
 
 jobs:
-  build_and_test:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_TOK }}
-      - name: npm install, build
-        run: |
-          npm run build --if-present
-          cd custom-generator-codelab/dist
-          echo $(git rev-parse HEAD) > latest_commit.txt
-          ls -l
-      - name: Commit files
-        run: |
-          ls -l
-          git clone https://ValentinHerrmann:${{ secrets.GH_TOK }}@github.com/ValentinHerrmann/B2J_dist.git B2J_dist
-          git remote set-url --push origin https://ValentinHerrmann:${{ secrets.GH_TOK }}@github.com/ValentinHerrmann/B2J_dist.git
-          cp -r custom-generator-codelab/dist/* B2J_dist
-          cd B2J_dist
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-              if [[ `git status --porcelain` ]]; then
-                git add *
-                git commit -m $(git rev-parse HEAD)
-                git push
-              else
-                echo "No changes to commit"
-              fi
+    environment:
+      name: ${{ github.event_name == 'release' && 'production' || 'b2j-dev' }}
+      url: https://${{ vars.DEPLOY_HOST }}
 
+    permissions:
+      contents: read
+      packages: write
+      
+    env:
+      DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        if: env.DOCKER_REGISTRY != ''
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ vars.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image (sha + :dev)
+        run: |
+          set -e
+          REGISTRY="${{ vars.DOCKER_REGISTRY }}"
+          IMAGE_NAME="${{ vars.DOCKER_IMAGE }}"
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          if [ -z "$REGISTRY" ] || [ -z "$IMAGE_NAME" ]; then
+            echo "ERROR: DOCKER_REGISTRY and DOCKER_IMAGE vars must be set" >&2
+            exit 1
+          fi
+          FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:${{ github.sha }}"
+          TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
+          DOCKER_BUILDKIT=1 docker build --pull --no-cache --build-arg SKIP_ONLINE_IDE_BUILD=1 -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
+          docker push "$FULL_IMAGE"
+          docker push "$TMP_IMAGE"
+
+      - name: Deploy on server via SSH (pull image and restart container)
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            set -e
+            REGISTRY="${{ vars.DOCKER_REGISTRY }}"
+            IMAGE_NAME="${{ vars.DOCKER_IMAGE }}"
+            OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            IMAGE_TAG="${{ github.sha }}"
+
+            echo "SSH connected to: $(hostname)";
+            uname -a || true
+
+            if [ -z "$REGISTRY" ]; then
+              echo "ERROR: var DOCKER_REGISTRY must be set" >&2
+              exit 1
+            fi
+            if [ -z "$IMAGE_NAME" ]; then
+              echo "ERROR: var DOCKER_IMAGE must be set" >&2
+              exit 1
+            fi
+
+            CONTAINER_NAME="${{ vars.DEPLOY_CONTAINER_NAME }}"
+            if [ -z "$CONTAINER_NAME" ]; then
+              echo "WARNING: repository variable DEPLOY_CONTAINER_NAME not set — using default 'blockly2java'" >&2
+              CONTAINER_NAME=blockly2java
+            fi
+
+            TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
+            docker pull "$TMP_IMAGE" || true
+
+            if docker ps -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+              docker stop "$CONTAINER_NAME" || true
+            fi
+            if docker ps -a -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+              docker rm "$CONTAINER_NAME" || true
+            fi
+
+            PORT="${{ vars.DEPLOY_APP_PORT }}"
+            PORT=${PORT:-8080}
+
+            docker run -d --restart unless-stopped --name "$CONTAINER_NAME" -p 127.0.0.1:${PORT}:${PORT} -e NODE_ENV=production -e PORT=${PORT} "$TMP_IMAGE"
+
+            APP_OK=0
+            for i in $(seq 1 10); do
+              if curl -sSf http://127.0.0.1:${PORT}/ >/dev/null 2>&1; then
+                APP_OK=1; break
+              fi
+              sleep 1
+            done
+            if [ "$APP_OK" -ne 1 ]; then
+              echo "ERROR: app did not respond on container port ${PORT}" >&2
+              docker logs --tail 500 "$CONTAINER_NAME" >&2 || true
+              docker ps -a --filter "name=$CONTAINER_NAME" >&2 || true
+              exit 1
+            fi
+            docker push "$TMP_IMAGE"
+
+      - name: Deploy on server via SSH (pull image and restart container)
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            set -e
+            REGISTRY="${{ vars.DOCKER_REGISTRY }}"
+            IMAGE_NAME="${{ vars.DOCKER_IMAGE }}"
+            OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            IMAGE_TAG="${{ github.sha }}"
+
+            # Quick remote checks to validate SSH session and environment
+            echo "SSH connected to: $(hostname)";
+            uname -a || true
+            if command -v docker >/dev/null 2>&1; then docker --version || true; else echo "docker not installed"; fi
+            if command -v nginx >/dev/null 2>&1; then nginx -v || true; else echo "nginx not installed yet"; fi
+
+            # Hostname for deploy (provided as a repo var)
+            HOST="${{ vars.DEPLOY_HOST }}"
+            HOST=${HOST:-_}
+
+            if [ -z "$REGISTRY" ]; then
+              echo "ERROR: var DOCKER_REGISTRY must be set" >&2
+              exit 1
+            fi
+            if [ -z "$IMAGE_NAME" ]; then
+              echo "ERROR: var DOCKER_IMAGE must be set" >&2
+              exit 1
+            fi
+
+            CONTAINER_NAME="${{ vars.DEPLOY_CONTAINER_NAME }}"
+            if [ -z "$CONTAINER_NAME" ]; then
+              echo "WARNING: repository variable DEPLOY_CONTAINER_NAME not set — using default 'blockly2java'" >&2
+              CONTAINER_NAME=blockly2java
+            fi
+
+            # Pull latest image (sha) and the :dev tag, then tag :dev locally as b2j-dev:dev
+            TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
+            docker pull "$TMP_IMAGE" || true
+
+            # Stop and remove existing container
+            if docker ps -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+              docker stop "$CONTAINER_NAME" || true
+            fi
+            if docker ps -a -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+              docker rm "$CONTAINER_NAME" || true
+            fi
+
+            # Choose internal port
+            PORT="${{ vars.DEPLOY_APP_PORT }}"
+            PORT=${PORT:-8080}
+
+            # Run container bound to localhost (pass PORT env so app respects mapping)
+            docker run -d --restart unless-stopped --name "$CONTAINER_NAME" -p 127.0.0.1:${PORT}:${PORT} -e NODE_ENV=production -e PORT=${PORT} "$TMP_IMAGE"
+
+            # Health check: verify the app inside the container responds on the chosen port
+            APP_OK=0
+            for i in $(seq 1 10); do
+              if curl -sSf http://127.0.0.1:${PORT}/ >/dev/null 2>&1; then
+                APP_OK=1; break
+              fi
+              sleep 1
+            done
+            if [ "$APP_OK" -ne 1 ]; then
+              echo "ERROR: app did not respond on container port ${PORT}" >&2
+              echo "=== last 500 lines of container logs ===" >&2
+              docker logs --tail 500 "$CONTAINER_NAME" >&2 || true
+              echo "=== container status ===" >&2
+              docker ps -a --filter "name=$CONTAINER_NAME" >&2 || true
+              exit 1
+            fi
+            # nginx configuration and external proxying are managed outside this workflow
