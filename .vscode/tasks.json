@@ -1,51 +1,36 @@
 {
-    "version": "2.0.0",
-    "tasks": [
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npmstart",
+      "type": "shell",
+      "command": "npm start",
+      "options": { "cwd": "${workspaceFolder}/custom-generator-codelab" },
+      "isBackground": true,
+      "problemMatcher": [
         {
-            "label": "npmstart",
-            "type": "shell",
-            "command": "npm run dev",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "isBackground": true,
-            "problemMatcher": {
-                "pattern": {
-                    "regexp": "^$"
-                },
-                "background": {
-                    "activeOnStart": true,
-                    "beginsPattern": ".*",
-                    "endsPattern": "(webpack.*compiled|Compiled successfully)"
-                }
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
+          "pattern": [
+            {
+              "regexp": "^(?:)$",
+              "file": 1,
+              "location": 2,
+              "message": 3
             }
-        },
-        {
-            "label": "npmstart-no-rebuild",
-            "type": "shell",
-            "command": "npm start",
-            "options": {
-                "cwd": "${workspaceFolder}/custom-generator-codelab"
-            },
-            "isBackground": true,
-            "problemMatcher": {
-                "pattern": {
-                    "regexp": "^$"
-                },
-                "background": {
-                    "activeOnStart": true,
-                    "beginsPattern": ".*",
-                    "endsPattern": "(webpack.*compiled|Compiled successfully)"
-                }
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
-            }
+          ],
+          "background": {
+                "activeOnStart": true,
+                "beginsPattern": "Serving!",
+                "endsPattern": "Copied local address to clipboard!"
+        }   
         }
-    ]
+      ],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "npmstop",
+      "type": "shell",
+      "command": "fuser -k 8080/tcp || pkill -f custom-generator-codelab || true",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
 }
