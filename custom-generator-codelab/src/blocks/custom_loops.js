@@ -7,9 +7,16 @@ import * as Blockly from 'blockly/core';
 
 Blockly.Blocks['controls_repeat_ext'] = {
   init: function() {
+    // Generate a unique default name for the loop counter variable in this workspace.
+    const workspace = this.workspace || null;
+    let defaultName = 'i';
+    if (workspace && Blockly.Variables && typeof Blockly.Variables.generateUniqueName === 'function') {
+      defaultName = Blockly.Variables.generateUniqueName(workspace);
+    }
+
     this.appendDummyInput()
         .appendField('repeat')
-        .appendField(new Blockly.FieldVariable('i', null, ['local'], 'local'), 'VAR');
+        .appendField(new Blockly.FieldVariable(defaultName, null, ['local'], 'local'), 'VAR');
     this.appendValueInput('TIMES')
         .setCheck('Number');
     this.appendDummyInput()
