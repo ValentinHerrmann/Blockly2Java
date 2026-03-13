@@ -28,21 +28,21 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
-    "copy-webpack-plugin": "^11.0.0",
+    "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^6.7.1",
     "html-webpack-plugin": "^5.6.6",
     "source-map-loader": "^4.0.1",
     "style-loader": "^3.3.1",
-    "webpack": "^5.90.3",
+    "webpack": "^5.105.4",
     "webpack-cli": "^4.10.0",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-dev-server": "^5.2.1"
   },
   "dependencies": {
     "serve": "^14.1.2",
-    "@blockly/continuous-toolbox": "^5.0.10",
+    "@blockly/continuous-toolbox": "^7.0.8",
     "@isomorphic-git/lightning-fs": "^4.6.2",
     "async_hooks": "^1.0.0",
-    "blockly": "^10.3.0",
+    "blockly": "^12.4.1",
     "buffer": "^6.0.3",
     "fs": "^0.0.1-security",
     "http": "^0.0.1-security",
