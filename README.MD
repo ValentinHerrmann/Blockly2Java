@@ -71,19 +71,19 @@ A visual programming environment that converts Blockly blocks into Java code. Bl
 git clone --recursive https://github.com/ValentinHerrmann/Blockly2Java.git
 cd Blockly2Java
 
-# Install dependencies (this also initializes the OnlineIDE submodule)
+# Install dependencies
 npm install
 
-# Start development server
+# Start development server (Blockly UI only)
 npm start
 ```
 
 The application will open automatically at `http://localhost:8080`.
 
-**Note:** If you cloned without `--recursive`, initialize submodules manually:
-```bash
-git submodule update --init --recursive
-```
+Note: The Online-IDE is no longer bundled in this repository. It is provided
+as a separate Docker container/service. Local development of the Blockly UI
+works without the Online-IDE; for full integration tests run the external
+Online-IDE container alongside this app.
 
 ---
 
@@ -100,12 +100,9 @@ Blockly2Java/
 │   │   ├── generators/           # Java code generators
 │   │   └── blocks/               # Custom block definitions
 │   ├── public/                    # Static assets (auto-generated)
-│   │   ├── online-ide-embedded.js  # Built OnlineIDE
-│   │   ├── online-ide-embedded.css
 │   │   ├── lib/                  # Third-party libraries
 │   │   └── assets/               # Fonts, graphics, JS modules
-│   ├── online-ide-source/        # OnlineIDE submodule (NewOnlineIDE_B2J)
-│   ├── setup.js                  # Setup script (builds OnlineIDE)
+│   ├── webpack.config.js         # Webpack configuration
 │   ├── webpack.config.js         # Webpack configuration
 │   └── package.json
 ├── .github/workflows/            # CI/CD workflows
@@ -120,12 +117,9 @@ Blockly2Java/
 | Script | Description |
 |--------|-------------|
 | `npm start` | Start development server at http://localhost:8080 |
-| `npm run dev` | Force rebuild OnlineIDE and start with hot reloading |
+| `npm run dev` | Start development server with hot reloading |
 | `npm run build` | Create production build in `custom-generator-codelab/dist/` |
-| `npm run build:all` | Rebuild OnlineIDE + create production build |
-| `npm run setup` | Build OnlineIDE from submodule (runs automatically) |
-| `npm run ide:dev` | Start OnlineIDE in development mode (for testing IDE changes) |
-| `npm run ide:build` | Build OnlineIDE embedded version |
+| `npm run build:all` | Create production build for all components (legacy) |
 
 **Codelab-level scripts** (run from `/Blockly2Java/custom-generator-codelab`):
 
