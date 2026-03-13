@@ -14,6 +14,7 @@ import './blocks/java_method_blocks.js';
 import './blocks/java_object_call_blocks.js';
 import './blocks/java_graphics_blocks.js';
 import './blocks/text.js';
+import './blocks/custom_loops.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
@@ -79,6 +80,9 @@ function init() {
     // ignore storage errors
   }
   load(ws);
+  // Ensure existing for-loop variables are typed as local so they are
+  // available to `java_local_var_*` blocks.
+  ensureForLoopVarsAreLocal(ws);
   //onBlocksChange();
 
   // Initialise the overlay manager that guards Blockly when Java was manually edited.
@@ -133,6 +137,61 @@ function setupBlockly(theme) {
 }
 
 /**
+ * Ensure that all `controls_for` loop iteration variables are created as
+ * Java-local variables (type 'local') so they appear in the `java_local_var_*`
+ * variable blocks and behave like normal local variables.
+ */
+function ensureForLoopVarsAreLocal(workspace) {
+  try {
+    const forBlocks = [
+      ...workspace.getBlocksByType('controls_for', true) || [],
+      ...workspace.getBlocksByType('controls_forEach', true) || [],
+      ...workspace.getBlocksByType('controls_repeat_ext', true) || [],
+    ];
+    for (const b of forBlocks) {
+      const field = b.getField && b.getField('VAR');
+      if (!field) continue;
+      const oldId = field.getValue();
+      if (!oldId) continue;
+      const oldVar = workspace.getVariableById(oldId);
+      if (!oldVar) continue;
+      if (oldVar.type === 'local') continue; // already correct
+
+      // Create a fresh local variable for the loop counter, ensuring a distinct name.
+      const baseName = oldVar.name || 'i';
+      let newName = baseName;
+      let suffix = 1;
+      // Ensure we don't collide with an existing local variable of the same name.
+      while (workspace.getVariable(newName, 'local')) {
+        newName = `${baseName}_${suffix++}`;
+      }
+      const newVar = workspace.createVariable(newName, 'local');
+      const newId = newVar.getId();
+      // Point this loop block's VAR field at the fresh local variable.
+      field.setValue(newId);
+      // If the old variable is now unused anywhere, remove it to avoid
+      // leaving a duplicate attribute variable behind.
+      try {
+        const remaining = workspace.getVariableUsesById(oldId) || [];
+        if (remaining.length === 0) {
+          if (workspace.variableMap && typeof workspace.variableMap.deleteVariable === 'function') {
+            workspace.variableMap.deleteVariable(oldVar);
+          } else {
+            // Fallback: best-effort deletion.
+            workspace.deleteVariableById(oldId);
+          }
+        }
+      } catch (err) {
+        // Non-fatal — leave the old variable alone if deletion fails.
+        console.debug('Could not remove old loop variable', err);
+      }
+    }
+  } catch (e) {
+    console.warn('ensureForLoopVarsAreLocal failed', e);
+  }
+}
+
+/**
  * Registers all workspace event listeners and the `online_ide_access` and
  * `selected_file_name` property hooks on `globalThis`.
  * @param {Blockly.WorkspaceSvg} workspace
@@ -142,6 +201,38 @@ function setupListeners(workspace) {
   workspace.addChangeListener((e) => {
     if (e.isUiEvent) return;   // scrolling, zooming, etc. — skip
     save(workspace);
+  });
+
+  // When blocks are created (e.g. the user drops a new for-loop), ensure the
+  // loop iteration variable is converted to a typed local variable.
+  // Also handle changes to the loop variable field so the invariant is maintained
+  // if the user reassigns the VAR field to a non-local variable.
+  workspace.addChangeListener((e) => {
+    // Handle initial creation of loop blocks.
+    if (e.type === Blockly.Events.BLOCK_CREATE || e.type === 'create') {
+      ensureForLoopVarsAreLocal(workspace);
+      return;
+    }
+
+    // Handle changes to the VAR field on existing loop blocks.
+    const isBlockChange =
+      e.type === Blockly.Events.BLOCK_CHANGE || e.type === 'change';
+    if (!isBlockChange) return;
+
+    if (e.element !== 'field' || e.name !== 'VAR' || !e.blockId) return;
+
+    const block = workspace.getBlockById(e.blockId);
+    if (!block) return;
+
+    // Only react for loop blocks that use a VAR field as their iteration variable.
+    const loopTypes = new Set([
+      'controls_for',
+      'controls_forEach',
+      'controls_repeat_ext',
+    ]);
+    if (!loopTypes.has(block.type)) return;
+
+    ensureForLoopVarsAreLocal(workspace);
   });
 
   // Intercept assignments to globalThis.online_ide_access.
