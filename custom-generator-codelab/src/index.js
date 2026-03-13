@@ -169,6 +169,22 @@ function ensureForLoopVarsAreLocal(workspace) {
       const newId = newVar.getId();
       // Point this loop block's VAR field at the fresh local variable.
       field.setValue(newId);
+      // If the old variable is now unused anywhere, remove it to avoid
+      // leaving a duplicate attribute variable behind.
+      try {
+        const remaining = workspace.getVariableUsesById(oldId) || [];
+        if (remaining.length === 0) {
+          if (workspace.variableMap && typeof workspace.variableMap.deleteVariable === 'function') {
+            workspace.variableMap.deleteVariable(oldVar);
+          } else {
+            // Fallback: best-effort deletion.
+            workspace.deleteVariableById(oldId);
+          }
+        }
+      } catch (err) {
+        // Non-fatal — leave the old variable alone if deletion fails.
+        console.debug('Could not remove old loop variable', err);
+      }
     }
   } catch (e) {
     console.warn('ensureForLoopVarsAreLocal failed', e);
