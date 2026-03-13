@@ -103,7 +103,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image (sha + :tmp)
+      - name: Build and push Docker image (sha + :dev)
         run: |
           set -e
           REGISTRY="${{ vars.DOCKER_REGISTRY }}"
@@ -114,7 +114,7 @@ jobs:
             exit 1
           fi
           FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:${{ github.sha }}"
-          TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:tmp"
+          TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
           DOCKER_BUILDKIT=1 docker build --pull --no-cache --build-arg SKIP_ONLINE_IDE_BUILD=1 -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
           docker push "$FULL_IMAGE"
           docker push "$TMP_IMAGE"
@@ -168,8 +168,8 @@ jobs:
               exit 1
             fi
 
-            # Pull latest image (sha) and the :tmp tag, then tag :tmp locally as b2j-dev:tmp
-            TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:tmp"
+            # Pull latest image (sha) and the :dev tag, then tag :dev locally as b2j-dev:dev
+            TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
             docker pull "$TMP_IMAGE" || true
 
             # Stop and remove existing container
