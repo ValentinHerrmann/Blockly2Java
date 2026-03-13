@@ -5,9 +5,7 @@
 
 A visual programming environment that converts Blockly blocks into Java code. Blockly2Java integrates with the [Java Online IDE](https://github.com/ValentinHerrmann/NewOnlineIDE_B2J) to provide real-time code generation and execution.
 
-**Live Demo:** https://b2j.valentin-herrmann.com
-
-**BlueJ Extension:** [BlueJBlocklyExtension](https://github.com/ValentinHerrmann/BlueJBlocklyExtension)
+## Releases hosted at: https://blockly2java.de
 
 ## Features
 
