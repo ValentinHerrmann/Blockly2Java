@@ -3,10 +3,6 @@
 name: Build and Deploy to Pages
 
 on:
-  push:
-    branches:
-      - main
-      - onlineide
   # Manual trigger (Actions tab → Run workflow).
   workflow_dispatch:
 
