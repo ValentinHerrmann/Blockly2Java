@@ -157,30 +157,18 @@ function ensureForLoopVarsAreLocal(workspace) {
       if (!oldVar) continue;
       if (oldVar.type === 'local') continue; // already correct
 
-      // Create or lookup a variable with the same name but type 'local'.
-      const newVar = Blockly.Variables.getOrCreateVariablePackage(
-        workspace,
-        null,
-        oldVar.name,
-        'local',
-      );
+      // Create a fresh local variable for the loop counter, ensuring a distinct name.
+      const baseName = oldVar.name || 'i';
+      let newName = baseName;
+      let suffix = 1;
+      // Ensure we don't collide with an existing local variable of the same name.
+      while (workspace.getVariable(newName, 'local')) {
+        newName = `${baseName}_${suffix++}`;
+      }
+      const newVar = workspace.createVariable(newName, 'local');
       const newId = newVar.getId();
-      if (newId === oldId) {
-        // If the id is identical, just ensure the field uses it (safe noop).
-        field.setValue(newId);
-        continue;
-      }
-
-      // Replace all references to the old variable id with the new id.
-      const all = workspace.getAllBlocks(false);
-      for (const blk of all) {
-        if (typeof blk.renameVarById === 'function') {
-          try { blk.renameVarById(oldId, newId); } catch (e) { /* ignore */ }
-        }
-      }
-
-      // Remove the old variable (no longer referenced).
-      try { workspace.deleteVariableById(oldId); } catch (e) { /* ignore */ }
+      // Point this loop block's VAR field at the fresh local variable.
+      field.setValue(newId);
     }
   } catch (e) {
     console.warn('ensureForLoopVarsAreLocal failed', e);
