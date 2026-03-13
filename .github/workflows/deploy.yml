@@ -3,13 +3,15 @@ name: Build and Deploy Docker image
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  release:
+    types: [created]
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: 
-      name: b2j-dev
+    environment:
+      name: ${{ github.event_name == 'release' && 'production' || 'b2j-dev' }}
       url: ${{ vars.DEPLOY_HOST }}
 
     permissions:
