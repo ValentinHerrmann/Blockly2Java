@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.event_name == 'release' && 'production' || 'b2j-dev' }}
-      url: ${{ vars.DEPLOY_HOST }}
+      url: https://${{ vars.DEPLOY_HOST }}
 
     permissions:
       contents: read
@@ -80,8 +80,8 @@ jobs:
 
             CONTAINER_NAME="${{ vars.DEPLOY_CONTAINER_NAME }}"
             if [ -z "$CONTAINER_NAME" ]; then
-              echo "ERROR: secret DEPLOY_CONTAINER_NAME must be set" >&2
-              exit 1
+              echo "WARNING: repository variable DEPLOY_CONTAINER_NAME not set — using default 'blockly2java'" >&2
+              CONTAINER_NAME=blockly2java
             fi
 
             TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
@@ -149,8 +149,8 @@ jobs:
 
             CONTAINER_NAME="${{ vars.DEPLOY_CONTAINER_NAME }}"
             if [ -z "$CONTAINER_NAME" ]; then
-              echo "ERROR: secret DEPLOY_CONTAINER_NAME must be set" >&2
-              exit 1
+              echo "WARNING: repository variable DEPLOY_CONTAINER_NAME not set — using default 'blockly2java'" >&2
+              CONTAINER_NAME=blockly2java
             fi
 
             # Pull latest image (sha) and the :dev tag, then tag :dev locally as b2j-dev:dev

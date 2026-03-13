@@ -41,6 +41,7 @@ A visual programming environment that converts Blockly blocks into Java code. Bl
     - [Testing Production Build Locally](#testing-production-build-locally)
   - [Deployment](#deployment)
     - [Manual Deployment](#manual-deployment)
+    - [Docker Deployment](#docker-deployment)
     - [Automated Deployment](#automated-deployment)
       - [CI/CD Workflows](#cicd-workflows)
       - [Deployment Checklist](#deployment-checklist)
@@ -281,6 +282,33 @@ The site will be deployed to: `https://<username>.github.io/Blockly2Java/`
 - Add `CNAME` file to repository root with your domain
 - Configure DNS CNAME record pointing to `<username>.github.io`
 
+### Docker Deployment
+
+If you deploy the app as a Docker container, the repository includes a multi-stage Dockerfile that builds the app and serves the production `build/` output.
+
+- Build locally (from repository root):
+
+```bash
+docker build -t b2j:latest .
+```
+
+- Run the container and expose port 8080 (set `PORT` if needed):
+
+```bash
+# default: builds app during image build and serves it on 8080
+docker run --rm -p 8080:8080 -e PORT=8080 b2j:latest
+```
+
+- If you already have a prebuilt `custom-generator-codelab/build/` directory and want the image to keep it instead of rebuilding the OnlineIDE, build with the `SKIP_ONLINE_IDE_BUILD=1` build-arg:
+
+```bash
+docker build --build-arg SKIP_ONLINE_IDE_BUILD=1 -t b2j:latest .
+```
+
+Notes:
+- The production image runs `npm start` which serves the `custom-generator-codelab/build` directory.
+- The project previously used `serve -s` (SPA fallback). The container now uses the plain `serve` command, so static files such as `datenschutz.html` are served directly. If you require SPA fallback behavior, adjust the `start` script in `custom-generator-codelab/package.json` accordingly.
+
 ### Automated Deployment
 
 #### CI/CD Workflows
@@ -288,7 +316,7 @@ The site will be deployed to: `https://<username>.github.io/Blockly2Java/`
 **1. Deploy to GitHub Pages** (`.github/workflows/deploy_to_pages.yml`)
 - **Trigger:** Manual via Actions tab
 - **Purpose:** Deploy production build to GitHub Pages
-- **Output:** https://b2j.valentin-herrmann.com
+- **Output:** https://<username>.github.io/Blockly2Java/
 
 **2. Build and Store** (`.github/workflows/build_and_store.yml`)
 - **Trigger:** Automatic on push to main
