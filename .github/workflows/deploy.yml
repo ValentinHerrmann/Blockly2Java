@@ -108,7 +108,7 @@ jobs:
               docker ps -a --filter "name=$CONTAINER_NAME" >&2 || true
               exit 1
             fi
-          docker push "$TMP_IMAGE"
+            docker push "$TMP_IMAGE"
 
       - name: Deploy on server via SSH (pull image and restart container)
         uses: appleboy/ssh-action@v0.1.7
