@@ -1,7 +1,5 @@
 [![Deploy Release https://blockly2java.de](https://github.com/ValentinHerrmann/Blockly2Java/actions/workflows/deploy_docker.yml/badge.svg?event=release)](https://github.com/ValentinHerrmann/Blockly2Java/actions/workflows/deploy_docker.yml)
 
-![Alt](https://repobeats.axiom.co/api/embed/4e7160ada4565a2f9254a11196dab7388eba30dc.svg "Repobeats analytics image")
-
 # Blockly2Java
 
 A visual programming environment that converts Blockly blocks into Java code. Blockly2Java integrates with the [Java Online IDE](https://github.com/ValentinHerrmann/NewOnlineIDE_B2J) to provide real-time code generation and execution.
@@ -19,6 +17,11 @@ A visual programming environment that converts Blockly blocks into Java code. Bl
 
 ---
 
+## Github Activities
+
+![Alt](https://repobeats.axiom.co/api/embed/4e7160ada4565a2f9254a11196dab7388eba30dc.svg "Repobeats analytics image")
+
+---
 ## Table of Contents
 
 - [Blockly2Java](#blockly2java)
