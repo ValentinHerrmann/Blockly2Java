@@ -1,5 +1,6 @@
 [![Deploy Release https://blockly2java.de](https://github.com/ValentinHerrmann/Blockly2Java/actions/workflows/deploy_docker.yml/badge.svg?event=release)](https://github.com/ValentinHerrmann/Blockly2Java/actions/workflows/deploy_docker.yml)
 
+![Alt](https://repobeats.axiom.co/api/embed/4e7160ada4565a2f9254a11196dab7388eba30dc.svg "Repobeats analytics image")
 
 # Blockly2Java
 
