@@ -12,10 +12,16 @@ COPY . .
 # Remove any pre-existing build artifacts from the repository to force a fresh build
 # If SKIP_ONLINE_IDE_BUILD is set, assume a prebuilt `build/` may be supplied and keep it
 ARG SKIP_ONLINE_IDE_BUILD=0
-RUN if [ "$SKIP_ONLINE_IDE_BUILD" = "1" ]; then echo "Keeping existing custom-generator-codelab/build (SKIP_ONLINE_IDE_BUILD=1)"; else rm -rf custom-generator-codelab/build || true; fi
+ARG CORS_PROXY_URL=
+RUN if [ "$SKIP_ONLINE_IDE_BUILD" = "1" ]; then \
+            echo "Keeping existing custom-generator-codelab/build (SKIP_ONLINE_IDE_BUILD=1)"; \
+        else \
+            rm -rf custom-generator-codelab/build || true; \
+        fi
 # Ensure project files are writable for any npm scripts that create node_modules or artifacts
 RUN chmod -R a+rwX /app || true
 ENV NODE_OPTIONS=--max_old_space_size=2048
+ENV CORS_PROXY_URL=$CORS_PROXY_URL
 RUN npm run build
 
 # Normalize build output: webpack production outputs to `dist`, but the runtime

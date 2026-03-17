@@ -25,17 +25,17 @@ export class GitService {
   /**
    * CORS proxy URL.
    * Injected at build time via webpack DefinePlugin from the CORS_PROXY_URL
-   * environment variable.  Defaults to '/cors-proxy' (the local webpack-dev-server
-   * middleware) so development works without any extra configuration.
+   * environment variable.  Defaults to '/cors-proxy' only in local development,
+   * where webpack-dev-server provides that middleware automatically.
    *
-   * For production (e.g. GitHub Pages), set CORS_PROXY_URL to your deployed
-   * Cloudflare Worker URL before running `npm run build`:
+   * For production, set CORS_PROXY_URL to your deployed Cloudflare Worker URL
+   * before running `npm run build`:
    *   CORS_PROXY_URL=https://b2j-cors-proxy.<sub>.workers.dev npm run build
    */
   /* global __CORS_PROXY_URL__ */
-  static CORS_PROXY = (typeof __CORS_PROXY_URL__ !== 'undefined')
+  static CORS_PROXY = typeof __CORS_PROXY_URL__ === 'string'
     ? __CORS_PROXY_URL__
-    : '/cors-proxy';
+    : '';
 
   /** sessionStorage key that holds the full config (URL + credentials) for the active session. */
   static SESSION_KEY = 'b2j_git_config';
@@ -195,6 +195,13 @@ export class GitService {
     return { Authorization: `Basic ${encoded}` };
   }
 
+  static _requireCorsProxy() {
+    if (this.CORS_PROXY) return this.CORS_PROXY;
+    throw new Error(
+      'Git-Zugriff ist nicht konfiguriert: CORS_PROXY_URL fehlt im Production-Build.'
+    );
+  }
+
   // ── Clone ────────────────────────────────────────────────────────────────
 
   /**
@@ -221,7 +228,7 @@ export class GitService {
       http,
       dir: this.REPO_DIR,
       url,
-      corsProxy: this.CORS_PROXY,
+      corsProxy: this._requireCorsProxy(),
       headers: this._authHeaders(finalUsername, finalPassword),
       onAuth: () => ({ username: finalUsername, password: finalPassword }),
       singleBranch: true,
@@ -249,7 +256,7 @@ export class GitService {
       fs,
       http,
       dir: this.REPO_DIR,
-      corsProxy: this.CORS_PROXY,
+      corsProxy: this._requireCorsProxy(),
       headers: this._authHeaders(config.username, config.password),
       onAuth: () => ({ username: config.username, password: config.password }),
       singleBranch: true,
@@ -509,7 +516,7 @@ export class GitService {
       fs,
       http,
       dir: this.REPO_DIR,
-      corsProxy: this.CORS_PROXY,
+      corsProxy: this._requireCorsProxy(),
       headers: this._authHeaders(config.username, config.password),
       onAuth: () => ({ username: config.username, password: config.password }),
     });
@@ -791,7 +798,7 @@ export class GitService {
       await git.fetch({
         fs, http,
         dir: this.REPO_DIR,
-        corsProxy: this.CORS_PROXY,
+        corsProxy: this._requireCorsProxy(),
         headers: this._authHeaders(config.username, config.password),
         onAuth: () => ({ username: config.username, password: config.password }),
         singleBranch: true,
