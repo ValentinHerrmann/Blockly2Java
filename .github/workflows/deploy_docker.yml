@@ -20,6 +20,7 @@ jobs:
       
     env:
       DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY }}
+      CORS_PROXY_URL: ${{ secrets.CORS_PROXY_URL }}
 
     steps:
       - name: Check out code
@@ -41,14 +42,19 @@ jobs:
           set -e
           REGISTRY="${{ vars.DOCKER_REGISTRY }}"
           IMAGE_NAME="${{ vars.DOCKER_IMAGE }}"
+          CORS_PROXY_URL="${CORS_PROXY_URL}"
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           if [ -z "$REGISTRY" ] || [ -z "$IMAGE_NAME" ]; then
             echo "ERROR: DOCKER_REGISTRY and DOCKER_IMAGE vars must be set" >&2
             exit 1
           fi
+          if [ -z "$CORS_PROXY_URL" ]; then
+            echo "ERROR: secret CORS_PROXY_URL must be set for Docker deployments" >&2
+            exit 1
+          fi
           FULL_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:${{ github.sha }}"
           TMP_IMAGE="$REGISTRY/$OWNER/$IMAGE_NAME:dev"
-          DOCKER_BUILDKIT=1 docker build --pull --no-cache --build-arg SKIP_ONLINE_IDE_BUILD=1 -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
+          DOCKER_BUILDKIT=1 docker build --pull --no-cache --build-arg SKIP_ONLINE_IDE_BUILD=1 --build-arg CORS_PROXY_URL="$CORS_PROXY_URL" -t "$FULL_IMAGE" -t "$TMP_IMAGE" .
           docker push "$FULL_IMAGE"
           docker push "$TMP_IMAGE"
 

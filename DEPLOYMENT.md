@@ -17,6 +17,7 @@ Required repository secrets (add under Settings → Secrets):
 - `DEPLOY_CONTAINER_NAME` — name of the container to run on the server
 - `DEPLOY_APP_PORT` — internal host port to bind the container to (default: `3000`)
 - `DEPLOY_SERVER_NAME` — nginx `server_name` to use for the site (e.g. `example.com`). If empty, nginx will use the default server.
+- `CORS_PROXY_URL` — absolute URL of the deployed CORS proxy worker used for browser-side git operations (required for production builds)
 
 Optional HTTPS secrets
 - `DEPLOY_ENABLE_HTTPS` — set to `true` to attempt obtaining TLS certs via `certbot`

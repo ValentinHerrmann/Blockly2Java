@@ -114,7 +114,7 @@ To deploy manually, go to the Actions tab on GitHub and trigger the "Build and D
 
 ### Custom Domain
 
-The project is configured to use `b2j.valentin-herrmann.com` as a custom domain. The `CNAME` file is automatically copied to the build output.
+The project is configured to use `blockly2java.de` as a custom domain. The `CNAME` file is automatically copied to the build output.
 
 ## Development Workflow
 

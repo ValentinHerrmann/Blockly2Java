@@ -1,4 +1,4 @@
-const path = require('path');
+const path = require('node:path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -10,6 +10,13 @@ const getPublicPath = () => {
     return '/Blockly2Java/';
   }
   return '/';
+};
+
+const getCorsProxyUrl = () => {
+  if (process.env.CORS_PROXY_URL) {
+    return process.env.CORS_PROXY_URL;
+  }
+  return process.env.WEBPACK_SERVE === 'true' ? '/cors-proxy' : '';
 };
 
 // Base config that applies to either development or production mode.
@@ -45,8 +52,8 @@ const config = {
     // can reach servers that don't set Access-Control-Allow-Origin.
     // Requests to /cors-proxy/{host}/{path} are forwarded to https://{host}/{path}.
     setupMiddlewares: (middlewares, _devServer) => {
-      const https = require('https');
-      const nodeHttp = require('http');
+      const https = require('node:https');
+      const nodeHttp = require('node:http');
 
       // Insert at the very front so it runs before any built-in middleware.
       middlewares.unshift({
@@ -149,7 +156,7 @@ const config = {
     // Override at build time: CORS_PROXY_URL=https://... npm run build
     new webpack.DefinePlugin({
       __CORS_PROXY_URL__: JSON.stringify(
-        process.env.CORS_PROXY_URL || '/cors-proxy'
+        getCorsProxyUrl()
       ),
     }),
     // Generate the HTML index page based on our template.
@@ -202,7 +209,7 @@ const config = {
   ],
 };
 
-module.exports = (env, argv) => {
+module.exports = function createWebpackConfig(env, argv) {
   if (argv.mode === 'development') {
     // Set the output path to the `build` directory
     // so we don't clobber production builds.

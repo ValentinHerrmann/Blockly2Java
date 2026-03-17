@@ -423,7 +423,7 @@ npm run setup
 **Solution:**
 The standalone version saves to cookies. If translation bugs occur (no Java code displayed), clear browser cookies for the domain:
 1. Open browser DevTools → Application → Cookies
-2. Delete all cookies for `b2j.valentin-herrmann.com`
+2. Delete all cookies for `blockly2java.de`
 3. Reload the page
 
 ---
