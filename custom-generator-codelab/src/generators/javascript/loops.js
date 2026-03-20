@@ -42,8 +42,14 @@ export function controls_repeat_ext(block, generator) {
   }
   let endVar = repeats;
   if (!repeats.match(/^\w+$/) && !Blockly.utils.string.isNumber(repeats)) {
-    endVar = generator.nameDB_.getDistinctName('repeat_end', Blockly.Names.NameType.VARIABLE);
-    code += 'int ' + endVar + ' = ' + repeats + ';\n';
+    // Only cache complex values that may have side-effects or expensive
+    // lookups (function calls, property access, indexing or assignments).
+    // Simple arithmetic expressions like "x + 1" can be safely inlined.
+    const needsCaching = /\w+\s*\(|\.|\[|=/.test(repeats);
+    if (needsCaching) {
+      endVar = generator.nameDB_.getDistinctName('repeat_end', Blockly.Names.NameType.VARIABLE);
+      code += 'int ' + endVar + ' = ' + repeats + ';\n';
+    }
   }
   code += '\nfor (int ' + loopVar + ' = 0; ' + loopVar + ' < ' + endVar + '; ' +
       loopVar + '++) {\n' + branch + '}\n';
