@@ -118,7 +118,6 @@ export function controls_for(block, generator) {
     const intLiteral = (s) => /^[-+]?\d+$/.test(String(s));
     const useInt = intLiteral(argument0) && intLiteral(argument1) && intLiteral(increment);
 
-    let startVar = argument0;
     // Only cache values that are likely to have side-effects or be expensive
     // (function calls, property access, indexing, or assignment). Simple
     // arithmetic like "x + 1" is safe to inline.
