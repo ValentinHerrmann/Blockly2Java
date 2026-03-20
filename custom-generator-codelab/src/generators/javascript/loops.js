@@ -96,7 +96,10 @@ export function controls_for(block, generator) {
   if (step === 1) { inc += '++'; } 
   else if (step === -1) { inc += '--'; } 
   else if (!Blockly.utils.string.isNumber(increment)) { 
-    inc += ' += ' + increment; } 
+    // Wrap complex increment expressions in parentheses to preserve
+    // the intended order when generating e.g. "j += (x + 1)".
+    const needsParens = /[+\-*/]/.test(increment);
+    inc += ' += ' + (needsParens ? '(' + increment + ')' : increment); } 
   else {
     inc += (step < 0 ? ' -= ' : ' += ') + Math.abs(step);
   }
@@ -111,16 +114,25 @@ export function controls_for(block, generator) {
     code = '';
     // Cache non-trivial values to variables to prevent repeated look-ups.
     let startVar = argument0;
-    if (!argument0.match(/^\w+$/) && !Blockly.utils.string.isNumber(argument0)) {
+    // Decide numeric type: use 'int' only when both bounds and step are integer literals.
+    const intLiteral = (s) => /^[-+]?\d+$/.test(String(s));
+    const useInt = intLiteral(argument0) && intLiteral(argument1) && intLiteral(increment);
+
+    let startVar = argument0;
+    // Only cache values that are likely to have side-effects or be expensive
+    // (function calls, property access, indexing, or assignment). Simple
+    // arithmetic like "x + 1" is safe to inline.
+    const needsCachingExpr = (s) => /\w+\s*\(|\.|\[|=/.test(String(s));
+    if (needsCachingExpr(argument0)) {
       startVar = generator.nameDB_.getDistinctName(
           variable0 + '_start', Blockly.Names.NameType.VARIABLE);
-      code += 'int ' + startVar + ' = ' + argument0 + ';\n';
+      code += (useInt ? 'int ' : 'double ') + startVar + ' = ' + argument0 + ';\n';
     }
     let endVar = argument1;
-    if (!argument1.match(/^\w+$/) && !Blockly.utils.string.isNumber(argument1)) {
+    if (needsCachingExpr(argument1)) {
       endVar = generator.nameDB_.getDistinctName(
           variable0 + '_end', Blockly.Names.NameType.VARIABLE);
-      code += 'int ' + endVar + ' = ' + argument1 + ';\n';
+      code += (useInt ? 'int ' : 'double ') + endVar + ' = ' + argument1 + ';\n';
     }
     // Determine loop direction at start, in case one of the bounds
     // changes during loop execution.
@@ -133,12 +145,13 @@ export function controls_for(block, generator) {
         comparison = Number(increment) < 0 ? ' > ' : ' < '
       }
         
-    const cast = Blockly.utils.string.isNumber(startVar) ? '' : '(int)';
+    const cast = useInt && !intLiteral(startVar) ? '(int)' : '';
+    const varType = useInt ? 'int' : 'double';
     code += 
-    'for (int ' + variable0 + ' = ' + cast + startVar + '; ' + 
-        variable0 + comparison + endVar + '; ' + 
-        variable0 + inc + ') {\n' +
-        branch + '}\n';
+    'for (' + varType + ' ' + variable0 + ' = ' + (useInt ? cast : '') + startVar + '; ' + 
+      variable0 + comparison + endVar + '; ' + 
+      variable0 + inc + ') {\n' +
+      branch + '}\n';
   }
   return code;
 };
