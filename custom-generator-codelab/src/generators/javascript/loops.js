@@ -47,6 +47,7 @@ export function controls_repeat_ext(block, generator) {
     // if variables used in the expression change inside the loop body.
     endVar = generator.nameDB_.getDistinctName('repeat_end', Blockly.Names.NameType.VARIABLE);
     code += 'int ' + endVar + ' = ' + repeats + ';\n';
+  }
   return code;
 };
 
