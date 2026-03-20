@@ -665,6 +665,11 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
     }
     return 'var';
   }
+  // Prompt/input block returns a String or numeric value depending on its TYPE field.
+  if (valueBlock.type === 'text_prompt_ext' || valueBlock.type === 'text_prompt') {
+    const t = valueBlock.getFieldValue('TYPE');
+    return (t === 'NUMBER') ? TYPES.DOUBLE : TYPES.STRING;
+  }
   return getType(valueBlock.type);
 }
 
