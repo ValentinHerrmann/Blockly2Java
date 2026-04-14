@@ -443,12 +443,8 @@ function getClassParent(className) {
     return GFX_CLASS_PARENTS[className];
   }
   // 1. Super-call type hints (fastest, populated at generation time).
-  const raw = globalThis.localStorage?.getItem(LocalStorageManager.SUPER_CALL_TYPE_HINTS_KEY);
-  if (raw) {
-    const store = JSON.parse(raw) || {};
-    const entry = store[className];
-    if (entry?.parentClass) return entry.parentClass;
-  }
+  const entry = LocalStorageManager.getSuperCallHintEntry(className);
+  if (entry?.parentClass) return entry.parentClass;
   // 2. Read the class's saved workspace JSON and look for a java_extends block.
   //    This works even when the sub-class has never been "generated" yet.
   try {

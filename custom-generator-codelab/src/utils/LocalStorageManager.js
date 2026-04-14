@@ -8,18 +8,109 @@ class LocalStorageManager {
     static OBJ_CALL_TYPE_HINTS_KEY = 'objCallTypeHints';
     static JAVA_MODIFIED_KEY_PREFIX  = 'javaModified_';
     static JAVA_GENERATED_KEY_PREFIX = 'javaGenerated_';
+
+    static _migrationDone = false;
+
+    static _isAppStorageKey(key) {
+        if (!key) return false;
+        if (key.endsWith('.json') || key.endsWith('.xml')) return true;
+        if (key.startsWith(this.JAVA_MODIFIED_KEY_PREFIX)) return true;
+        if (key.startsWith(this.JAVA_GENERATED_KEY_PREFIX)) return true;
+        if (key.startsWith('b2j_') || key.startsWith('b2j.')) return true;
+        return key === this.CTR_STORAGE_KEY ||
+            key === this.METHODS_STORAGE_KEY ||
+            key === this.SUPER_CALL_TYPE_HINTS_KEY ||
+            key === this.CONSTRUCTOR_CALLSITE_HINTS_KEY ||
+            key === this.OBJ_CALL_TYPE_HINTS_KEY;
+    }
+
+    static _migrateToSessionStorageIfNeeded() {
+        if (this._migrationDone) return;
+        this._migrationDone = true;
+        const session = globalThis.sessionStorage;
+        const local = globalThis.localStorage;
+        if (!session || !local) return;
+        const keys = [];
+        for (let i = 0; i < local.length; i++) {
+            const key = local.key(i);
+            if (this._isAppStorageKey(key)) keys.push(key);
+        }
+        for (const key of keys) {
+            const value = local.getItem(key);
+            if (value != null && session.getItem(key) == null) {
+                session.setItem(key, value);
+            }
+            local.removeItem(key);
+        }
+    }
+
+    static _storage() {
+        this._migrateToSessionStorageIfNeeded();
+        return globalThis.sessionStorage ?? globalThis.localStorage;
+    }
+
+    static getStorage() {
+        return this._storage();
+    }
+
+    static getItem(key) {
+        return this._storage()?.getItem(key) ?? null;
+    }
+
+    static setItem(key, value) {
+        this._storage()?.setItem(key, value);
+    }
+
+    static removeItem(key) {
+        this._storage()?.removeItem(key);
+    }
+
+    static getAllKeys() {
+        const storage = this._storage();
+        if (!storage) return [];
+        const keys = [];
+        for (let i = 0; i < storage.length; i++) {
+            const key = storage.key(i);
+            if (key) keys.push(key);
+        }
+        return keys;
+    }
+
+    static getStoredSelectedFileName() {
+        return this.getItem('b2j.selected_file_name');
+    }
+
+    static setStoredSelectedFileName(fileName) {
+        if (!fileName) {
+            this.removeItem('b2j.selected_file_name');
+            return;
+        }
+        this.setItem('b2j.selected_file_name', fileName);
+    }
+
+    static getStoredLastJavaFileName() {
+        return this.getItem('b2j.last_java_file_name');
+    }
+
+    static setStoredLastJavaFileName(fileName) {
+        if (!fileName) {
+            this.removeItem('b2j.last_java_file_name');
+            return;
+        }
+        this.setItem('b2j.last_java_file_name', fileName);
+    }
     
     static clearConstructors(className) {
         if(className == null || className === '') {
             console.warn("No class name provided for clearing constructors.");
             return;
         }
-        let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        let ctrs = this._storage()?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
         //console.log("Clearing constructors for class: "+className);
         //console.log("Stored constructors for class "+className+": "+ctrObjs[className]);
         ctrObjs[className] = [];
-        globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
+        this._storage()?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
         //console.log("Remaining constructors: "+JSON.stringify(ctrObjs));
         // Clear any super-call type hints this class wrote as a sub-class.
         // This ensures stale hints are never used on the next generation.
@@ -29,15 +120,15 @@ class LocalStorageManager {
     }
 
     static clearAllConstructors() {
-        globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify({}));
-        globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify({}));
-        globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify({}));
-        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify({}));
+        this._storage()?.setItem(this.CTR_STORAGE_KEY, JSON.stringify({}));
+        this._storage()?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify({}));
+        this._storage()?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify({}));
+        this._storage()?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify({}));
         //console.log("Cleared all stored constructors.");
     }
 
     static storeConstructors(className, block) {
-        let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        let ctrs = this._storage()?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
         //console.log("Storing constructors for class: "+className);
 
@@ -53,11 +144,11 @@ class LocalStorageManager {
             clz: className,
         };
         ctrObjs[className].push(blockData);
-        globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
+        this._storage()?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
     }
 
     static getAllConstructors() {
-        let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        let ctrs = this._storage()?.getItem(this.CTR_STORAGE_KEY);
         const ret = JSON.parse(ctrs) || {};
         return ret;
     }
@@ -80,11 +171,11 @@ class LocalStorageManager {
      */
     static storeSuperCallTypeHints(subClassName, parentClassName, typeHints) {
         if (!subClassName || !parentClassName) return;
-        const raw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         // Replace entirely – don't merge so stale entries can't survive.
         store[subClassName] = { parentClass: parentClassName, hints: typeHints };
-        globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+        this._storage()?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     /**
@@ -96,11 +187,11 @@ class LocalStorageManager {
      */
     static clearSubClassTypeHints(subClassName) {
         if (!subClassName) return;
-        const raw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         if (store[subClassName]) {
             delete store[subClassName];
-            globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+            this._storage()?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
         }
     }
 
@@ -131,10 +222,10 @@ class LocalStorageManager {
      */
     static storeConstructorCallsiteHintsByClass(callerClass, hintsByCallee) {
         if (!callerClass) return;
-        const raw = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         store[callerClass] = hintsByCallee || {};
-        globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(store));
+        this._storage()?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(store));
     }
 
     /**
@@ -146,11 +237,11 @@ class LocalStorageManager {
      */
     static _clearConstructorCallsiteHintsByCaller(callerClass) {
         if (!callerClass) return;
-        const raw = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         if (store[callerClass]) {
             delete store[callerClass];
-            globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(store));
+            this._storage()?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(store));
         }
     }
 
@@ -162,7 +253,7 @@ class LocalStorageManager {
      * @returns {Array<string|null>|null}
      */
     static getConstructorCallsiteHints(calledClass) {
-        const raw = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         let merged = null;
         for (const calleeMap of Object.values(store)) {
@@ -181,7 +272,7 @@ class LocalStorageManager {
     }
 
     static getSuperCallTypeHints(parentClassName) {
-        const raw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         const merged = {};
         let found = false;
@@ -192,6 +283,13 @@ class LocalStorageManager {
             }
         }
         return found ? merged : null;
+    }
+
+    static getSuperCallHintEntry(subClassName) {
+        if (!subClassName) return null;
+        const raw = this._storage()?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        const store = JSON.parse(raw) || {};
+        return store[subClassName] ?? null;
     }
 
     // ── Object-method-call parameter type hints ───────────────────────────────
@@ -218,10 +316,10 @@ class LocalStorageManager {
      */
     static storeObjCallTypeHints(callerClass, hints) {
         if (!callerClass || !hints || Object.keys(hints).length === 0) return;
-        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         store[callerClass] = hints;
-        globalThis.localStorage?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+        this._storage()?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     /**
@@ -232,7 +330,7 @@ class LocalStorageManager {
      * @returns {Array<string|null>|null}
      */
     static getObjCallTypeHints(methodKey) {
-        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         let merged = null;
         for (const calleeMap of Object.values(store)) {
@@ -258,11 +356,11 @@ class LocalStorageManager {
      */
     static clearObjCallTypeHintsByCaller(callerClass) {
         if (!callerClass) return;
-        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
         const store = JSON.parse(raw) || {};
         if (store[callerClass]) {
             delete store[callerClass];
-            globalThis.localStorage?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+            this._storage()?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
         }
     }
 
@@ -275,10 +373,10 @@ class LocalStorageManager {
      */
     static clearMethods(className) {
         if (!className) return;
-        const raw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        const raw = this._storage()?.getItem(this.METHODS_STORAGE_KEY);
         const store = JSON.parse(raw) || {};
         store[className] = [];
-        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
+        this._storage()?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
         // Clear method-call type hints stored by this class as a caller so they
         // are rebuilt fresh during the next code-generation pass.
         this.clearObjCallTypeHintsByCaller(className);
@@ -288,7 +386,7 @@ class LocalStorageManager {
      * Removes all stored method definitions for every class.
      */
     static clearAllMethods() {
-        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify({}));
+        this._storage()?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify({}));
     }
 
     /**
@@ -298,11 +396,11 @@ class LocalStorageManager {
      */
     static storeMethods(className, methodData) {
         if (!className) return;
-        const raw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        const raw = this._storage()?.getItem(this.METHODS_STORAGE_KEY);
         const store = JSON.parse(raw) || {};
         if (!store[className]) store[className] = [];
         store[className].push(methodData);
-        globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
+        this._storage()?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(store));
     }
 
     /**
@@ -310,13 +408,13 @@ class LocalStorageManager {
      * @returns {Object.<string, Array<{name:string, arguments:string[], isStatic:boolean, hasReturn:boolean}>>}
      */
     static getAllMethods() {
-        const raw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        const raw = this._storage()?.getItem(this.METHODS_STORAGE_KEY);
         return JSON.parse(raw) || {};
     }
 
     /** @param {string} className */
     static _removeCallsiteHintsForClass(className) {
-        const csRaw = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
+        const csRaw = this._storage()?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
         if (!csRaw) return;
         const csStore = JSON.parse(csRaw) || {};
         let csChanged = false;
@@ -326,12 +424,12 @@ class LocalStorageManager {
                 delete calleeMap[className]; csChanged = true;
             }
         }
-        if (csChanged) globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore));
+        if (csChanged) this._storage()?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore));
     }
 
     /** @param {string} className */
     static _removeSuperHintsForClass(className) {
-        const hintsRaw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        const hintsRaw = this._storage()?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
         if (!hintsRaw) return;
         const store = JSON.parse(hintsRaw) || {};
         let changed = false;
@@ -341,23 +439,23 @@ class LocalStorageManager {
                 changed = true;
             }
         }
-        if (changed) globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+        if (changed) this._storage()?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     static deleteClass(className) {
-        let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        let ctrs = this._storage()?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
         if (ctrObjs[className] != null) {
             delete ctrObjs[className];
-            globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
+            this._storage()?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
         }
         const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
-        globalThis.localStorage?.removeItem(key);
+        this._storage()?.removeItem(key);
         // Also remove legacy .xml key if present.
-        globalThis.localStorage?.removeItem(this.WORKSPACE_STORAGE_KEY + className + '.xml');
+        this._storage()?.removeItem(this.WORKSPACE_STORAGE_KEY + className + '.xml');
         // Clean up java-modified flag and generated-code cache.
-        globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX  + className);
-        globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        this._storage()?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX  + className);
+        this._storage()?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
         // Clean up stored method definitions.
         this.clearMethods(className);
         // Clean up callsite hints where this class appears as caller or callee.
@@ -372,7 +470,7 @@ class LocalStorageManager {
 
     /** @param {string} className */
     static _removeObjCallHintsForClass(className) {
-        const raw = globalThis.localStorage?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
+        const raw = this._storage()?.getItem(this.OBJ_CALL_TYPE_HINTS_KEY);
         if (!raw) return;
         const store = JSON.parse(raw) || {};
         let changed = false;
@@ -385,46 +483,46 @@ class LocalStorageManager {
                 if (key.startsWith(prefix)) { delete calleeMap[key]; changed = true; }
             }
         }
-        if (changed) globalThis.localStorage?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+        if (changed) this._storage()?.setItem(this.OBJ_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     static renameClass(className, newClassName) {
         const oldKey = this.WORKSPACE_STORAGE_KEY + className + '.json';
         const newKey = this.WORKSPACE_STORAGE_KEY + newClassName + '.json';
 
-        const savedData = globalThis.localStorage?.getItem(oldKey);
+        const savedData = this._storage()?.getItem(oldKey);
         if (savedData) {
-            globalThis.localStorage.setItem(newKey, savedData);
-            globalThis.localStorage.removeItem(oldKey);
+            this._storage()?.setItem(newKey, savedData);
+            this._storage()?.removeItem(oldKey);
         }
 
         // Migrate constructor data from old class name to new class name.
-        const ctrsJSON = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        const ctrsJSON = this._storage()?.getItem(this.CTR_STORAGE_KEY);
         if (ctrsJSON) {
             const ctrs = JSON.parse(ctrsJSON);
             if (ctrs[className] !== undefined) {
                 ctrs[newClassName] = ctrs[className];
                 delete ctrs[className];
-                globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrs));
+                this._storage()?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrs));
             }
         }
 
         // Migrate java-modified flag.
-        const modifiedVal = globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+        const modifiedVal = this._storage()?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
         if (modifiedVal != null) {
-            globalThis.localStorage?.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
-            globalThis.localStorage?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
+            this._storage()?.setItem(this.JAVA_MODIFIED_KEY_PREFIX + newClassName, modifiedVal);
+            this._storage()?.removeItem(this.JAVA_MODIFIED_KEY_PREFIX + className);
         }
 
         // Migrate last-generated-code cache.
-        const generatedVal = globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+        const generatedVal = this._storage()?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className);
         if (generatedVal != null) {
-            globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
-            globalThis.localStorage?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
+            this._storage()?.setItem(this.JAVA_GENERATED_KEY_PREFIX + newClassName, generatedVal);
+            this._storage()?.removeItem(this.JAVA_GENERATED_KEY_PREFIX + className);
         }
 
         // Migrate callsite hints where className appears as caller or callee.
-        const csRaw2 = globalThis.localStorage?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
+        const csRaw2 = this._storage()?.getItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY);
         if (csRaw2) {
             const csStore2 = JSON.parse(csRaw2) || {};
             let csChanged2 = false;
@@ -440,17 +538,17 @@ class LocalStorageManager {
                     csChanged2 = true;
                 }
             }
-            if (csChanged2) globalThis.localStorage?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore2));
+            if (csChanged2) this._storage()?.setItem(this.CONSTRUCTOR_CALLSITE_HINTS_KEY, JSON.stringify(csStore2));
         }
 
         // Migrate method definitions keyed by class name.
-        const methodDefsRaw = globalThis.localStorage?.getItem(this.METHODS_STORAGE_KEY);
+        const methodDefsRaw = this._storage()?.getItem(this.METHODS_STORAGE_KEY);
         if (methodDefsRaw) {
             const methodDefsStore = JSON.parse(methodDefsRaw) || {};
             if (methodDefsStore[className] !== undefined) {
                 methodDefsStore[newClassName] = methodDefsStore[className];
                 delete methodDefsStore[className];
-                globalThis.localStorage?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(methodDefsStore));
+                this._storage()?.setItem(this.METHODS_STORAGE_KEY, JSON.stringify(methodDefsStore));
             }
         }
         // Migrate super-call type hints where className appears as either
@@ -464,7 +562,7 @@ class LocalStorageManager {
      * @param {string} newName
      */
     static _migrateSuperHints(oldName, newName) {
-        const hintsRaw = globalThis.localStorage?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
+        const hintsRaw = this._storage()?.getItem(this.SUPER_CALL_TYPE_HINTS_KEY);
         if (!hintsRaw) return;
         const store = JSON.parse(hintsRaw) || {};
         let changed = false;
@@ -479,30 +577,30 @@ class LocalStorageManager {
                 changed = true;
             }
         }
-        if (changed) globalThis.localStorage?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
+        if (changed) this._storage()?.setItem(this.SUPER_CALL_TYPE_HINTS_KEY, JSON.stringify(store));
     }
 
     static createClass(className) {
-        let ctrs = globalThis.localStorage?.getItem(this.CTR_STORAGE_KEY);
+        let ctrs = this._storage()?.getItem(this.CTR_STORAGE_KEY);
         let ctrObjs = JSON.parse(ctrs) || {};
         ctrObjs[className] = []
-        globalThis.localStorage?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
+        this._storage()?.setItem(this.CTR_STORAGE_KEY, JSON.stringify(ctrObjs));
 
         const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
-        globalThis.localStorage?.setItem(key, '');
+        this._storage()?.setItem(key, '');
     }
 
     static loadWorkspace(className) {
         const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
-        let data = globalThis.localStorage?.getItem(key);
+        let data = this._storage()?.getItem(key);
 
         // Migrate legacy .xml key on first access.
         if (data == null) {
             const legacyKey = this.WORKSPACE_STORAGE_KEY + className + '.xml';
-            const legacyData = globalThis.localStorage?.getItem(legacyKey);
+            const legacyData = this._storage()?.getItem(legacyKey);
             if (legacyData != null) {
-                globalThis.localStorage?.setItem(key, legacyData);
-                globalThis.localStorage?.removeItem(legacyKey);
+                this._storage()?.setItem(key, legacyData);
+                this._storage()?.removeItem(legacyKey);
                 data = legacyData;
             }
         }
@@ -512,7 +610,7 @@ class LocalStorageManager {
 
     static saveWorkspace(className, data) {
         const key = this.WORKSPACE_STORAGE_KEY + className + '.json';
-        globalThis.localStorage?.setItem(key, JSON.stringify(data));
+        this._storage()?.setItem(key, JSON.stringify(data));
     }
 
     // ── Java-modified bulk helpers ────────────────────────────────────────────
@@ -522,7 +620,7 @@ class LocalStorageManager {
      * from localStorage.  Call this when the entire workspace is reset.
      */
     static clearAllJavaModifiedData() {
-        const ls = globalThis.localStorage;
+        const ls = this._storage();
         if (!ls) return;
         const toRemove = [];
         for (let i = 0; i < ls.length; i++) {
@@ -542,7 +640,7 @@ class LocalStorageManager {
      */
     static getAllJavaModifiedClassNames() {
         const result = [];
-        const ls = globalThis.localStorage;
+        const ls = this._storage();
         if (!ls) return result;
         for (let i = 0; i < ls.length; i++) {
             const key = ls.key(i);
@@ -562,7 +660,7 @@ class LocalStorageManager {
      * @param {string[]} classNames – class names (without .java) to flag as modified
      */
     static restoreJavaModifiedClassNames(classNames) {
-        const ls = globalThis.localStorage;
+        const ls = this._storage();
         if (!ls) return;
         // Remove all existing flags AND all generated-code cache entries.
         const toRemove = [];
@@ -590,7 +688,7 @@ class LocalStorageManager {
      */
     static isJavaModified(className) {
         if (!className) return false;
-        return globalThis.localStorage?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className) === '1';
+        return this._storage()?.getItem(this.JAVA_MODIFIED_KEY_PREFIX + className) === '1';
     }
 
     /**
@@ -602,9 +700,9 @@ class LocalStorageManager {
         if (!className) return;
         const key = this.JAVA_MODIFIED_KEY_PREFIX + className;
         if (modified) {
-            globalThis.localStorage?.setItem(key, '1');
+            this._storage()?.setItem(key, '1');
         } else {
-            globalThis.localStorage?.removeItem(key);
+            this._storage()?.removeItem(key);
         }
     }
 
@@ -618,7 +716,7 @@ class LocalStorageManager {
      */
     static saveLastGeneratedCode(className, code) {
         if (!className) return;
-        globalThis.localStorage?.setItem(this.JAVA_GENERATED_KEY_PREFIX + className, code);
+        this._storage()?.setItem(this.JAVA_GENERATED_KEY_PREFIX + className, code);
     }
 
     /**
@@ -629,7 +727,7 @@ class LocalStorageManager {
      */
     static loadLastGeneratedCode(className) {
         if (!className) return null;
-        return globalThis.localStorage?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className) ?? null;
+        return this._storage()?.getItem(this.JAVA_GENERATED_KEY_PREFIX + className) ?? null;
     }
 }
 

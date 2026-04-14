@@ -67,18 +67,20 @@ function init() {
 
   // Load the initial state from storage and run the code.
   // Restore previously selected IDE file (if any) so a refresh keeps selection.
-  try {
-    const stored = globalThis.localStorage?.getItem('b2j.selected_file_name');
-    const lastJava = globalThis.localStorage?.getItem('b2j.last_java_file_name');
-    if (stored) {
-      IdeBridge.selected_file_name = stored;
-      if (stored.endsWith('.java')) IdeBridge.last_java_file_name = stored;
-    } else if (lastJava) {
-      IdeBridge.last_java_file_name = lastJava;
-    }
-  } catch (e) {
-    // ignore storage errors
+  const stored = LocalStorageManager.getStoredSelectedFileName();
+  const lastJava = LocalStorageManager.getStoredLastJavaFileName();
+  if (stored) {
+    IdeBridge.selected_file_name = stored;
+    if (stored.endsWith('.java')) IdeBridge.last_java_file_name = stored;
+  } else if (lastJava) {
+    IdeBridge.last_java_file_name = lastJava;
   }
+
+  // Guard against accidental tab/browser close while work only lives in-session.
+  globalThis.addEventListener('beforeunload', (event) => {
+    event.preventDefault();
+  });
+
   load(ws);
   // Ensure existing for-loop variables are typed as local so they are
   // available to `java_local_var_*` blocks.
@@ -254,7 +256,7 @@ function setupListeners(workspace) {
 
         // Intercept the IDE's initial auto-selection: if it picks a different
         // file than what was active before the page refresh, override it once.
-        const storedFile = globalThis.localStorage?.getItem('b2j.selected_file_name') ?? '';
+        const storedFile = LocalStorageManager.getStoredSelectedFileName() ?? '';
         let _initialSelectionHandled = !storedFile; // skip intercept if nothing stored
         ideAccess.onFileSelected((name) => {
           if (!_initialSelectionHandled) {
