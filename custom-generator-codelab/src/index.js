@@ -197,6 +197,121 @@ function ensureForLoopVarsAreLocal(workspace) {
  * @param {Blockly.WorkspaceSvg} workspace
  */
 function setupListeners(workspace) {
+  const hasBlocklyGesture = () => Boolean(workspace.currentGesture_);
+  let pointerIsDown = false;
+
+  const cancelBlocklyGesture = () => {
+    // Defensive cleanup for rare lost-pointerup cases where Blockly keeps a
+    // stale workspace gesture alive and starts panning on simple mouse moves.
+    if (typeof workspace.cancelCurrentGesture === 'function') {
+      workspace.cancelCurrentGesture();
+    } else if (workspace.currentGesture_) {
+      workspace.currentGesture_.cancel();
+    }
+  };
+
+  const runAfterPointerSettles = (callback) => {
+    const run = () => {
+      // Let Blockly process pointerup first, then run generation logic.
+      setTimeout(() => {
+        cancelBlocklyGesture();
+        callback();
+      }, 0);
+    };
+
+    if (!pointerIsDown && !workspace.isDragging() && !hasBlocklyGesture()) {
+      run();
+      return;
+    }
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      document.removeEventListener('pointerup', onRelease, true);
+      document.removeEventListener('pointercancel', onRelease, true);
+      run();
+    };
+    const onRelease = () => {
+      pointerIsDown = false;
+      finish();
+    };
+    const waitForPointerToSettle = (deadline) => {
+      if (finished) return;
+      if (!pointerIsDown && !workspace.isDragging() && !hasBlocklyGesture()) {
+        finish();
+        return;
+      }
+      if (Date.now() >= deadline) {
+        return;
+      }
+      setTimeout(() => waitForPointerToSettle(deadline), 100);
+    };
+
+    document.addEventListener('pointerup', onRelease, true);
+    document.addEventListener('pointercancel', onRelease, true);
+    // Safety net for rare lost pointerup cases: only finish after the pointer
+    // and Blockly gesture state have actually settled.
+    waitForPointerToSettle(Date.now() + 5000);
+  };
+
+  // Recover from occasional stale drag state: if no button is pressed while
+  // Blockly still reports dragging, abort the active gesture.
+  document.addEventListener('pointermove', (evt) => {
+    if (evt.buttons === 0 && (workspace.isDragging() || hasBlocklyGesture())) {
+      cancelBlocklyGesture();
+    }
+  }, true);
+
+  // When dismissing a Blockly FieldTextInput by clicking elsewhere, the
+  // pointerdown can race with blur and leave a stale gesture behind.
+  document.addEventListener('pointerdown', (evt) => {
+    pointerIsDown = true;
+    const active = document.activeElement;
+    const editingBlocklyInput =
+      active?.tagName === 'INPUT' && active.closest?.('.blocklyWidgetDiv');
+    const clickedWidget = evt.target?.closest?.('.blocklyWidgetDiv');
+    if (editingBlocklyInput && !clickedWidget && hasBlocklyGesture()) {
+      cancelBlocklyGesture();
+    }
+  }, true);
+
+  // After pointer release/cancel, Blockly should have cleared any gesture.
+  // If one remains, clean it up to avoid latched workspace panning.
+  const scheduleGestureCleanup = () => {
+    setTimeout(() => {
+      if (hasBlocklyGesture()) {
+        cancelBlocklyGesture();
+      }
+    }, 0);
+  };
+  document.addEventListener('pointerup', (evt) => {
+    pointerIsDown = (evt.buttons ?? 0) !== 0;
+    scheduleGestureCleanup();
+  }, true);
+  document.addEventListener('pointercancel', () => {
+    pointerIsDown = false;
+    scheduleGestureCleanup();
+  }, true);
+  document.addEventListener('mouseup', scheduleGestureCleanup, true);
+  document.addEventListener('touchend', scheduleGestureCleanup, true);
+
+  // Also clear stale gestures when pointer capture is interrupted.
+  window.addEventListener('blur', () => {
+    pointerIsDown = false;
+    if (workspace.isDragging() || hasBlocklyGesture()) {
+      cancelBlocklyGesture();
+    }
+  });
+
+  // If the tab loses visibility while a gesture is active, clear it.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pointerIsDown = false;
+    if (document.hidden && (workspace.isDragging() || hasBlocklyGesture())) {
+      cancelBlocklyGesture();
+    }
+  });
+
   // Persist workspace state after every meaningful change.
   workspace.addChangeListener((e) => {
     if (e.isUiEvent) return;   // scrolling, zooming, etc. — skip
@@ -333,6 +448,7 @@ function setupListeners(workspace) {
   // workspaces via silentGenerateForClass → load(ws) mid-mutation, creating
   // an endless event→generation→swap→event loop.
   let _codeGenTimer = null;
+  let _pendingFieldBlurInput = null;
   workspace.addChangeListener((e) => {
     if (e.isUiEvent || e.type == Blockly.Events.FINISHED_LOADING ||
       workspace.isDragging()) {
@@ -347,16 +463,20 @@ function setupListeners(workspace) {
       // Instead, defer code generation until the field editor is dismissed.
       const active = document.activeElement;
       if (active && active.tagName === 'INPUT' && active.closest?.('.blocklyWidgetDiv')) {
-        active.addEventListener('blur', () => {
-          // If the user clicked elsewhere to dismiss the editor, a gesture may
-          // already be starting (pointerdown fired before blur). Cancel it so
-          // that load(ws) inside onBlocksChange() doesn't operate on stale
-          // block references while the gesture's handlers are still bound.
-          if (ws.currentGesture_) {
-            ws.currentGesture_.cancel();
-          }
-          onBlocksChange();
-        }, { once: true });
+        // Attach at most one pending blur handler per active input element.
+        // Without this guard, each keystroke can register another blur handler,
+        // leading to multiple overlapping onBlocksChange() calls on click-out.
+        if (_pendingFieldBlurInput !== active) {
+          _pendingFieldBlurInput = active;
+          active.addEventListener('blur', () => {
+            _pendingFieldBlurInput = null;
+            // Avoid running load(ws) while the click/pointer gesture that
+            // closed the editor is still in flight.
+            runAfterPointerSettles(() => {
+              onBlocksChange();
+            });
+          }, { once: true });
+        }
         return;
       }
       onBlocksChange();
