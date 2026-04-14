@@ -178,11 +178,123 @@ function setupBlockly(theme) {
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'local'));
   workspace.registerButtonCallback('CREATE_JAVA_STATIC_ATTR',
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'static'));
+
+  // Open collapsible toolbox folders as soon as the mouse hovers over them.
+  enableToolboxFolderHoverOpen(workspace);
+
   // Toolbox config editor button.
   document.getElementById('toolboxConfigBtn')?.addEventListener('click', () => {
     ToolboxConfigManager.openConfigEditor(ws, FULL_ACTIVE_CONFIG);
   });
   return workspace;
+}
+
+/**
+ * Expands collapsible toolbox folders on mouse hover.
+ *
+ * @param {Blockly.WorkspaceSvg} workspace
+ */
+function enableToolboxFolderHoverOpen(workspace) {
+  const toolbox = workspace.getToolbox?.();
+  if (!toolbox) return;
+
+  const toolboxDiv =
+    toolbox.HtmlDiv ??
+    toolbox.getDiv?.() ??
+    document.querySelector('.blocklyToolboxDiv');
+  if (!toolboxDiv || toolboxDiv.dataset.b2jHoverOpenBound === 'true') return;
+
+  const getHoveredItem = (target) => {
+    if (!(target instanceof Element)) return null;
+
+    const row = target.closest('.blocklyTreeRow');
+    if (!row) return null;
+
+    const itemId = row.getAttribute('id') ?? row.closest('[id]')?.getAttribute('id');
+    if (!itemId) return null;
+
+    if (typeof toolbox.getToolboxItemById === 'function') {
+      return toolbox.getToolboxItemById(itemId);
+    }
+
+    if (typeof toolbox.getToolboxItems === 'function') {
+      return (
+        toolbox.getToolboxItems().find((item) => item.getId?.() === itemId) ??
+        null
+      );
+    }
+
+    return null;
+  };
+
+  const isInsideToolboxOrFlyout = (target) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest('.blocklyToolboxDiv, .blocklyFlyout'));
+  };
+
+  const collapseAllFolders = () => {
+    if (typeof toolbox.getToolboxItems === 'function') {
+      for (const item of toolbox.getToolboxItems()) {
+        if (!item?.isCollapsible?.()) continue;
+        if (!item.isExpanded?.()) continue;
+
+        if (typeof item.setExpanded === 'function') {
+          item.setExpanded(false);
+        } else {
+          item.toggleExpanded?.();
+        }
+      }
+    }
+
+    toolbox.clearSelection?.();
+    const flyout = toolbox.getFlyout?.();
+    flyout?.hide?.();
+    flyout?.setVisible?.(false);
+  };
+
+  const collapseIfOutside = (target) => {
+    if (isInsideToolboxOrFlyout(target)) return;
+    if (workspace.isDragging?.() || workspace.currentGesture_) return;
+    collapseAllFolders();
+  };
+
+  toolboxDiv.addEventListener('mouseover', (event) => {
+    const item = getHoveredItem(event.target);
+    if (!item?.isSelectable?.()) return;
+
+    toolbox.setSelectedItem?.(item);
+
+    if (!item.isCollapsible?.()) return;
+    if (item.isExpanded?.()) return;
+
+    if (typeof item.setExpanded === 'function') {
+      item.setExpanded(true);
+      return;
+    }
+    item.toggleExpanded?.();
+  });
+
+  toolboxDiv.addEventListener('mouseleave', (event) => {
+    collapseIfOutside(event.relatedTarget);
+  });
+
+  // Keep folders open while moving from the category list into the flyout,
+  // but collapse once the pointer leaves the flyout and is no longer on the
+  // toolbox list.
+  const flyoutRoot = document.querySelector('.blocklyFlyout');
+  flyoutRoot?.addEventListener('mouseleave', (event) => {
+    collapseIfOutside(event.relatedTarget);
+  });
+
+  document.addEventListener(
+    'mouseover',
+    (event) => {
+      collapseIfOutside(event.target);
+    },
+    true,
+  );
+
+  toolboxDiv.dataset.b2jHoverOpenBound = 'true';
 }
 
 /**

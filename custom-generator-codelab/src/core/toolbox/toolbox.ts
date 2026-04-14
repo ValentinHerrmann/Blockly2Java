@@ -237,6 +237,14 @@ export class Toolbox
     );
     this.boundEvents_.push(clickEvent);
 
+    const pointerOverEvent = browserEvents.bind(
+      contentsContainer,
+      'mouseover',
+      this,
+      this.onPointerOver_,
+    );
+    this.boundEvents_.push(pointerOverEvent);
+
     const keyDownEvent = browserEvents.conditionalBind(
       contentsContainer,
       'keydown',
@@ -270,6 +278,36 @@ export class Toolbox
       (common.getMainWorkspace() as WorkspaceSvg).hideChaff(true);
     }
     Touch.clearTouchIdentifier();
+  }
+
+  /**
+   * Handles hover events over toolbox items.
+   *
+   * @param e Pointer event to handle.
+   */
+  protected onPointerOver_(e: PointerEvent) {
+    const targetElement = e.target as Element | null;
+    if (!targetElement) {
+      return;
+    }
+
+    const itemId = targetElement.closest('[id]')?.getAttribute('id');
+    if (!itemId) {
+      return;
+    }
+
+    const item = this.getToolboxItemById(itemId);
+    if (!item?.isSelectable()) {
+      return;
+    }
+
+    this.setSelectedItem(item);
+    if (item.isCollapsible()) {
+      const collapsibleItem = item as ICollapsibleToolboxItem;
+      if (!collapsibleItem.isExpanded()) {
+        collapsibleItem.toggleExpanded();
+      }
+    }
   }
 
   /**
