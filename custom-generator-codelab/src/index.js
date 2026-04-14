@@ -178,11 +178,93 @@ function setupBlockly(theme) {
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'local'));
   workspace.registerButtonCallback('CREATE_JAVA_STATIC_ATTR',
     (btn) => Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace(), null, 'static'));
+
+  // Open collapsible toolbox folders as soon as the mouse hovers over them.
+  enableToolboxFolderHoverOpen(workspace);
+
   // Toolbox config editor button.
   document.getElementById('toolboxConfigBtn')?.addEventListener('click', () => {
     ToolboxConfigManager.openConfigEditor(ws, FULL_ACTIVE_CONFIG);
   });
   return workspace;
+}
+
+/**
+ * Expands collapsible toolbox folders on mouse hover.
+ *
+ * @param {Blockly.WorkspaceSvg} workspace
+ */
+function enableToolboxFolderHoverOpen(workspace) {
+  const toolbox = workspace.getToolbox?.();
+  if (!toolbox) return;
+
+  const toolboxDiv =
+    toolbox.HtmlDiv ??
+    toolbox.getDiv?.() ??
+    document.querySelector('.blocklyToolboxDiv');
+  if (!toolboxDiv || toolboxDiv.dataset.b2jHoverOpenBound === 'true') return;
+
+  const getHoveredItem = (target) => {
+    if (!(target instanceof Element)) return null;
+
+    const row = target.closest('.blocklyTreeRow');
+    if (!row) return null;
+
+    const itemId = row.getAttribute('id') ?? row.closest('[id]')?.getAttribute('id');
+    if (!itemId) return null;
+
+    if (typeof toolbox.getToolboxItemById === 'function') {
+      return toolbox.getToolboxItemById(itemId);
+    }
+
+    if (typeof toolbox.getToolboxItems === 'function') {
+      return (
+        toolbox.getToolboxItems().find((item) => item.getId?.() === itemId) ??
+        null
+      );
+    }
+
+    return null;
+  };
+
+  const collapseAllFolders = () => {
+    if (typeof toolbox.getToolboxItems !== 'function') return;
+
+    for (const item of toolbox.getToolboxItems()) {
+      if (!item?.isCollapsible?.()) continue;
+      if (!item.isExpanded?.()) continue;
+
+      if (typeof item.setExpanded === 'function') {
+        item.setExpanded(false);
+      } else {
+        item.toggleExpanded?.();
+      }
+    }
+
+    toolbox.clearSelection?.();
+  };
+
+  toolboxDiv.addEventListener('mouseover', (event) => {
+    const item = getHoveredItem(event.target);
+    if (!item?.isSelectable?.()) return;
+
+    toolbox.setSelectedItem?.(item);
+
+    if (!item.isCollapsible?.()) return;
+    if (item.isExpanded?.()) return;
+
+    if (typeof item.setExpanded === 'function') {
+      item.setExpanded(true);
+      return;
+    }
+    item.toggleExpanded?.();
+  });
+
+  toolboxDiv.addEventListener('mouseleave', () => {
+    collapseAllFolders();
+  });
+
+  toolboxDiv.dataset.b2jHoverOpenBound = 'true';
 }
 
 /**
