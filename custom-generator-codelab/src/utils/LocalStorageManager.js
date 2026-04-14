@@ -37,10 +37,23 @@ class LocalStorageManager {
         }
         for (const key of keys) {
             const value = local.getItem(key);
-            if (value != null && session.getItem(key) == null) {
-                session.setItem(key, value);
+            if (value == null) {
+                continue;
             }
-            local.removeItem(key);
+
+            let migrated = session.getItem(key) != null;
+            if (!migrated) {
+                try {
+                    session.setItem(key, value);
+                    migrated = true;
+                } catch (e) {
+                    migrated = false;
+                }
+            }
+
+            if (migrated) {
+                local.removeItem(key);
+            }
         }
     }
 
