@@ -321,14 +321,15 @@ export class WorkspaceManager {
    */
   static clearWorkspace(ws) {
     // ── 1. Clear localStorage workspace files ────────────────────────────
+    const storage = LocalStorageManager.getStorage();
     const keysToRemove = [];
-    for (let i = 0; i < globalThis.localStorage.length; i++) {
-      const key = globalThis.localStorage.key(i);
+    for (let i = 0; i < (storage?.length ?? 0); i++) {
+      const key = storage.key(i);
       if (key && (key.endsWith('.json') || key.endsWith('.xml'))) {
         keysToRemove.push(key);
       }
     }
-    keysToRemove.forEach(k => globalThis.localStorage.removeItem(k));
+    keysToRemove.forEach(k => storage?.removeItem(k));
 
     // Clear constructor data.
     LocalStorageManager.clearAllConstructors();
@@ -419,12 +420,13 @@ export class WorkspaceManager {
 
     const zip = new JSZip();
     const src = zip.folder('src');
+    const storage = LocalStorageManager.getStorage();
 
     // ── Blockly workspace JSON files (from localStorage) -----------------
-    for (let i = 0; i < globalThis.localStorage.length; i++) {
-      const key = globalThis.localStorage.key(i);
+    for (let i = 0; i < (storage?.length ?? 0); i++) {
+      const key = storage.key(i);
       if (!key?.endsWith('.json')) continue;
-      const raw = globalThis.localStorage.getItem(key);
+      const raw = storage.getItem(key);
       if (!raw) continue;
       let pretty = raw;
       try { pretty = JSON.stringify(JSON.parse(raw), null, 2); } catch { /* keep raw */ }
@@ -590,9 +592,10 @@ export class WorkspaceManager {
 
     // ── Restore JSON workspaces to localStorage --------------------------
     // First clear stale entries not present in the archive.
+    const storage = LocalStorageManager.getStorage();
     const incomingJsonKeys = new Set(jsonEntries.map(e => e.basename));
-    for (let i = globalThis.localStorage.length - 1; i >= 0; i--) {
-      const key = globalThis.localStorage.key(i);
+    for (let i = (storage?.length ?? 0) - 1; i >= 0; i--) {
+      const key = storage.key(i);
       if (key?.endsWith('.json') && !incomingJsonKeys.has(key)) {
         const className = key.replace(/\.json$/, '');
         LocalStorageManager.deleteClass(className);

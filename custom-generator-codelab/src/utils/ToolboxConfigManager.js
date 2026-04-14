@@ -72,6 +72,7 @@
 
 import { toolbox as FULL_TOOLBOX } from '../toolbox.js';
 import { templates as TEMPLATE_LIST } from '../toolbox_templates/index.js';
+import LocalStorageManager from './LocalStorageManager.js';
 
 export class ToolboxConfigManager {
 
@@ -102,7 +103,7 @@ export class ToolboxConfigManager {
    * @returns {Object|null}
    */
   static loadStored() {
-    const raw = globalThis.localStorage?.getItem(this.STORAGE_KEY);
+    const raw = LocalStorageManager.getItem(this.STORAGE_KEY);
     if (!raw) return null;
     try { return JSON.parse(raw); } catch { return null; }
   }
@@ -238,9 +239,9 @@ export class ToolboxConfigManager {
     // survives page reloads / browser session restarts.
     this.lastConfig = config;
     if (config === null) {
-      globalThis.localStorage?.removeItem(this.STORAGE_KEY);
+      LocalStorageManager.removeItem(this.STORAGE_KEY);
     } else {
-      globalThis.localStorage?.setItem(this.STORAGE_KEY, JSON.stringify(config));
+      LocalStorageManager.setItem(this.STORAGE_KEY, JSON.stringify(config));
     }
 
     // ── Store subcategory configs for flyout callbacks ────────────────────

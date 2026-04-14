@@ -174,10 +174,8 @@ export class IdeBridge {
     // (bypassing the setter so we don't trigger a reload) and sync the class name.
     if (this.selected_file_name === previousName) {
       this.selected_file_name = newName;
-      try {
-        globalThis.localStorage?.setItem('b2j.selected_file_name', newName);
-        globalThis.localStorage?.setItem('b2j.last_java_file_name', newName);
-      } catch (e) {}
+      LocalStorageManager.setStoredSelectedFileName(newName);
+      LocalStorageManager.setStoredLastJavaFileName(newName);
       this.syncClassNameFromIDE();
     }
   }
@@ -198,7 +196,7 @@ export class IdeBridge {
     // If the deleted file was currently active, clear the Blockly workspace.
     if (this.selected_file_name === fileName) {
       this.selected_file_name = '';
-      try { globalThis.localStorage?.removeItem('b2j.selected_file_name'); } catch (e) {}
+      LocalStorageManager.setStoredSelectedFileName('');
       Blockly.getMainWorkspace()?.clear();
       this.syncClassNameFromIDE();
     }
@@ -239,13 +237,9 @@ export class IdeBridge {
 
     // Update the plain global property so save/load use the correct storage key.
     this.selected_file_name = fileName;
-    try {
-      globalThis.localStorage?.setItem('b2j.selected_file_name', fileName);
-      if (fileName.endsWith('.java')) {
-        globalThis.localStorage?.setItem('b2j.last_java_file_name', fileName);
-      }
-    } catch (e) {
-      // ignore storage errors
+    LocalStorageManager.setStoredSelectedFileName(fileName);
+    if (fileName.endsWith('.java')) {
+      LocalStorageManager.setStoredLastJavaFileName(fileName);
     }
     if (fileName.endsWith('.java')) {
       this.last_java_file_name = fileName;

@@ -39,6 +39,7 @@ export let ws;
 /** Guard: prevents the workspace change listener from re-entering onBlocksChange
  *  while a background multi-pass generation is in progress. */
 let _batchGenerating = false;
+let _skipUnloadWarning = false;
 
 // Instantiate managers
 // Passing onXmlLoaded as callback for REST response
@@ -67,18 +68,17 @@ function init() {
 
   // Load the initial state from storage and run the code.
   // Restore previously selected IDE file (if any) so a refresh keeps selection.
-  try {
-    const stored = globalThis.localStorage?.getItem('b2j.selected_file_name');
-    const lastJava = globalThis.localStorage?.getItem('b2j.last_java_file_name');
-    if (stored) {
-      IdeBridge.selected_file_name = stored;
-      if (stored.endsWith('.java')) IdeBridge.last_java_file_name = stored;
-    } else if (lastJava) {
-      IdeBridge.last_java_file_name = lastJava;
-    }
-  } catch (e) {
-    // ignore storage errors
+  const stored = LocalStorageManager.getStoredSelectedFileName();
+  const lastJava = LocalStorageManager.getStoredLastJavaFileName();
+  if (stored) {
+    IdeBridge.selected_file_name = stored;
+    if (stored.endsWith('.java')) IdeBridge.last_java_file_name = stored;
+  } else if (lastJava) {
+    IdeBridge.last_java_file_name = lastJava;
   }
+
+  setupUnloadGuard();
+
   load(ws);
   // Ensure existing for-loop variables are typed as local so they are
   // available to `java_local_var_*` blocks.
@@ -97,6 +97,41 @@ function init() {
   BlocklyOverlayManager.updateForClass(initialClassName);
 
   setupListeners(ws);
+}
+
+/**
+ * Installs unload protection for session-ending exits.
+ *
+ * IMPORTANT: Browsers only allow their native beforeunload prompt on tab-close/
+ * browser-close. Custom HTML dialogs are blocked there.
+ *
+ * We suppress the warning for known reload actions because sessionStorage
+ * survives reload and should not trigger a data-loss warning.
+ */
+function setupUnloadGuard() {
+  const markReload = () => {
+    _skipUnloadWarning = true;
+    setTimeout(() => {
+      _skipUnloadWarning = false;
+    }, 2000);
+  };
+
+  // Warn on potential session-ending exits.
+  globalThis.addEventListener('beforeunload', (event) => {
+    if (_skipUnloadWarning) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  // Do not warn on keyboard-triggered reload.
+  document.addEventListener('keydown', (event) => {
+    const isReloadShortcut =
+      event.key === 'F5' ||
+      ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r');
+    if (!isReloadShortcut) return;
+    markReload();
+  }, true);
+
 }
 
 /**
@@ -369,7 +404,7 @@ function setupListeners(workspace) {
 
         // Intercept the IDE's initial auto-selection: if it picks a different
         // file than what was active before the page refresh, override it once.
-        const storedFile = globalThis.localStorage?.getItem('b2j.selected_file_name') ?? '';
+        const storedFile = LocalStorageManager.getStoredSelectedFileName() ?? '';
         let _initialSelectionHandled = !storedFile; // skip intercept if nothing stored
         ideAccess.onFileSelected((name) => {
           if (!_initialSelectionHandled) {

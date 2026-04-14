@@ -108,7 +108,7 @@ export class GitService {
     if (sessionRaw) return JSON.parse(sessionRaw);
 
     // Fall back to the persistent (non-sensitive) localStorage entry.
-    const localRaw = globalThis.localStorage?.getItem(this.LOCAL_KEY);
+    const localRaw = LocalStorageManager.getItem(this.LOCAL_KEY);
     return localRaw ? { ...JSON.parse(localRaw), password: '' } : null;
   }
 
@@ -131,7 +131,7 @@ export class GitService {
    */
   static _storeConfig(url, username, password) {
     // Persist non-sensitive parts across sessions.
-    globalThis.localStorage?.setItem(
+    LocalStorageManager.setItem(
       this.LOCAL_KEY,
       JSON.stringify({ url, username }),
     );
@@ -145,7 +145,7 @@ export class GitService {
   /** Clears the stored git config from both storages (effectively "disconnects"). */
   static clearConfig() {
     globalThis.sessionStorage?.removeItem(this.SESSION_KEY);
-    globalThis.localStorage?.removeItem(this.LOCAL_KEY);
+    LocalStorageManager.removeItem(this.LOCAL_KEY);
   }
 
   /** Whether a git repository URL is known (even if session credentials have expired). */
@@ -666,9 +666,10 @@ export class GitService {
     await this._collectMdFiles(fs, this.REPO_DIR, result.md);
 
     // Remove JSON entries from localStorage that no longer exist in the repo.
+    const storage = LocalStorageManager.getStorage();
     const repoJsonKeys = new Set(Object.keys(result.json));
-    for (let i = globalThis.localStorage.length - 1; i >= 0; i--) {
-      const key = globalThis.localStorage.key(i);
+    for (let i = (storage?.length ?? 0) - 1; i >= 0; i--) {
+      const key = storage.key(i);
       if (key?.endsWith('.json') && !repoJsonKeys.has(key)) {
         const className = key.replace(/\.json$/, '');
         LocalStorageManager.deleteClass(className);
@@ -689,9 +690,10 @@ export class GitService {
     await fs.promises.mkdir(srcPath).catch(() => {});
 
     // Collect current JSON keys from localStorage.
+    const storage = LocalStorageManager.getStorage();
     const currentJsonKeys = new Set();
-    for (let i = 0; i < globalThis.localStorage.length; i++) {
-      const key = globalThis.localStorage.key(i);
+    for (let i = 0; i < (storage?.length ?? 0); i++) {
+      const key = storage.key(i);
       if (key?.endsWith('.json')) currentJsonKeys.add(key);
     }
 
@@ -705,7 +707,7 @@ export class GitService {
 
     // Write current JSON files, pretty-printed for readability and git auto-mergeability.
     for (const key of currentJsonKeys) {
-      const data = globalThis.localStorage.getItem(key);
+      const data = storage.getItem(key);
       if (data) {
         let prettyData = data;
         try {
