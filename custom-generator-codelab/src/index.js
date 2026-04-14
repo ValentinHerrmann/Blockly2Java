@@ -41,6 +41,12 @@ export let ws;
 let _batchGenerating = false;
 let _skipUnloadWarning = false;
 
+function hideIdeLoadingOverlay() {
+  const overlay = document.getElementById('ideLoadingOverlay');
+  if (!overlay) return;
+  overlay.classList.add('ide-loading-overlay--hidden');
+}
+
 // Instantiate managers
 // Passing onXmlLoaded as callback for REST response
 const restManager = new RestManager(onXmlLoaded, UiManager.showCodeDiv);
@@ -79,6 +85,9 @@ function init() {
 
   setupUnloadGuard();
 
+  // Keep visible by default; hide as soon as IDE bridge becomes available.
+  hideIdeLoadingOverlayIfReady();
+
   load(ws);
   // Ensure existing for-loop variables are typed as local so they are
   // available to `java_local_var_*` blocks.
@@ -97,6 +106,11 @@ function init() {
   BlocklyOverlayManager.updateForClass(initialClassName);
 
   setupListeners(ws);
+}
+
+function hideIdeLoadingOverlayIfReady() {
+  const ideAccess = globalThis.online_ide_access?.getIDE?.('Java');
+  if (ideAccess) hideIdeLoadingOverlay();
 }
 
 /**
@@ -395,6 +409,8 @@ function setupListeners(workspace) {
       this._online_ide_access = value;
       const ideAccess = value?.getIDE?.('Java');
       if (ideAccess) {
+        hideIdeLoadingOverlay();
+        globalThis.dispatchEvent(new Event('onlineide:ready'));
         // Store a direct reference on IdeBridge so it can drive IDE selection.
         IdeBridge.ideAccess = ideAccess;
 
