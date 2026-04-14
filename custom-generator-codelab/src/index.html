@@ -53,7 +53,9 @@
   <body>
     <!-- Pre-loader splash screen -->
     <div id="preloader" aria-hidden="true" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#fff;opacity:1;transition:opacity 0.4s ease;">
-      <img src="assets/B2J.svg" alt="Blockly2Java" style="width:min(500px,50vmin);height:auto;" />
+      <div class="preloader-brand" style="position:relative;width:640px;height:640px;display:flex;align-items:center;justify-content:center;">
+        <img src="assets/B2J_nocircle.svg" alt="Blockly2Java" style="display:block;width:486px;height:auto;" />
+      </div>
     </div>
 
     <!-- Reusable icon definitions (referenced via <use href="#..."> everywhere) -->
@@ -251,6 +253,14 @@
                     </div>
                 </div>
                 <div class="pane-content">
+                    <div id="ideLoadingOverlay" class="ide-loading-overlay" aria-label="Java IDE wird geladen">
+                        <div class="ide-loading-overlay__card">
+                            
+                            <div class="ide-loading-overlay__spinner" aria-hidden="true"></div>
+                            <p class="ide-loading-overlay__title">Java IDE wird geladen…</p>
+                            <p class="ide-loading-overlay__hint">Bitte einen Moment Geduld</p>
+                        </div>
+                    </div>
                     <!-- Top section: monaco editor fills this area -->
                     <div id="ideTopSection" class="inner-split-pane">
                         <div id="ide" class="java-online"
@@ -263,7 +273,7 @@
                             'withFileList': true ,
                             'withErrorList': true,
                             'enableFileAccess': true,
-                            'withClassDiagram': true,
+                            'withClassDiagram': false,
                             'hideUnitTests': true,
                             'hideWorkspaceFilesMng': true,
                             'simplifyDebugger': true,
@@ -312,13 +322,31 @@
           pre.addEventListener('transitionend', remove, { once: true });
           setTimeout(remove, 600);
         }
-        // Fire as soon as the DOM is interactive; fall back to a hard 5 s timeout.
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', hidePreloader);
-        } else {
-          hidePreloader();
+
+        function isOnlineIdeReady() {
+          return Boolean(globalThis.online_ide_access?.getIDE?.('Java'));
         }
-        setTimeout(hidePreloader, 5000);
+
+        function waitForOnlineIdeReady() {
+          if (isOnlineIdeReady()) {
+            hidePreloader();
+            return;
+          }
+          setTimeout(function () {
+            waitForOnlineIdeReady();
+          }, 100);
+        }
+
+        // Keep the big splash visible until OnlineIDE is actually ready.
+        globalThis.addEventListener('onlineide:ready', hidePreloader, { once: true });
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function () {
+            waitForOnlineIdeReady();
+          }, { once: true });
+        } else {
+          waitForOnlineIdeReady();
+        }
       })();
     </script>
 </html>

@@ -52,9 +52,41 @@ body {
     transition: opacity 0.4s ease;
 }
 
-#preloader img {
-    width: min(500px, 50vmin);
+.preloader-brand {
+    position: relative;
+    width: 640px;
+    height: 640px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preloader-brand::before {
+    content: '';
+    position: absolute;
+    inset: 115px;
+    border-radius: 999px;
+    border: 16px solid rgba(0, 0, 0, 0.12);
+    border-top-color: #4bf598;
+    border-left-color: #4bf598;
+    border-bottom-color: #1a9efc;
+    border-right-color: #1a9efc;
+    animation: preloader-ring-spin 3s linear infinite;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.preloader-brand img {
+    position: relative;
+    z-index: 1;
+    width: 486px;
     height: auto;
+}
+
+@keyframes preloader-ring-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 #preloader.preloader--hidden {
