@@ -502,6 +502,21 @@ export class GitDialog {
     });
   }
 
+  /**
+   * Shows a confirmation dialog before navigating away/reloading the page.
+   * Returns `true` when the user confirms leaving, `false` on cancel.
+   * @returns {Promise<boolean>}
+   */
+  static showLeavePageConfirm() {
+    return this._showDangerConfirm({
+      title: 'Seite verlassen?',
+      bodyContent:
+        'Nicht exportierte Änderungen liegen nur in dieser Browser-Sitzung und können verloren gehen. ' +
+        'Möchtest du die Seite wirklich verlassen?',
+      confirmLabel: 'Seite verlassen',
+    });
+  }
+
   // ── Loading overlay ───────────────────────────────────────────────────
 
   /**

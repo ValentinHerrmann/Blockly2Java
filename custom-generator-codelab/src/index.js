@@ -39,6 +39,7 @@ export let ws;
 /** Guard: prevents the workspace change listener from re-entering onBlocksChange
  *  while a background multi-pass generation is in progress. */
 let _batchGenerating = false;
+let _skipUnloadWarning = false;
 
 // Instantiate managers
 // Passing onXmlLoaded as callback for REST response
@@ -76,10 +77,7 @@ function init() {
     IdeBridge.last_java_file_name = lastJava;
   }
 
-  // Guard against accidental tab/browser close while work only lives in-session.
-  globalThis.addEventListener('beforeunload', (event) => {
-    event.preventDefault();
-  });
+  setupUnloadGuard();
 
   load(ws);
   // Ensure existing for-loop variables are typed as local so they are
@@ -99,6 +97,41 @@ function init() {
   BlocklyOverlayManager.updateForClass(initialClassName);
 
   setupListeners(ws);
+}
+
+/**
+ * Installs unload protection for session-ending exits.
+ *
+ * IMPORTANT: Browsers only allow their native beforeunload prompt on tab-close/
+ * browser-close. Custom HTML dialogs are blocked there.
+ *
+ * We suppress the warning for known reload actions because sessionStorage
+ * survives reload and should not trigger a data-loss warning.
+ */
+function setupUnloadGuard() {
+  const markReload = () => {
+    _skipUnloadWarning = true;
+    setTimeout(() => {
+      _skipUnloadWarning = false;
+    }, 2000);
+  };
+
+  // Warn on potential session-ending exits.
+  globalThis.addEventListener('beforeunload', (event) => {
+    if (_skipUnloadWarning) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  // Do not warn on keyboard-triggered reload.
+  document.addEventListener('keydown', (event) => {
+    const isReloadShortcut =
+      event.key === 'F5' ||
+      ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r');
+    if (!isReloadShortcut) return;
+    markReload();
+  }, true);
+
 }
 
 /**
