@@ -30,15 +30,19 @@ export function controls_repeat_ext(block, generator) {
   branch = generator.addLoopTrap(branch, block);
   let code = '';
   // Prefer an explicit variable field on the block (our custom override).
-  const varFieldId = block.getFieldValue && block.getFieldValue('VAR');
+  const varFieldId = block.getFieldValue?.('VAR');
   let loopVar;
+  let loopInit;
   if (varFieldId) {
-    // Mark this variable id as declared so other generators don't redeclare it.
+    // Reuse an already-declared local variable; otherwise declare it here.
     if (!generator.declaredLocalVarIds_) generator.declaredLocalVarIds_ = new Set();
-    try { generator.declaredLocalVarIds_.add(varFieldId); } catch (e) { /* ignore */ }
+    const alreadyDeclared = generator.declaredLocalVarIds_.has(varFieldId);
+    generator.declaredLocalVarIds_.add(varFieldId);
     loopVar = adjustStaticName(getVarCodeName(block.workspace, generator, varFieldId));
+    loopInit = (alreadyDeclared ? '' : 'int ') + loopVar + ' = 0';
   } else {
     loopVar = generator.nameDB_.getDistinctName('i', Blockly.Names.NameType.VARIABLE);
+    loopInit = 'int ' + loopVar + ' = 0';
   }
   let endVar = repeats;
   if (!repeats.match(/^\w+$/) && !Blockly.utils.string.isNumber(repeats)) {
@@ -51,7 +55,7 @@ export function controls_repeat_ext(block, generator) {
       code += 'int ' + endVar + ' = ' + repeats + ';\n';
     }
   }
-  code += '\nfor (int ' + loopVar + ' = 0; ' + loopVar + ' < ' + endVar + '; ' +
+  code += '\nfor (' + loopInit + '; ' + loopVar + ' < ' + endVar + '; ' +
       loopVar + '++) {\n' + branch + '}\n';
   return code;
 };
