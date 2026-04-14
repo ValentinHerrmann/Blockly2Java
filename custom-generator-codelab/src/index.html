@@ -29,31 +29,19 @@
          (monaco-editor, p5, pako, jszip, upng, markdownit, howler, fonts) -->
     <script>
       (function () {
-        // Keep worker scripts same-origin by default, otherwise browsers block them.
-        var origin = '';
-        var overrideOrigin = typeof globalThis.__B2J_ONLINEIDE_ORIGIN__ === 'string'
-          ? globalThis.__B2J_ONLINEIDE_ORIGIN__.trim()
-          : '';
-
-        if (overrideOrigin) {
-          origin = overrideOrigin;
-          while (origin.length > 1 && origin.charAt(origin.length - 1) === '/') {
-            origin = origin.slice(0, -1);
-          }
+        var origin = 'https://onlineide.dev.blockly2java.de';
+        var host = globalThis.location.hostname || '';
+        if (host !== 'localhost' && host !== '') {
+            origin = globalThis.location.protocol + '//onlineide.' + host + (globalThis.location.port ? ':' + globalThis.location.port : '');
         }
-
-        function toUrl(path) {
-          return origin ? origin + path : path;
-        }
-
         var s = document.createElement('script');
         s.type = 'module';
-        if (origin) s.crossOrigin = 'anonymous';
-        s.src = toUrl('/online-ide-embedded.js');
+        s.crossOrigin = 'anonymous';
+        s.src = origin + '/online-ide-embedded.js';
         document.head.appendChild(s);
         var l = document.createElement('link');
         l.rel = 'stylesheet';
-        l.href = toUrl('/online-ide-embedded.css');
+        l.href = origin + '/online-ide-embedded.css';
         document.head.appendChild(l);
       })();
     </script>
