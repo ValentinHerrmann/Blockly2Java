@@ -227,21 +227,35 @@ function enableToolboxFolderHoverOpen(workspace) {
     return null;
   };
 
+  const isInsideToolboxOrFlyout = (target) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest('.blocklyToolboxDiv, .blocklyFlyout'));
+  };
+
   const collapseAllFolders = () => {
-    if (typeof toolbox.getToolboxItems !== 'function') return;
+    if (typeof toolbox.getToolboxItems === 'function') {
+      for (const item of toolbox.getToolboxItems()) {
+        if (!item?.isCollapsible?.()) continue;
+        if (!item.isExpanded?.()) continue;
 
-    for (const item of toolbox.getToolboxItems()) {
-      if (!item?.isCollapsible?.()) continue;
-      if (!item.isExpanded?.()) continue;
-
-      if (typeof item.setExpanded === 'function') {
-        item.setExpanded(false);
-      } else {
-        item.toggleExpanded?.();
+        if (typeof item.setExpanded === 'function') {
+          item.setExpanded(false);
+        } else {
+          item.toggleExpanded?.();
+        }
       }
     }
 
     toolbox.clearSelection?.();
+    const flyout = toolbox.getFlyout?.();
+    flyout?.hide?.();
+    flyout?.setVisible?.(false);
+  };
+
+  const collapseIfOutside = (target) => {
+    if (isInsideToolboxOrFlyout(target)) return;
+    if (workspace.isDragging?.() || workspace.currentGesture_) return;
+    collapseAllFolders();
   };
 
   toolboxDiv.addEventListener('mouseover', (event) => {
@@ -260,9 +274,25 @@ function enableToolboxFolderHoverOpen(workspace) {
     item.toggleExpanded?.();
   });
 
-  toolboxDiv.addEventListener('mouseleave', () => {
-    collapseAllFolders();
+  toolboxDiv.addEventListener('mouseleave', (event) => {
+    collapseIfOutside(event.relatedTarget);
   });
+
+  // Keep folders open while moving from the category list into the flyout,
+  // but collapse once the pointer leaves the flyout and is no longer on the
+  // toolbox list.
+  const flyoutRoot = document.querySelector('.blocklyFlyout');
+  flyoutRoot?.addEventListener('mouseleave', (event) => {
+    collapseIfOutside(event.relatedTarget);
+  });
+
+  document.addEventListener(
+    'mouseover',
+    (event) => {
+      collapseIfOutside(event.target);
+    },
+    true,
+  );
 
   toolboxDiv.dataset.b2jHoverOpenBound = 'true';
 }
