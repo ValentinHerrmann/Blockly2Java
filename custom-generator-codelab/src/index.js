@@ -236,11 +236,23 @@ function setupListeners(workspace) {
       pointerIsDown = false;
       finish();
     };
+    const waitForPointerToSettle = (deadline) => {
+      if (finished) return;
+      if (!pointerIsDown && !workspace.isDragging() && !hasBlocklyGesture()) {
+        finish();
+        return;
+      }
+      if (Date.now() >= deadline) {
+        return;
+      }
+      setTimeout(() => waitForPointerToSettle(deadline), 100);
+    };
 
     document.addEventListener('pointerup', onRelease, true);
     document.addEventListener('pointercancel', onRelease, true);
-    // Safety net for rare lost pointerup cases.
-    setTimeout(finish, 250);
+    // Safety net for rare lost pointerup cases: only finish after the pointer
+    // and Blockly gesture state have actually settled.
+    waitForPointerToSettle(Date.now() + 5000);
   };
 
   // Recover from occasional stale drag state: if no button is pressed while
