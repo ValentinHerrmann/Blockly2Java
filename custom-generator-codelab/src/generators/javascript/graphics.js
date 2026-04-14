@@ -426,12 +426,12 @@ export function gfx_color_const(block, _generator) {
 // Shape position getters
 export function gfx_get_x(block, generator) {
   const o = obj(block, generator);
-  return [`${o}.getX()`, Order.FUNCTION_CALL];
+  return [`${o}.getCenterX()`, Order.FUNCTION_CALL];
 }
 
 export function gfx_get_y(block, generator) {
   const o = obj(block, generator);
-  return [`${o}.getY()`, Order.FUNCTION_CALL];
+  return [`${o}.getCenterY()`, Order.FUNCTION_CALL];
 }
 
 // World controls
