@@ -549,6 +549,34 @@ function setupListeners(workspace) {
           IdeBridge.fileSelected(name);
         });
 
+        // Some Online-IDE versions do not emit an initial onFileSelected event.
+        // Ensure Blockly always has an active Java file so generation/sync works.
+        const ensureInitialIdeSelection = () => {
+          if (IdeBridge.selected_file_name) return;
+
+          const candidateFiles = ideAccess
+            .getFiles?.()
+            ?.map((file) => file?.getName?.())
+            .filter(Boolean) ?? [];
+
+          const preferred =
+            storedFile ||
+            LocalStorageManager.getStoredLastJavaFileName() ||
+            candidateFiles.find((name) => name.endsWith('.java')) ||
+            candidateFiles[0] ||
+            '';
+
+          if (!preferred) return;
+
+          if (!IdeBridge.selectFileInIDE(preferred)) {
+            IdeBridge.fileSelected(preferred);
+          }
+        };
+
+        // Try immediately and once more after the file tree has fully mounted.
+        ensureInitialIdeSelection();
+        setTimeout(ensureInitialIdeSelection, 400);
+
         // ── Java-modified detection polling ───────────────────────────
         // Poll every 350 ms to compare the IDE's current code against the
         // last Blockly-generated baseline.  As soon as they diverge (= the

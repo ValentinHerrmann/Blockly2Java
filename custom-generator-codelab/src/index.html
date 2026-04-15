@@ -26,22 +26,40 @@
     <meta name="apple-mobile-web-app-title" content="Blockly2Java">
 
     <!-- online-ide-embedded.js is a Vite bundle that includes all dependencies
-         (monaco-editor, p5, pako, jszip, upng, markdownit, howler, fonts) -->
+         (monaco-editor, p5, pako, jszip, upng, markdownit, howler, fonts)
+         Load from same-origin by default to avoid cross-origin Worker failures.
+         Optional override: set window.__ONLINE_IDE_ORIGIN__ before this script. -->
     <script>
       (function () {
-        var origin = 'https://onlineide.dev.blockly2java.de';
-        var host = globalThis.location.hostname || '';
-        if (host !== 'localhost' && host !== '') {
-            origin = globalThis.location.protocol + '//onlineide.' + host + (globalThis.location.port ? ':' + globalThis.location.port : '');
+        var configuredOrigin =
+          typeof globalThis.__ONLINE_IDE_ORIGIN__ === 'string'
+            ? globalThis.__ONLINE_IDE_ORIGIN__.trim()
+            : '';
+        var origin = configuredOrigin.replace(/\/+$/, '');
+
+        function assetUrl(fileName) {
+          return origin ? origin + '/' + fileName : './' + fileName;
         }
+
         var s = document.createElement('script');
         s.type = 'module';
-        s.crossOrigin = 'anonymous';
-        s.src = origin + '/online-ide-embedded.js';
+        if (origin) {
+          s.crossOrigin = 'anonymous';
+        }
+        s.src = assetUrl('online-ide-embedded.js');
+        s.addEventListener('error', function () {
+          console.error('[B2J] Failed to load online-ide-embedded.js from', s.src);
+          globalThis.dispatchEvent(new Event('onlineide:load-error'));
+        });
         document.head.appendChild(s);
+
         var l = document.createElement('link');
         l.rel = 'stylesheet';
-        l.href = origin + '/online-ide-embedded.css';
+        l.href = assetUrl('online-ide-embedded.css');
+        l.addEventListener('error', function () {
+          console.error('[B2J] Failed to load online-ide-embedded.css from', l.href);
+          globalThis.dispatchEvent(new Event('onlineide:load-error'));
+        });
         document.head.appendChild(l);
       })();
     </script>
@@ -327,25 +345,32 @@
           return Boolean(globalThis.online_ide_access?.getIDE?.('Java'));
         }
 
-        function waitForOnlineIdeReady() {
+        function waitForOnlineIdeReady(startedAt) {
           if (isOnlineIdeReady()) {
             hidePreloader();
             return;
           }
+          if (Date.now() - startedAt > 12000) {
+            console.warn('[B2J] OnlineIDE did not become ready in time. Continuing without splash lock.');
+            hidePreloader();
+            return;
+          }
           setTimeout(function () {
-            waitForOnlineIdeReady();
+            waitForOnlineIdeReady(startedAt);
           }, 100);
         }
 
         // Keep the big splash visible until OnlineIDE is actually ready.
         globalThis.addEventListener('onlineide:ready', hidePreloader, { once: true });
+        globalThis.addEventListener('onlineide:load-error', hidePreloader, { once: true });
 
+        var startedAt = Date.now();
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', function () {
-            waitForOnlineIdeReady();
+            waitForOnlineIdeReady(startedAt);
           }, { once: true });
         } else {
-          waitForOnlineIdeReady();
+          waitForOnlineIdeReady(startedAt);
         }
       })();
     </script>
