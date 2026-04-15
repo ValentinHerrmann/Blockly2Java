@@ -10,7 +10,7 @@
 
 // Former goog.module ID: Blockly.JavaScript.procedures
 
-import { javascriptGenerator } from 'blockly/javascript.js';
+import { javascriptGenerator } from 'blockly/javascript';
 import {getType, getVariableType, Order, getClassName, TYPES, adjustStaticName} from './javascript_generator.js';
 import * as Blockly from "blockly";
 
