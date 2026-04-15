@@ -26,6 +26,9 @@
     "blockly"
   ],
   "author": "",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "license": "Apache-2.0",
   "devDependencies": {
     "copy-webpack-plugin": "^14.0.0",
