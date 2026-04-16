@@ -299,12 +299,12 @@ export function getType(var_type) {
     case 'gfx_is_key_down':
     case 'gfx_is_key_up':
     case 'gfx_is_mouse_down':   return TYPES.BOOLEAN;
-    case 'gfx_get_width':
-    case 'gfx_get_height':
     case 'gfx_get_x':
     case 'gfx_get_y':
+    case 'gfx_get_width':
+    case 'gfx_get_height':
     case 'gfx_get_mouse_x':
-    case 'gfx_get_mouse_y':     return TYPES.INTEGER;
+    case 'gfx_get_mouse_y':           return TYPES.DOUBLE;
     case 'gfx_get_collision_pairs':
     case 'gfx_get_colliding_shapes': return TYPES.LIST;
     default:
