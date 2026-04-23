@@ -813,9 +813,15 @@ export function allAttrFlyoutCategory(workspace) {
   const attrConfig = ToolboxConfigManager.getSubcategoryConfig('Attribute');
   const show = (name) => attrConfig?.get(name) !== false;
 
+  const instanceBlockFilter = ToolboxConfigManager.getSubcategoryBlockConfig('Attribute', 'Instanz-Attribute');
+  const showInstanceBlock = (type) => !instanceBlockFilter || instanceBlockFilter.get(type) !== false;
+
   const sections = [];
 
   if (show('Instanz-Attribute')) {
+    if (showInstanceBlock('java_this')) {
+      sections.push(makeBlockTemplate('java_this'));
+    }
     sections.push(
       ...normalAttrFlyoutCategory(workspace),
     );

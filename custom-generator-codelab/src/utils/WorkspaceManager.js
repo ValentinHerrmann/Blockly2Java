@@ -241,7 +241,13 @@ export const FULL_ACTIVE_CONFIG = {
       name: 'Attribute',
       active: true,
       subcategories: [
-        { name: 'Instanz-Attribute', active: true },
+        {
+          name: 'Instanz-Attribute',
+          active: true,
+          blocks: [
+            { type: 'java_this', active: true },
+          ],
+        },
         { name: 'Klassen-Attribute', active: true },
       ],
     },
@@ -299,7 +305,6 @@ export const FULL_ACTIVE_CONFIG = {
       blocks: [
         { type: 'defconstructor',  active: true },
         { type: 'callconstructor', active: true },
-        { type: 'java_this',       active: true },
         { type: 'java_extends',    active: true },
         { type: 'java_super_call', active: true },
       ],
