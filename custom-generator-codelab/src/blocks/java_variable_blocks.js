@@ -818,10 +818,13 @@ export function allAttrFlyoutCategory(workspace) {
 
   const sections = [];
 
+  // Keep `this` independently toggleable from the whole
+  // "Instanz-Attribute" section.
+  if (showInstanceBlock('java_this')) {
+    sections.push(makeBlockTemplate('java_this'));
+  }
+
   if (show('Instanz-Attribute')) {
-    if (showInstanceBlock('java_this')) {
-      sections.push(makeBlockTemplate('java_this'));
-    }
     sections.push(
       ...normalAttrFlyoutCategory(workspace),
     );
