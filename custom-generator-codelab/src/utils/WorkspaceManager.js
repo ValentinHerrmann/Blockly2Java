@@ -241,7 +241,13 @@ export const FULL_ACTIVE_CONFIG = {
       name: 'Attribute',
       active: true,
       subcategories: [
-        { name: 'Instanz-Attribute', active: true },
+        {
+          name: 'Instanz-Attribute',
+          active: true,
+          blocks: [
+            { type: 'java_this', active: true },
+          ],
+        },
         { name: 'Klassen-Attribute', active: true },
       ],
     },

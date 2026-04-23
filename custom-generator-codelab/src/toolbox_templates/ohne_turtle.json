@@ -73,7 +73,7 @@
             { "type": "colour_blend",  "active": true }
           ] },
         { "name": "Variablen", "active": true, "subcategories": [ { "name": "Lokale Variablen", "active": true } ] },
-        { "name": "Attribute", "active": true, "subcategories": [ { "name": "Instanz-Attribute", "active": true }, { "name": "Klassen-Attribute", "active": true } ] },
+        { "name": "Attribute", "active": true, "subcategories": [ { "name": "Instanz-Attribute", "active": true, "blocks": [ { "type": "java_this", "active": true } ] }, { "name": "Klassen-Attribute", "active": true } ] },
         { "name": "Parameter", "active": true, "subcategories": [] },
         { "name": "Methoden", "active": true, "subcategories": [
             { "name": "Objekt-Methoden", "active": true, "blocks": [ { "type": "java_method_noreturn", "active": true }, { "type": "java_method_return",   "active": true } ] },

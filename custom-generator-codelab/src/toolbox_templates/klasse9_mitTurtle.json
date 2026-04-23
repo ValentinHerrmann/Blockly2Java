@@ -113,7 +113,10 @@
       "subcategories": [
         {
           "name": "Instanz-Attribute",
-          "active": true
+          "active": true,
+          "blocks": [
+            { "type": "java_this", "active": true }
+          ]
         },
         {
           "name": "Klassen-Attribute",

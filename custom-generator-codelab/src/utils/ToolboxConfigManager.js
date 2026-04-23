@@ -359,6 +359,7 @@ export class ToolboxConfigManager {
     // Klassen
     defconstructor:           'Konstruktor definieren',
     callconstructor:          'Objekt erzeugen (new)',
+    java_this:                'this (aktuelle Instanz)',
     java_extends:             'Klasse erbt von (extends)',
     java_super_call:          'super(…) aufrufen',
     // Grafik

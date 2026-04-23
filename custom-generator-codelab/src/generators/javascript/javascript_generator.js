@@ -274,6 +274,8 @@ export function getType(var_type) {
     case 'CLASS':
     case 'callconstructor':
       return TYPES.CLASS;
+    case 'java_this':
+      return getClassName() || TYPES.CLASS;
     // Legacy graphics block names
     case 'graphics_new_world':     return 'World';
     case 'graphics_new_circle':    return 'Circle';
