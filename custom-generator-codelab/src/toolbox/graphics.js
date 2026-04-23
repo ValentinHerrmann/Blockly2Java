@@ -6,8 +6,7 @@ export const graphicsCategories = [
         'name': 'Grafik: Objekte',
         'colour': '#00796b',
         'contents': [
-            // ── Vererbung ─────────────────────────────────────────────────
-            { 'kind': 'block', 'type': 'gfx_extends' },
+            // Vererbung handled in the `Klassen` category now.
             // ── World ──────────────────────────────────────────────────────
             {
                 'kind': 'block', 'type': 'java_local_var_set',
@@ -30,6 +29,22 @@ export const graphicsCategories = [
                     'VALUE': { 'block': { 'type': 'gfx_new_shape' } },
                 },
             },
+            // ── Text ──────────────────────────────────────────────────────
+            {
+                'kind': 'block', 'type': 'java_local_var_set',
+                'fields': { 'VAR': { 'name': 'text', 'type': 'local' } },
+                'inputs': {
+                    'VALUE': { 'block': {
+                        'type': 'gfx_new_text',
+                        'inputs': {
+                            'X':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
+                            'Y':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
+                            'SIZE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 20 } } },
+                            'TEXT': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': 'Hallo!' } } },
+                        },
+                    }},
+                },
+            },
             // ── Polygon ───────────────────────────────────────────────────
             {
                 'kind': 'block', 'type': 'java_local_var_set',
@@ -50,22 +65,6 @@ export const graphicsCategories = [
                     'OBJ': { 'shadow': { 'type': 'java_local_var_get', 'fields': { 'VAR': { 'name': 'polygon', 'type': 'local' } } } },
                     'X': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
                     'Y': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 0 } } },
-                },
-            },
-            // ── Text ──────────────────────────────────────────────────────
-            {
-                'kind': 'block', 'type': 'java_local_var_set',
-                'fields': { 'VAR': { 'name': 'text', 'type': 'local' } },
-                'inputs': {
-                    'VALUE': { 'block': {
-                        'type': 'gfx_new_text',
-                        'inputs': {
-                            'X':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                            'Y':    { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 100 } } },
-                            'SIZE': { 'shadow': { 'type': 'math_number', 'fields': { 'NUM': 20 } } },
-                            'TEXT': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': 'Hallo!' } } },
-                        },
-                    }},
                 },
             },
             // ── Group ─────────────────────────────────────────────────────

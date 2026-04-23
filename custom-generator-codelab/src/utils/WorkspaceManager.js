@@ -144,21 +144,21 @@ export const FULL_ACTIVE_CONFIG = {
       name: 'Grafik: Objekte',
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
-        { type: 'gfx_extends',          active: true  },
-        { type: 'java_local_var_set',   active: true  }, // deckt alle Wrapper-Blöcke ab
         { type: 'gfx_new_world',        active: true  },
         { type: 'gfx_new_shape',        active: true  },
-        { type: 'gfx_new_polygon',      active: true  },
         { type: 'gfx_new_text',         active: true  },
+        { type: 'gfx_new_polygon',      active: true  },
         { type: 'gfx_new_group',        active: true  },
+        // Optional global switch for all constructor wrappers.
+        { type: 'java_local_var_set',   active: true  },
         { type: 'gfx_group_add',        active: true  },
+        { type: 'gfx_polygon_add_point',active: true  },
       ],
     },
     {
       name: 'Grafik: Erscheinung',
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
-        { type: 'gfx_color_const',          active: true },
         { type: 'gfx_set_fill_color',        active: true },
         { type: 'gfx_set_fill_color_alpha',  active: true },
         { type: 'gfx_set_border_color',      active: true },
@@ -169,10 +169,9 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'gfx_send_to_back',          active: true },
         { type: 'gfx_set_text_content',      active: true },
         { type: 'gfx_set_alignment',         active: true },
+        { type: 'gfx_set_cursor',            active: true },
         { type: 'gfx_default_fill_color',    active: true },
         { type: 'gfx_default_visibility',    active: true },
-        { type: 'colour_picker',             active: true },
-        { type: 'colour_rgb',                active: true },
       ],
     },
     {
@@ -187,15 +186,15 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'gfx_mirror_x',          active: true },
         { type: 'gfx_mirror_y',          active: true },
         { type: 'gfx_line_set_points',   active: true },
-        { type: 'gfx_polygon_add_point', active: true },
       ],
     },
     {
       name: 'Grafik: Turtle',
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
-        { type: 'java_local_var_set',    active: true  }, // Wrapper-Block
         { type: 'gfx_new_turtle',       active: true  },
+        // Optional global switch for all constructor wrappers.
+        { type: 'java_local_var_set',    active: true  },
         { type: 'gfx_forward',           active: true  },
         { type: 'gfx_turtle_turn',       active: true  },
         { type: 'gfx_define_direction',  active: true  },
@@ -209,25 +208,10 @@ export const FULL_ACTIVE_CONFIG = {
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
         { type: 'gfx_event_handler',          active: true },
-        { type: 'gfx_get_world',              active: true },
-        { type: 'gfx_get_width',              active: true },
-        { type: 'gfx_get_height',             active: true },
-        { type: 'gfx_set_cursor',             active: true },
-        { type: 'gfx_world_set_background',   active: true },
         { type: 'gfx_world_stop',             active: true },
         { type: 'gfx_world_start',            active: true },
-        { type: 'gfx_get_x',                  active: true },
-        { type: 'gfx_get_y',                  active: true },
         { type: 'gfx_is_key_down',            active: true },
         { type: 'gfx_is_key_up',              active: true },
-        { type: 'gfx_is_mouse_down',          active: true },
-        { type: 'gfx_get_mouse_x',            active: true },
-        { type: 'gfx_get_mouse_y',            active: true },
-        { type: 'gfx_group_add',              active: true },
-        { type: 'gfx_get_collision_pairs',    active: true },
-        { type: 'gfx_get_colliding_shapes',   active: true },
-        { type: 'gfx_bitmap_set_pixel',       active: true },
-        { type: 'gfx_bitmap_get_pixel',       active: true },
       ],
     },
     {
@@ -306,6 +290,7 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'defconstructor',  active: true },
         { type: 'callconstructor', active: true },
         { type: 'java_extends',    active: true },
+        { type: 'gfx_extends',     active: true },
         { type: 'java_super_call', active: true },
       ],
     },

@@ -409,14 +409,38 @@ export class ToolboxConfigManager {
       if (catDef.custom) {
         // Dynamic category – expose subcategory toggles.
         const subcatMap = new Map();
+        const subcatBlockMap = new Map();
         const fbEntry = (fallbackConfig?.categories ?? []).find(c => c.name === catName);
         // Use fallback's subcategory list as the master list of known sections.
         const allSubcats = fbEntry?.subcategories ?? configEntry?.subcategories ?? [];
         for (const s of allSubcats) {
           const cur = (configEntry?.subcategories ?? []).find(sc => sc.name === s.name);
           subcatMap.set(s.name, cur ? cur.active !== false : true);
+
+          // Optional per-subcategory block toggles for dynamic categories
+          // (e.g. Attribute -> Instanz-Attribute -> java_this).
+          const fallbackBlocks = s.blocks ?? [];
+          const currentBlocks = cur?.blocks ?? [];
+          const knownBlockTypes = [
+            ...new Set([
+              ...fallbackBlocks.map(b => b.type),
+              ...currentBlocks.map(b => b.type),
+            ]),
+          ];
+          if (knownBlockTypes.length > 0) {
+            const blockState = new Map();
+            const currentBlockMap = new Map(currentBlocks.map(b => [b.type, b.active !== false]));
+            for (const type of knownBlockTypes) {
+              blockState.set(type, currentBlockMap.has(type) ? currentBlockMap.get(type) : true);
+            }
+            subcatBlockMap.set(s.name, blockState);
+          }
         }
-        catState.set(catName, { active: isActive, subcats: subcatMap });
+        catState.set(catName, {
+          active: isActive,
+          subcats: subcatMap,
+          ...(subcatBlockMap.size > 0 ? { subcatBlocks: subcatBlockMap } : {}),
+        });
       } else {
         // Static category – expose per-block toggles.
         const blockMap = new Map();
@@ -424,10 +448,21 @@ export class ToolboxConfigManager {
         const configBlockMap = new Map(configBlocks.map(b => [b.type, b.active !== false]));
         for (const block of (catDef.contents ?? [])) {
           if (block.kind?.toLowerCase() !== 'block') continue;
-          blockMap.set(
-            block.type,
-            configBlockMap.has(block.type) ? configBlockMap.get(block.type) : true,
-          );
+          // If this block is a wrapper around a constructor (e.g. java_local_var_set
+          // with a nested VALUE block), expose the nested constructor type as a
+          // separate toggle so each geometric shape can be controlled individually.
+          const nestedValueType = block.inputs?.VALUE?.block?.type;
+          if (nestedValueType) {
+            blockMap.set(
+              nestedValueType,
+              configBlockMap.has(nestedValueType) ? configBlockMap.get(nestedValueType) : true,
+            );
+          } else {
+            blockMap.set(
+              block.type,
+              configBlockMap.has(block.type) ? configBlockMap.get(block.type) : true,
+            );
+          }
         }
         catState.set(catName, { active: isActive, blocks: blockMap });
       }
@@ -453,13 +488,18 @@ export class ToolboxConfigManager {
         entry.blocks = [...state.blocks].map(([type, active]) => ({ type, active }));
       }
       if (state.subcats) {
-        // Carry over any per-block configs that were in the reference config
-        // for subcategories of dynamic categories (e.g. Methoden, Klassen-Methoden).
-        const refCat = (referenceConfig?.categories ?? []).find(c => c.name === catName);
         entry.subcategories = [...state.subcats].map(([name, active]) => {
-          const refSub = (refCat?.subcategories ?? []).find(s => s.name === name);
           const sub = { name, active };
-          if (refSub?.blocks) sub.blocks = refSub.blocks;
+          const blockState = state.subcatBlocks?.get?.(name);
+          if (blockState) {
+            sub.blocks = [...blockState].map(([type, blockActive]) => ({ type, active: blockActive }));
+          } else {
+            // Carry over existing subcategory block config when the current
+            // editor state has no explicit block list for this subcategory.
+            const refCat = (referenceConfig?.categories ?? []).find(c => c.name === catName);
+            const refSub = (refCat?.subcategories ?? []).find(s => s.name === name);
+            if (refSub?.blocks) sub.blocks = refSub.blocks;
+          }
           return sub;
         });
       }
@@ -757,10 +797,34 @@ export class ToolboxConfigManager {
           });
           blockList.appendChild(subLbl);
           for (const [subcatName, active] of state.subcats) {
-            blockList.appendChild(makeCheckRow(
+            const subcatRow = makeCheckRow(
               `sub-${catName}-${subcatName}`, subcatName, active, color,
               val => state.subcats.set(subcatName, val),
-            ));
+            );
+            blockList.appendChild(subcatRow);
+
+            const blockState = state.subcatBlocks?.get?.(subcatName);
+            if (blockState && blockState.size > 0) {
+              const blockWrap = document.createElement('div');
+              Object.assign(blockWrap.style, {
+                marginLeft: '18px',
+                borderLeft: '1px solid #3c3c3c',
+                marginBottom: '4px',
+              });
+              for (const [blockType, blockActive] of blockState) {
+                const displayName = ToolboxConfigManager._blockDisplayNames[blockType]
+                  ?? ToolboxConfigManager._formatBlockType(blockType);
+                blockWrap.appendChild(makeCheckRow(
+                  `subblk-${catName}-${subcatName}-${blockType}`,
+                  displayName,
+                  blockActive,
+                  color,
+                  val => blockState.set(blockType, val),
+                  blockType,
+                ));
+              }
+              blockList.appendChild(blockWrap);
+            }
           }
         }
       } else if (state.blocks) {
@@ -1070,6 +1134,16 @@ export class ToolboxConfigManager {
 
       const filteredBlocks = (item.contents ?? []).filter(block => {
         if (block.kind?.toLowerCase() !== 'block') return true; // keep non-block items (labels, buttons…)
+
+        // Graphics object constructors are represented in the toolbox as
+        // java_local_var_set wrappers with a nested VALUE block.
+        // Allow config keys to target either the wrapper type
+        // (java_local_var_set) or the nested constructor type (gfx_new_*).
+        const nestedValueType = block.inputs?.VALUE?.block?.type;
+        if (nestedValueType && blockMap.has(nestedValueType)) {
+          return blockMap.get(nestedValueType);
+        }
+
         // If this block type is in the config, honour its flag.
         if (blockMap.has(block.type)) return blockMap.get(block.type);
         // Not mentioned → default-off (allowlist semantics).
