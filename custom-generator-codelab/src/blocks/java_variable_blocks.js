@@ -307,17 +307,12 @@ const METHOD_GROUPS = [
     ],
   },
   {
-    // Pre-filled call-on-object blocks for every method defined in THIS class,
-    // plus blank templates for calls on objects of other classes / library types.
+    // Generic call-on-object templates for methods of other objects/classes.
+    // Keep this section fixed to exactly two blocks (with/without return).
     label: 'Methode eines anderen Objekts aufrufen',
     defs: [],
     calls: [],
-    // objCalls: for each matching def-block, generate an obj-method-call block
-    // pre-filled with method name + args (the OBJ socket stays empty for the user).
-    objCalls: [
-      { defType: 'java_method_noreturn', callType: 'java_obj_method_call_noreturn' },
-      { defType: 'java_method_return',   callType: 'java_obj_method_call_return'   },
-    ],
+    objCalls: [],
     // templates: blank blocks the user can freely configure for any object/method.
     templates: [
       { type: 'java_obj_method_call_noreturn' },
@@ -349,7 +344,21 @@ function makeBlockTemplate(type) {
   const b = Blockly.utils.xml.createElement('block');
   b.setAttribute('type', type);
   b.setAttribute('gap', '16');
+  if (type === 'java_obj_method_call_noreturn' || type === 'java_obj_method_call_return') {
+    _appendThisShadowToObjInput(b);
+  }
   return b;
+}
+
+function _appendThisShadowToObjInput(blockXml) {
+  const value = Blockly.utils.xml.createElement('value');
+  value.setAttribute('name', 'OBJ');
+
+  const shadow = Blockly.utils.xml.createElement('shadow');
+  shadow.setAttribute('type', 'java_this');
+
+  value.appendChild(shadow);
+  blockXml.appendChild(value);
 }
 
 function makeCallBlock(callType, name, argNames) {
@@ -378,6 +387,7 @@ function makeObjCallBlock(callType, name, argNames) {
   const b = Blockly.utils.xml.createElement('block');
   b.setAttribute('type', callType);
   b.setAttribute('gap', '8');
+  _appendThisShadowToObjInput(b);
   // Mutation: shape restoration (arg count + param names).
   const mutation = Blockly.utils.xml.createElement('mutation');
   mutation.setAttribute('args', String(argNames.length));
@@ -521,7 +531,13 @@ export function methodFlyoutCategory(workspace) {
   return xmlList;
 }
 
-function _methodFlyoutCategoryFor(workspace, categoryName, groups, includeStaticParentMethods) {
+function _methodFlyoutCategoryFor(
+  workspace,
+  categoryName,
+  groups,
+  includeStaticParentMethods,
+  includeParentClassMethods = true,
+) {
   const methodConfig = ToolboxConfigManager.getSubcategoryConfig(categoryName);
   const showGroup = (name) => !methodConfig || methodConfig.get(name) !== false;
   const showParamsInline = !ToolboxConfigManager.isCategoryActive('Parameter');
@@ -577,7 +593,9 @@ function _methodFlyoutCategoryFor(workspace, categoryName, groups, includeStatic
     }
   }
 
-  _appendParentClassMethods(workspace, xmlList, includeStaticParentMethods);
+  if (includeParentClassMethods) {
+    _appendParentClassMethods(workspace, xmlList, includeStaticParentMethods);
+  }
 
   return xmlList;
 }
@@ -590,6 +608,7 @@ export function normalMethodFlyoutCategory(workspace) {
       { name: 'Objekt-Methoden', group: METHOD_GROUPS[0] },
       { name: 'Methoden auf Objekten', group: METHOD_GROUPS[2] },
     ],
+    false,
     false,
   );
 }
