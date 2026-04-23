@@ -37,6 +37,7 @@ export const javaCategories = [
         contents: [
             { kind: 'block', type: 'defconstructor' },
             { kind: 'block', type: 'callconstructor' },
+            { kind: 'block', type: 'java_this' },
             { kind: 'block', type: 'java_extends' },
             { kind: 'block', type: 'java_super_call' },
         ],

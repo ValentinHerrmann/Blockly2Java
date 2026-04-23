@@ -133,7 +133,21 @@ Blockly.Blocks['java_param_get'] = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 6. NORMAL ATTRIBUTE – GET  (mirrors variables_get but type-restricted to '')
+// 6. THIS – GET  (variable-like current class instance reference)
+// ─────────────────────────────────────────────────────────────────────────────
+Blockly.Blocks['java_this'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('this');
+    this.setOutput(true, null);
+    this.setStyle('variable_blocks');
+    this.setTooltip('Verweist auf die aktuelle Instanz der geöffneten Klasse.');
+    this.setHelpUrl('');
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. NORMAL ATTRIBUTE – GET  (mirrors variables_get but type-restricted to '')
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_normal_attr_get'] = {
   init: function () {
@@ -149,7 +163,7 @@ Blockly.Blocks['java_normal_attr_get'] = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7. NORMAL ATTRIBUTE – SET  (mirrors variables_set but type-restricted to '')
+// 8. NORMAL ATTRIBUTE – SET  (mirrors variables_set but type-restricted to '')
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_normal_attr_set'] = {
   init: function () {

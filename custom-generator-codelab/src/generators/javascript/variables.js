@@ -80,6 +80,10 @@ export function java_param_get(block, generator) {
   const code = getVarCodeName(block.workspace, generator, block.getFieldValue('VAR'));
   return [code, Order.ATOMIC];
 };
+
+export function java_this() {
+  return ['this', Order.ATOMIC];
+};
 // No class-level declaration is generated for local variables.
 // The setter outputs "type name = value;" (inline declaration with inferred type).
 
