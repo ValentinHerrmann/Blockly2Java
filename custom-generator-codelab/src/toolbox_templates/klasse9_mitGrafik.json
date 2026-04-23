@@ -387,6 +387,10 @@
           "active": false
         },
         {
+          "type": "gfx_extends",
+          "active": true
+        },
+        {
           "type": "java_super_call",
           "active": false
         }
@@ -396,10 +400,6 @@
       "name": "Grafik: Objekte",
       "active": true,
       "blocks": [
-        {
-          "type": "gfx_extends",
-          "active": true
-        },
         {
           "type": "gfx_new_world",
           "active": true

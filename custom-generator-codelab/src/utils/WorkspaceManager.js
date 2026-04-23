@@ -144,7 +144,6 @@ export const FULL_ACTIVE_CONFIG = {
       name: 'Grafik: Objekte',
       active: false, // nur bei Grafik-Aufgaben benötigt
       blocks: [
-        { type: 'gfx_extends',          active: true  },
         { type: 'gfx_new_world',        active: true  },
         { type: 'gfx_new_shape',        active: true  },
         { type: 'gfx_new_polygon',      active: true  },
@@ -292,6 +291,7 @@ export const FULL_ACTIVE_CONFIG = {
         { type: 'defconstructor',  active: true },
         { type: 'callconstructor', active: true },
         { type: 'java_extends',    active: true },
+        { type: 'gfx_extends',     active: true },
         { type: 'java_super_call', active: true },
       ],
     },

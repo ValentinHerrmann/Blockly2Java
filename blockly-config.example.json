@@ -115,7 +115,8 @@
       "active": false,
       "blocks": [
         { "type": "defconstructor",   "active": false },
-        { "type": "callconstructor",  "active": false }
+        { "type": "callconstructor",  "active": false },
+        { "type": "gfx_extends",      "active": false }
       ]
     },
     {
@@ -135,7 +136,6 @@
       "name": "Grafik: Objekte",
       "active": true,
       "blocks": [
-        { "type": "gfx_extends",           "active": false },
         { "type": "gfx_new_world",          "active": true },
         { "type": "gfx_new_circle",         "active": true },
         { "type": "gfx_new_ellipse",        "active": true },

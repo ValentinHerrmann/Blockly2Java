@@ -38,6 +38,8 @@ export const javaCategories = [
             { kind: 'block', type: 'defconstructor' },
             { kind: 'block', type: 'callconstructor' },
             { kind: 'block', type: 'java_extends' },
+            // gfx_extends belongs to Klassen as well (graphics inheritance)
+            { kind: 'block', type: 'gfx_extends' },
             { kind: 'block', type: 'java_super_call' },
         ],
     },

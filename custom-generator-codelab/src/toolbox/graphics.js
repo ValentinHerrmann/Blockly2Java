@@ -6,8 +6,7 @@ export const graphicsCategories = [
         'name': 'Grafik: Objekte',
         'colour': '#00796b',
         'contents': [
-            // ── Vererbung ─────────────────────────────────────────────────
-            { 'kind': 'block', 'type': 'gfx_extends' },
+            // Vererbung handled in the `Klassen` category now.
             // ── World ──────────────────────────────────────────────────────
             {
                 'kind': 'block', 'type': 'java_local_var_set',

@@ -272,10 +272,6 @@
       "active": true,
       "blocks": [
         {
-          "type": "gfx_extends",
-          "active": true
-        },
-        {
           "type": "gfx_new_world",
           "active": true
         },
@@ -615,6 +611,10 @@
         },
         {
           "type": "java_extends",
+          "active": true
+        },
+        {
+          "type": "gfx_extends",
           "active": true
         },
         {

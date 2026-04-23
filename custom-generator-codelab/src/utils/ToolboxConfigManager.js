@@ -448,10 +448,21 @@ export class ToolboxConfigManager {
         const configBlockMap = new Map(configBlocks.map(b => [b.type, b.active !== false]));
         for (const block of (catDef.contents ?? [])) {
           if (block.kind?.toLowerCase() !== 'block') continue;
-          blockMap.set(
-            block.type,
-            configBlockMap.has(block.type) ? configBlockMap.get(block.type) : true,
-          );
+          // If this block is a wrapper around a constructor (e.g. java_local_var_set
+          // with a nested VALUE block), expose the nested constructor type as a
+          // separate toggle so each geometric shape can be controlled individually.
+          const nestedValueType = block.inputs?.VALUE?.block?.type;
+          if (nestedValueType) {
+            blockMap.set(
+              nestedValueType,
+              configBlockMap.has(nestedValueType) ? configBlockMap.get(nestedValueType) : true,
+            );
+          } else {
+            blockMap.set(
+              block.type,
+              configBlockMap.has(block.type) ? configBlockMap.get(block.type) : true,
+            );
+          }
         }
         catState.set(catName, { active: isActive, blocks: blockMap });
       }
