@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies and install root packages (allow scripts to run as root)
@@ -34,7 +34,7 @@ RUN if [ -d custom-generator-codelab/dist ]; then \
         fi
 
 # --- Production stage ---
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 WORKDIR /app
 
 # Copy built output from builder

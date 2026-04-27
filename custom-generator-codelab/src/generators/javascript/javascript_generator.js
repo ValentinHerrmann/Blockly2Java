@@ -1378,7 +1378,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         // Collect comments for all value arguments.
         // Don't collect comments for nested statements.
         for (let i = 0; i < block.inputList.length; i++) {
-          if (block.inputList[i].type === Blockly.inputTypes.VALUE) {
+          if (block.inputList[i].type === Blockly.inputs.inputTypes.VALUE) {
             const childBlock = block.inputList[i].connection.targetBlock();
             if (childBlock) {
               comment = this.allNestedComments(childBlock);
