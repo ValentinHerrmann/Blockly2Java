@@ -1,6 +1,39 @@
 import * as Blockly from 'blockly/core';
 import {getClassName} from '../generators/javascript/javascript_generator';
 import LocalStorageManager from '../utils/LocalStorageManager';
+import {getGraphicsSuperArgNames, getGraphicsSuperArgTypes} from './java_graphics_blocks';
+
+// Attach a sensible shadow block to a value input based on its check type.
+function setShadowForInput(block, inputName, checkType) {
+  if (!inputName || !block) return;
+  const inp = block.getInput(inputName);
+  if (!inp || !inp.connection) return;
+  if (!checkType) return; // no shadow for unknown types
+  let shadowType = null;
+  let fieldName = null;
+  let fieldValue = '';
+  switch (checkType) {
+    case 'Number':
+      shadowType = 'math_number'; fieldName = 'NUM'; fieldValue = '0'; break;
+    case 'String':
+      shadowType = 'text'; fieldName = 'TEXT'; fieldValue = '' ; break;
+    case 'Boolean':
+      shadowType = 'logic_boolean'; fieldName = 'BOOL'; fieldValue = 'TRUE'; break;
+    default:
+      return;
+  }
+  try {
+    const shadow = Blockly.utils.xml.createElement('shadow');
+    shadow.setAttribute('type', shadowType);
+    const field = Blockly.utils.xml.createElement('field');
+    field.setAttribute('name', fieldName);
+    field.textContent = fieldValue;
+    shadow.appendChild(field);
+    inp.connection.setShadowDom(shadow);
+  } catch (e) {
+    // Defensive: if Blockly API differs, silently continue.
+  }
+}
 
 Blockly.Blocks["defconstructor"] = {
   init: function () {
@@ -434,6 +467,7 @@ Blockly.Blocks['java_extends'] = {
 Blockly.Blocks['java_super_call'] = {
   init: function () {
     this.argNames_ = [];
+    this.superArgTypes_ = null;
     this.appendDummyInput('TOP_LINE').appendField('super()', 'SUPER_LABEL');
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -446,9 +480,14 @@ Blockly.Blocks['java_super_call'] = {
   _getParentClass: function () {
     if (!this.workspace) return null;
     const extendsBlocks = this.workspace.getBlocksByType('java_extends', false);
-    if (!extendsBlocks.length) return null;
-    const val = extendsBlocks[0].getFieldValue('PARENT_CLASS');
-    return (val && val !== 'NONE') ? val : null;
+    if (extendsBlocks.length) {
+      const val = extendsBlocks[0].getFieldValue('PARENT_CLASS');
+      if (val && val !== 'NONE') return val;
+    }
+    const gfxExtendsBlocks = this.workspace.getBlocksByType('gfx_extends', false);
+    if (!gfxExtendsBlocks.length) return null;
+    const gfxVal = gfxExtendsBlocks[0].getFieldValue('PARENT_CLASS');
+    return (gfxVal && gfxVal !== 'NONE') ? gfxVal : null;
   },
 
   /**
@@ -459,10 +498,18 @@ Blockly.Blocks['java_super_call'] = {
   refreshFromParent_: function () {
     const parentClass = this._getParentClass();
     let argNames = [];
+    this.superArgTypes_ = null;
     if (parentClass) {
       const allCtrs = LocalStorageManager.getAllConstructors();
       const ctrs = allCtrs[parentClass] || [];
-      if (ctrs.length > 0) argNames = ctrs[0].arguments || [];
+      if (ctrs.length > 0) {
+        argNames = ctrs[0].arguments || [];
+      } else {
+        const gfxArgs = getGraphicsSuperArgNames(parentClass);
+        if (gfxArgs != null) argNames = gfxArgs;
+      }
+      const gfxTypes = getGraphicsSuperArgTypes(parentClass);
+      if (gfxTypes != null) this.superArgTypes_ = gfxTypes;
     }
     this.updateShape_(argNames);
   },
@@ -496,6 +543,11 @@ Blockly.Blocks['java_super_call'] = {
     if (this.getInput('TOP_LINE')) this.removeInput('TOP_LINE');
   },
 
+  _getArgCheckType_: function(argName) {
+    if (!this.superArgTypes_) return null;
+    return this.superArgTypes_[argName] || null;
+  },
+
   /** Build TOP_LINE + ARG inputs from argNames, restoring saved connections. */
   _buildArgInputsShape_: function(saved) {
     if (this.argNames_.length === 0) {
@@ -503,18 +555,26 @@ Blockly.Blocks['java_super_call'] = {
       return;
     }
     const label0 = this.argNames_[0];
-    this.appendValueInput('ARG0')
+    const check0 = this._getArgCheckType_(label0);
+    const input0 = this.appendValueInput('ARG0')
       .appendField('super( ' + label0 + (this.argNames_.length > 1 ? ' ,' : ' )'));
+    if (check0) input0.setCheck(check0);
     if (saved[0]?.getSourceBlock()?.workspace) {
       this.getInput('ARG0').connection.connect(saved[0]);
+    } else if (check0) {
+      setShadowForInput(this, 'ARG0', check0);
     }
     for (let j = 1; j < this.argNames_.length; j++) {
       const label = this.argNames_[j];
-      this.appendValueInput('ARG' + j)
+      const check = this._getArgCheckType_(label);
+      const input = this.appendValueInput('ARG' + j)
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField(label + (j + 1 === this.argNames_.length ? ' )' : ' ,'));
+      if (check) input.setCheck(check);
       if (saved[j]?.getSourceBlock()?.workspace) {
         this.getInput('ARG' + j).connection.connect(saved[j]);
+      } else if (check) {
+        setShadowForInput(this, 'ARG' + j, check);
       }
     }
   },

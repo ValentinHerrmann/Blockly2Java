@@ -58,15 +58,22 @@ const C_CTRL  = '#4e342e';   // brown       – control / events
 // params: [ [inputName, fieldLabel, typeCheck?], ... ]  (typeCheck defaults to 'Number')
 // ─────────────────────────────────────────────────────────────────────────────
 function buildObjInputs(block, label, params) {
-  if (params.length === 0) {
-    block.appendDummyInput().appendField(label);
+  if (!params || params.length === 0) {
+    block.appendDummyInput().appendField(label + '()');
     return;
   }
   const [[n0, l0, c0 = 'Number'], ...rest] = params;
-  block.appendValueInput(n0).setCheck(c0).appendField(label + ' ' + l0);
+  block.appendValueInput(n0)
+    .setCheck(c0)
+    .appendField(label + '( ' + l0 + (rest.length > 0 ? ' ,' : ' )'));
   setShadowForInput(block, n0, c0);
-  for (const [n, l, c = 'Number'] of rest) {
-    block.appendValueInput(n).setAlign(Blockly.inputs.Align.RIGHT).setCheck(c).appendField(l);
+  for (let i = 0; i < rest.length; i++) {
+    const [n, l, c = 'Number'] = rest[i];
+    const isLast = i === rest.length - 1;
+    block.appendValueInput(n)
+      .setAlign(Blockly.inputs.Align.RIGHT)
+      .setCheck(c)
+      .appendField(l + (isLast ? ' )' : ' ,'));
     setShadowForInput(block, n, c);
   }
 }
@@ -145,14 +152,54 @@ function setShadowForInput(block, inputName, checkType) {
 //                       Triangle / Line  – selected via dropdown)
 // =============================================================================
 
-const SHAPE_PARAMS = {
-  Circle:           [['X','x:'], ['Y','y:'], ['RADIUS','Radius:']],
-  Ellipse:          [['X','x:'], ['Y','y:'], ['RADIUS_X','rx:'], ['RADIUS_Y','ry:']],
-  Rectangle:        [['TOP','oben:'], ['LEFT','links:'], ['WIDTH','Breite:'], ['HEIGHT','Höhe:']],
-  RoundedRectangle: [['TOP','oben:'], ['LEFT','links:'], ['WIDTH','Breite:'], ['HEIGHT','Höhe:'], ['CORNER','Ecke:']],
-  Triangle:         [['X1','x1:'], ['Y1','y1:'], ['X2','x2:'], ['Y2','y2:'], ['X3','x3:'], ['Y3','y3:']],
-  Line:             [['X1','x1:'], ['Y1','y1:'], ['X2','x2:'], ['Y2','y2:']],
+export const SHAPE_PARAMS = {
+  Circle:           [['X','x'], ['Y','y'], ['RADIUS','Radius']],
+  Ellipse:          [['X','x'], ['Y','y'], ['RADIUS_X','rx'], ['RADIUS_Y','ry']],
+  Rectangle:        [['LEFT','links'], ['TOP','oben'], ['WIDTH','Breite'], ['HEIGHT','H\u00f6he']],
+  RoundedRectangle: [['LEFT','links'], ['TOP','oben'], ['WIDTH','Breite'], ['HEIGHT','H\u00f6he'], ['CORNER','Ecke']],
+  Triangle:         [['X1','x1'], ['Y1','y1'], ['X2','x2'], ['Y2','y2'], ['X3','x3'], ['Y3','y3']],
+  Line:             [['X1','x1'], ['Y1','y1'], ['X2','x2'], ['Y2','y2']],
 };
+
+export const GRAPHICS_SUPER_ARGS = {
+  Actor:            [],
+  World:            ['width', 'height'],
+  Circle:           ['x', 'y', 'radius'],
+  Ellipse:          ['x', 'y', 'rx', 'ry'],
+  Rectangle:        ['left', 'top', 'width', 'height'],
+  RoundedRectangle: ['left', 'top', 'width', 'height', 'radius'],
+  Triangle:         ['x1', 'y1', 'x2', 'y2', 'x3', 'y3'],
+  Line:             ['x1', 'y1', 'x2', 'y2'],
+  Polygon:          ['closeAndFill', 'coordinates'],
+  Text:             ['x', 'y', 'fontSize', 'text'],
+  Turtle:           ['x', 'y', 'showTurtle'],
+  Group:            ['shapes'],
+  Bitmap:           ['resolutionX', 'resolutionY', 'left', 'top', 'displayWidth', 'displayHeight'],
+};
+
+export const GRAPHICS_SUPER_ARG_TYPES = {
+  Actor:            {},
+  World:            { width: 'Number', height: 'Number' },
+  Circle:           { x: 'Number', y: 'Number', radius: 'Number' },
+  Ellipse:          { x: 'Number', y: 'Number', rx: 'Number', ry: 'Number' },
+  Rectangle:        { left: 'Number', top: 'Number', width: 'Number', height: 'Number' },
+  RoundedRectangle: { left: 'Number', top: 'Number', width: 'Number', height: 'Number', radius: 'Number' },
+  Triangle:         { x1: 'Number', y1: 'Number', x2: 'Number', y2: 'Number', x3: 'Number', y3: 'Number' },
+  Line:             { x1: 'Number', y1: 'Number', x2: 'Number', y2: 'Number' },
+  Polygon:          { closeAndFill: 'Boolean', coordinates: 'Number' },
+  Text:             { x: 'Number', y: 'Number', fontSize: 'Number', text: 'String' },
+  Turtle:           { x: 'Number', y: 'Number', showTurtle: 'Boolean' },
+  Group:            { shapes: null },
+  Bitmap:           { resolutionX: 'Number', resolutionY: 'Number', left: 'Number', top: 'Number', displayWidth: 'Number', displayHeight: 'Number' },
+};
+
+export function getGraphicsSuperArgNames(className) {
+  return GRAPHICS_SUPER_ARGS[className] ?? null;
+}
+
+export function getGraphicsSuperArgTypes(className) {
+  return GRAPHICS_SUPER_ARG_TYPES[className] ?? null;
+}
 
 const SHAPE_DD_OPTIONS = [
   ['Kreis',           'Circle'],
@@ -249,7 +296,7 @@ function makeShapeBlock(isStatement) {
         .setCheck('Number')
         .appendField('neue ')
         .appendField(this._makeDropdown_(), 'SHAPE')
-        .appendField(' ' + l0);
+        .appendField('( ' + l0 + (rest.length > 0 ? ' ,' : ' )'));
       if (savedConns[n0]) {
         this.getInput('P_' + n0).connection.connect(savedConns[n0]);
       } else {
@@ -267,11 +314,13 @@ function makeShapeBlock(isStatement) {
       }
 
       // ── Remaining params: right-aligned ────────────────────────────────
-      for (const [n, l] of rest) {
+      for (let i = 0; i < rest.length; i++) {
+        const [n, l] = rest[i];
+        const isLast = i === rest.length - 1;
         this.appendValueInput('P_' + n)
           .setAlign(Blockly.inputs.Align.RIGHT)
           .setCheck('Number')
-          .appendField(l);
+          .appendField(l + (isLast ? ' )' : ' ,'));
         if (savedConns[n]) {
           this.getInput('P_' + n).connection.connect(savedConns[n]);
         } else {
@@ -287,167 +336,133 @@ Blockly.Blocks['gfx_new_shape']      = makeShapeBlock(false);
 
 
 // =============================================================================
-// 1.  WORLD
+// 1–9.  GFX CONSTRUCTORS
 // =============================================================================
 
-Blockly.Blocks['gfx_new_world'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Welt', [
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-    ]);
-    this.setOutput(true, 'World');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt einen neuen Grafikbereich. Gibt die World zurück (für spätere Methoden-Aufrufe).');
+const GFX_CONSTRUCTORS = [
+  {
+    type: 'gfx_new_world',
+    output: 'World',
+    label: 'neue Welt',
+    params: [
+      ['WIDTH',  'Breite'],
+      ['HEIGHT', 'H\u00f6he'],
+    ],
+    tooltip: 'Erstellt einen neuen Grafikbereich. Gibt die World zur\u00fcck (f\u00fcr sp\u00e4tere Methoden-Aufrufe).',
+    autoName: 'world',
   },
-  onchange: _makeAutoNameOnchange('world'),
-};
-
-// =============================================================================
-// 2.  CIRCLE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_circle'] = {
-  init: function () {
-    buildObjInputs(this, 'neuer Kreis', [
-      ['X',      'x:'],
-      ['Y',      'y:'],
-      ['RADIUS', 'Radius:'],
-    ]);
-    this.setOutput(true, 'Circle');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt einen Kreis mit Mittelpunkt (x, y) und dem angegebenen Radius.');
+  {
+    type: 'gfx_new_circle',
+    output: 'Circle',
+    label: 'neuer Kreis',
+    params: [
+      ['X',      'x'],
+      ['Y',      'y'],
+      ['RADIUS', 'Radius'],
+    ],
+    tooltip: 'Erstellt einen Kreis mit Mittelpunkt (x, y) und dem angegebenen Radius.',
   },
-};
-
-// =============================================================================
-// 3.  ELLIPSE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_ellipse'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Ellipse', [
-      ['X',        'x:'],
-      ['Y',        'y:'],
-      ['RADIUS_X', 'rx:'],
-      ['RADIUS_Y', 'ry:'],
-    ]);
-    this.setOutput(true, 'Ellipse');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine Ellipse mit Mittelpunkt (x, y) und den Halbachsen rx/ry.');
+  {
+    type: 'gfx_new_ellipse',
+    output: 'Ellipse',
+    label: 'neue Ellipse',
+    params: [
+      ['X',        'x'],
+      ['Y',        'y'],
+      ['RADIUS_X', 'rx'],
+      ['RADIUS_Y', 'ry'],
+    ],
+    tooltip: 'Erstellt eine Ellipse mit Mittelpunkt (x, y) und den Halbachsen rx/ry.',
   },
-};
-
-
-// =============================================================================
-// 4.  RECTANGLE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_rect'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Rechteck', [
-      ['TOP',    'oben:'],
-      ['LEFT',   'links:'],
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-    ]);
-    this.setOutput(true, 'Rectangle');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Rechteck (oben-links-Ecke + Breite/Höhe).');
+  {
+    type: 'gfx_new_rect',
+    output: 'Rectangle',
+    label: 'neues Rechteck',
+    params: [
+      ['LEFT',   'links'],
+      ['TOP',    'oben'],
+      ['WIDTH',  'Breite'],
+      ['HEIGHT', 'H\u00f6he'],
+    ],
+    tooltip: 'Erstellt ein Rechteck (oben-links-Ecke + Breite/H\u00f6he).',
   },
-};
-
-// =============================================================================
-// 5.  ROUNDED RECTANGLE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_rrect'] = {
-  init: function () {
-    buildObjInputs(this, 'neues abger. Rechteck', [
-      ['TOP',    'oben:'],
-      ['LEFT',   'links:'],
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-      ['CORNER', 'Ecke:'],
-    ]);
-    this.setOutput(true, 'RoundedRectangle');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Rechteck mit abgerundeten Ecken.');
+  {
+    type: 'gfx_new_rrect',
+    output: 'RoundedRectangle',
+    label: 'neues abger. Rechteck',
+    params: [
+      ['LEFT',   'links'],
+      ['TOP',    'oben'],
+      ['WIDTH',  'Breite'],
+      ['HEIGHT', 'H\u00f6he'],
+      ['CORNER', 'Ecke'],
+    ],
+    tooltip: 'Erstellt ein Rechteck mit abgerundeten Ecken.',
   },
-};
-
-// =============================================================================
-// 6.  TRIANGLE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_triangle'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Dreieck', [
-      ['X1', 'x1:'],
-      ['Y1', 'y1:'],
-      ['X2', 'x2:'],
-      ['Y2', 'y2:'],
-      ['X3', 'x3:'],
-      ['Y3', 'y3:'],
-    ]);
-    this.setOutput(true, 'Triangle');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Dreieck mit drei Eckpunkten.');
+  {
+    type: 'gfx_new_triangle',
+    output: 'Triangle',
+    label: 'neues Dreieck',
+    params: [
+      ['X1', 'x1'],
+      ['Y1', 'y1'],
+      ['X2', 'x2'],
+      ['Y2', 'y2'],
+      ['X3', 'x3'],
+      ['Y3', 'y3'],
+    ],
+    tooltip: 'Erstellt ein Dreieck mit drei Eckpunkten.',
   },
-};
-
-// =============================================================================
-// 7.  LINE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_line'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Linie', [
-      ['X1', 'x1:'],
-      ['Y1', 'y1:'],
-      ['X2', 'x2:'],
-      ['Y2', 'y2:'],
-    ]);
-    this.setOutput(true, 'Line');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine Linie zwischen zwei Punkten.');
+  {
+    type: 'gfx_new_line',
+    output: 'Line',
+    label: 'neue Linie',
+    params: [
+      ['X1', 'x1'],
+      ['Y1', 'y1'],
+      ['X2', 'x2'],
+      ['Y2', 'y2'],
+    ],
+    tooltip: 'Erstellt eine Linie zwischen zwei Punkten.',
   },
-};
-// =============================================================================
-// 8.  TEXT
-// =============================================================================
-
-Blockly.Blocks['gfx_new_text'] = {
-  init: function () {
-    buildObjInputs(this, 'neuer Text', [
-      ['X',    'x:'],
-      ['Y',    'y:'],
-      ['SIZE', 'Größe:'],
-      ['TEXT', 'Text:', 'String'],
-    ]);
-    this.setOutput(true, 'Text');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Text-Objekt an Position (x, y) mit der angegebenen Schriftgröße.');
+  {
+    type: 'gfx_new_text',
+    output: 'Text',
+    label: 'neuer Text',
+    params: [
+      ['X',    'x'],
+      ['Y',    'y'],
+      ['SIZE', 'Gr\u00f6\u00dfe'],
+      ['TEXT', 'Text', 'String'],
+    ],
+    tooltip: 'Erstellt ein Text-Objekt an Position (x, y) mit der angegebenen Schriftgr\u00f6\u00dfe.',
+    autoName: 'grafik',
   },
-  onchange: _makeAutoNameOnchange('grafik'),
-};
-
-// =============================================================================
-// 9.  TURTLE
-// =============================================================================
-
-Blockly.Blocks['gfx_new_turtle'] = {
-  init: function () {
-    buildObjInputs(this, 'neue Turtle', [
-      ['X', 'x:'],
-      ['Y', 'y:'],
-    ]);
-    this.setOutput(true, 'Turtle');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt eine Turtle an Position (x, y). Die Turtle zeichnet beim Vorwärtsgehen.');
+  {
+    type: 'gfx_new_turtle',
+    output: 'Turtle',
+    label: 'neue Turtle',
+    params: [
+      ['X', 'x'],
+      ['Y', 'y'],
+      ['SHOW', 'zeige', 'Boolean'],
+    ],
+    tooltip: 'Erstellt eine Turtle an Position (x, y). Die Turtle zeichnet beim Vorw\u00e4rtsgehen.',
+    autoName: 'turtle',
   },
-  onchange: _makeAutoNameOnchange('turtle'),
-};
+];
+
+for (const def of GFX_CONSTRUCTORS) {
+  Blockly.Blocks[def.type] = {
+    init: function () {
+      buildObjInputs(this, def.label, def.params);
+      this.setOutput(true, def.output);
+      this.setColour(C_OBJ);
+      if (def.tooltip) this.setTooltip(def.tooltip);
+    },
+    onchange: def.autoName ? _makeAutoNameOnchange(def.autoName) : undefined,
+  };
+}
 
 // =============================================================================
 // 10.  GROUP
@@ -573,42 +588,48 @@ Blockly.Blocks['gfx_new_group'] = {
 };
 
 // =============================================================================
-// 11.  BITMAP
+// 11–12.  BITMAP / POLYGON
 // =============================================================================
 
-Blockly.Blocks['gfx_new_bitmap'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Bitmap', [
-      ['COLS',   'Spalten:'],
-      ['ROWS',   'Zeilen:'],
-      ['LEFT',   'links:'],
-      ['TOP',    'oben:'],
-      ['WIDTH',  'Breite:'],
-      ['HEIGHT', 'Höhe:'],
-    ]);
-    this.setOutput(true, 'Bitmap');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Bitmap-Raster (Spalten×Zeilen Felder) an der angegebenen Position.');
+const GFX_MISC_CONSTRUCTORS = [
+  {
+    type: 'gfx_new_bitmap',
+    output: 'Bitmap',
+    label: 'neues Bitmap',
+    params: [
+      ['COLS',   'Spalten'],
+      ['ROWS',   'Zeilen'],
+      ['LEFT',   'links'],
+      ['TOP',    'oben'],
+      ['WIDTH',  'Breite'],
+      ['HEIGHT', 'H\u00f6he'],
+    ],
+    tooltip: 'Erstellt ein Bitmap-Raster (Spalten\u00d7Zeilen Felder) an der angegebenen Position.',
+    autoName: 'grafik',
   },
-  onchange: _makeAutoNameOnchange('grafik'),
-};
-
-
-// =============================================================================
-// 12.  POLYGON
-// =============================================================================
-
-Blockly.Blocks['gfx_new_polygon'] = {
-  init: function () {
-    buildObjInputs(this, 'neues Polygon', [
-      ['CLOSE', 'geschlossen:', 'Boolean'],
-    ]);
-    this.setOutput(true, 'Polygon');
-    this.setColour(C_OBJ);
-    this.setTooltip('Erstellt ein Polygon (geschlossen/gefüllt wenn true, offenene Linie wenn false). Punkte mit addPoint() hinzufügen.');
+  {
+    type: 'gfx_new_polygon',
+    output: 'Polygon',
+    label: 'neues Polygon',
+    params: [
+      ['CLOSE', 'geschlossen', 'Boolean'],
+    ],
+    tooltip: 'Erstellt ein Polygon (geschlossen/gef\u00fcllt wenn true, offenene Linie wenn false). Punkte mit addPoint() hinzuf\u00fcgen.',
+    autoName: 'grafik',
   },
-  onchange: _makeAutoNameOnchange('grafik'),
-};
+];
+
+for (const def of GFX_MISC_CONSTRUCTORS) {
+  Blockly.Blocks[def.type] = {
+    init: function () {
+      buildObjInputs(this, def.label, def.params);
+      this.setOutput(true, def.output);
+      this.setColour(C_OBJ);
+      if (def.tooltip) this.setTooltip(def.tooltip);
+    },
+    onchange: def.autoName ? _makeAutoNameOnchange(def.autoName) : undefined,
+  };
+}
 
 // =============================================================================
 // APPEARANCE BLOCKS  (all are statement blocks with an OBJ input)
