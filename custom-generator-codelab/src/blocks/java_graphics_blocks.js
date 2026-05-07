@@ -177,8 +177,28 @@ export const GRAPHICS_SUPER_ARGS = {
   Bitmap:           ['resolutionX', 'resolutionY', 'left', 'top', 'displayWidth', 'displayHeight'],
 };
 
+export const GRAPHICS_SUPER_ARG_TYPES = {
+  Actor:            {},
+  World:            { width: 'Number', height: 'Number' },
+  Circle:           { x: 'Number', y: 'Number', radius: 'Number' },
+  Ellipse:          { x: 'Number', y: 'Number', rx: 'Number', ry: 'Number' },
+  Rectangle:        { left: 'Number', top: 'Number', width: 'Number', height: 'Number' },
+  RoundedRectangle: { left: 'Number', top: 'Number', width: 'Number', height: 'Number', radius: 'Number' },
+  Triangle:         { x1: 'Number', y1: 'Number', x2: 'Number', y2: 'Number', x3: 'Number', y3: 'Number' },
+  Line:             { x1: 'Number', y1: 'Number', x2: 'Number', y2: 'Number' },
+  Polygon:          { closeAndFill: 'Boolean', coordinates: 'Number' },
+  Text:             { x: 'Number', y: 'Number', fontSize: 'Number', text: 'String' },
+  Turtle:           { x: 'Number', y: 'Number', showTurtle: 'Boolean' },
+  Group:            { shapes: null },
+  Bitmap:           { resolutionX: 'Number', resolutionY: 'Number', left: 'Number', top: 'Number', displayWidth: 'Number', displayHeight: 'Number' },
+};
+
 export function getGraphicsSuperArgNames(className) {
   return GRAPHICS_SUPER_ARGS[className] ?? null;
+}
+
+export function getGraphicsSuperArgTypes(className) {
+  return GRAPHICS_SUPER_ARG_TYPES[className] ?? null;
 }
 
 const SHAPE_DD_OPTIONS = [
