@@ -98,6 +98,8 @@ export const TYPES = {
   CLASS: '__CLASS__'
 };
 
+const ACCESS_MODIFIERS = new Set(['public', 'private', 'protected']);
+
 /**
  * Parses an explicit Java type prefix from a Blockly variable or method display name.
  *
@@ -116,6 +118,8 @@ export function parseExplicitType(rawName) {
   const typePart = rawName.slice(0, spaceIdx);
   const namePart = rawName.slice(spaceIdx + 1).trim();
   if (!typePart || !namePart) return null;
+  const firstToken = typePart.trim().split(/\s+/)[0];
+  if (ACCESS_MODIFIERS.has(firstToken)) return null;
   // typePart: Java type identifier, may include package qualifiers (.), generics
   // (<...>, including wildcards like "? extends Foo"), or arrays ([]).
   // For security: avoid complex backtracking regexes. Use a deterministic
@@ -124,6 +128,39 @@ export function parseExplicitType(rawName) {
   // namePart: simple Java identifier (no spaces or special chars)
   if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(namePart)) return null;
   return { type: typePart, name: namePart };
+}
+
+/**
+ * Parses an optional access modifier and/or type prefix from a display name.
+ *
+ * Supported patterns (Java-style):
+ * - "name" → null (no explicit info)
+ * - "type name" → {type, name}
+ * - "modifier name" → {modifier, name}
+ * - "modifier type name" → {modifier, type, name}
+ */
+export function parseExplicitSignature(rawName) {
+  if (!rawName) return null;
+  const trimmed = rawName.trim();
+  if (!trimmed) return null;
+  const firstSpace = trimmed.indexOf(' ');
+  if (firstSpace === -1) return null;
+
+  const firstToken = trimmed.slice(0, firstSpace);
+  if (ACCESS_MODIFIERS.has(firstToken)) {
+    const remainder = trimmed.slice(firstSpace + 1).trim();
+    if (!remainder) return null;
+    const parsed = parseExplicitType(remainder);
+    if (parsed) return { modifier: firstToken, type: parsed.type, name: parsed.name };
+    if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(remainder)) {
+      return { modifier: firstToken, type: null, name: remainder };
+    }
+    return null;
+  }
+
+  const parsed = parseExplicitType(trimmed);
+  if (parsed) return { modifier: null, type: parsed.type, name: parsed.name };
+  return null;
 }
 
 /**
@@ -197,7 +234,7 @@ function isValidTypeString(s) {
 export function getVarCodeName(workspace, generator, varId) {
   const varModel = workspace?.getVariableById?.(varId);
   if (varModel) {
-    const parsed = parseExplicitType(varModel.name);
+    const parsed = parseExplicitSignature(varModel.name);
     if (parsed) return parsed.name;
   }
   return generator.getVariableName(varId);
@@ -829,8 +866,8 @@ function _getVariableTypeImpl(workSpace, varId, useCompares, recursionDeepness) 
   // that type unconditionally overrides any automatic inference.
   const _varModel = workSpace.getVariableById?.(varId);
   if (_varModel) {
-    const _explicit = parseExplicitType(_varModel.name);
-    if (_explicit) return _explicit.type;
+    const _explicit = parseExplicitSignature(_varModel.name);
+    if (_explicit?.type) return _explicit.type;
   }
 
   const forLoopType = _searchForLoopVar(workSpace, varId);
@@ -1114,7 +1151,8 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
         // bare name part as the base for the code identifier (e.g. "int test" → "test"),
         // but still run it through nameDB_ to ensure it is safe and unique.
         const _rawVarName = workspace.getVariableById(varId)?.name ?? '';
-        const _parsedVarName = parseExplicitType(_rawVarName);
+        const _parsedVarName = parseExplicitSignature(_rawVarName);
+        const _explicitModifier = _parsedVarName?.modifier ?? null;
         if (_parsedVarName) {
           name = this.nameDB_.getDistinctName(
             _parsedVarName.name,
@@ -1137,7 +1175,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
           // attribute is still declared in the class body.
           const fallbackType = staticAttrVarIds.has(varId) ? 'static Object' : 'Object';
           if (name.startsWith('static_')) name = name.replace('static_', '');
-          definition.push(fallbackType + ' ' + name);
+          definition.push({ decl: fallbackType + ' ' + name, modifier: _explicitModifier });
         }
         else if(orgType === 'forint')
         {
@@ -1152,7 +1190,7 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
             if (name.startsWith('static_')) name = name.replace('static_', '');
             type = 'static ' + orgType;
           }
-          definition.push(type + ' ' + name);
+          definition.push({ decl: type + ' ' + name, modifier: _explicitModifier });
         }
         def_map.set(orgType, definition);
       }
@@ -1163,23 +1201,30 @@ export class JavascriptGenerator extends Blockly.CodeGenerator {
     {
       if (value.length > 0) 
       {
-        let uniqueValues = [...new Set(value)];
+        const uniqueValues = [];
+        const seen = new Set();
+        for (const entry of value) {
+          const key = `${entry.modifier || ''}|${entry.decl}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          uniqueValues.push(entry);
+        }
         for(let v of uniqueValues)
         {
           //console.log('Variable: ' + v);
           //if(v.includes('var ')){
 
             let comment = '\n'; 
-            let modifier = 'private ';
-            let varName = substringAfterLastSpace(v);
+            let modifier = v.modifier ? v.modifier + ' ' : 'private ';
+            let varName = substringAfterLastSpace(v.decl);
             //console.log('Variable: ' + varName + " | " + v);
             //console.log(variable_definitions);
             if(variable_definitions.includes(" "+varName+";")) {
               comment = "// Attribut doppelt! \n";
               modifier = '//'+modifier;
             }
-            v=v.replace('var ', 'Object ');
-            variable_definitions += modifier + v + "; "+comment;
+            const decl = v.decl.replace('var ', 'Object ');
+            variable_definitions += modifier + decl + "; "+comment;
           // }
           // else {
           //   console.log('Variable ' + v + ' not defined');
