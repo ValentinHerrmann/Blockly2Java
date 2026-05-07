@@ -288,6 +288,10 @@
             {
               "type": "java_this",
               "active": true
+            },
+            {
+              "type": "java_super",
+              "active": true
             }
           ]
         },

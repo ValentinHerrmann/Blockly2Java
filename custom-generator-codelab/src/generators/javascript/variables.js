@@ -84,6 +84,10 @@ export function java_param_get(block, generator) {
 export function java_this() {
   return ['this', Order.ATOMIC];
 };
+
+export function java_super() {
+  return ['super', Order.ATOMIC];
+};
 // No class-level declaration is generated for local variables.
 // The setter outputs "type name = value;" (inline declaration with inferred type).
 

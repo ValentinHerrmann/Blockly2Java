@@ -146,6 +146,17 @@ Blockly.Blocks['java_this'] = {
   },
 };
 
+Blockly.Blocks['java_super'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('super');
+    this.setOutput(true, null);
+    this.setStyle('variable_blocks');
+    this.setTooltip('Verweist auf die Oberklasse.');
+    this.setHelpUrl('');
+  },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 7. NORMAL ATTRIBUTE – GET  (mirrors variables_get but type-restricted to '')
 // ─────────────────────────────────────────────────────────────────────────────
@@ -822,6 +833,9 @@ export function allAttrFlyoutCategory(workspace) {
   // "Instanz-Attribute" section.
   if (showInstanceBlock('java_this')) {
     sections.push(makeBlockTemplate('java_this'));
+  }
+  if (showInstanceBlock('java_super')) {
+    sections.push(makeBlockTemplate('java_super'));
   }
 
   if (show('Instanz-Attribute')) {

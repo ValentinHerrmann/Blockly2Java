@@ -313,6 +313,8 @@ export function getType(var_type) {
       return TYPES.CLASS;
     case 'java_this':
       return getClassName() || TYPES.CLASS;
+    case 'java_super':
+      return TYPES.CLASS; // TODO: reicht nur class?
     // Legacy graphics block names
     case 'graphics_new_world':     return 'World';
     case 'graphics_new_circle':    return 'Circle';

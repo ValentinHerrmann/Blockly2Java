@@ -230,6 +230,7 @@ export const FULL_ACTIVE_CONFIG = {
           active: true,
           blocks: [
             { type: 'java_this', active: true },
+            { type: 'java_super', active: true },
           ],
         },
         { name: 'Klassen-Attribute', active: true },
