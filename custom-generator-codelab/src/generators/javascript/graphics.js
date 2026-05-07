@@ -39,9 +39,9 @@ export function gfx_new_shape(block, generator) {
     case 'Ellipse':
       return [`new Ellipse(${n('X','0')}, ${n('Y','0')}, ${n('RADIUS_X','100')}, ${n('RADIUS_Y','50')})`, Order.NEW];
     case 'Rectangle':
-      return [`new Rectangle(${n('TOP','0')}, ${n('LEFT','0')}, ${n('WIDTH','100')}, ${n('HEIGHT','80')})`, Order.NEW];
+      return [`new Rectangle(${n('LEFT','0')}, ${n('TOP','0')}, ${n('WIDTH','100')}, ${n('HEIGHT','80')})`, Order.NEW];
     case 'RoundedRectangle':
-      return [`new RoundedRectangle(${n('TOP','0')}, ${n('LEFT','0')}, ${n('WIDTH','100')}, ${n('HEIGHT','80')}, ${n('CORNER','10')})`, Order.NEW];
+      return [`new RoundedRectangle(${n('LEFT','0')}, ${n('TOP','0')}, ${n('WIDTH','100')}, ${n('HEIGHT','80')}, ${n('CORNER','10')})`, Order.NEW];
     case 'Triangle':
       return [`new Triangle(${n('X1','0')}, ${n('Y1','0')}, ${n('X2','100')}, ${n('Y2','0')}, ${n('X3','50')}, ${n('Y3','80')})`, Order.NEW];
     case 'Line':
@@ -78,20 +78,20 @@ export function gfx_new_ellipse(block, generator) {
 }
 
 export function gfx_new_rect(block, generator) {
-  const t = num(block, generator, 'TOP',    '0');
   const l = num(block, generator, 'LEFT',   '0');
+  const t = num(block, generator, 'TOP',    '0');
   const w = num(block, generator, 'WIDTH',  '100');
   const h = num(block, generator, 'HEIGHT', '80');
-  return [`new Rectangle(${t}, ${l}, ${w}, ${h})`, Order.NEW];
+  return [`new Rectangle(${l}, ${t}, ${w}, ${h})`, Order.NEW];
 }
 
 export function gfx_new_rrect(block, generator) {
-  const t = num(block, generator, 'TOP',    '0');
   const l = num(block, generator, 'LEFT',   '0');
+  const t = num(block, generator, 'TOP',    '0');
   const w = num(block, generator, 'WIDTH',  '100');
   const h = num(block, generator, 'HEIGHT', '80');
   const c = num(block, generator, 'CORNER', '10');
-  return [`new RoundedRectangle(${t}, ${l}, ${w}, ${h}, ${c})`, Order.NEW];
+  return [`new RoundedRectangle(${l}, ${t}, ${w}, ${h}, ${c})`, Order.NEW];
 }
 
 export function gfx_new_triangle(block, generator) {
@@ -123,7 +123,8 @@ export function gfx_new_text(block, generator) {
 export function gfx_new_turtle(block, generator) {
   const x = num(block, generator, 'X', '400');
   const y = num(block, generator, 'Y', '300');
-  return [`new Turtle(${x}, ${y})`, Order.NEW];
+  const show = generator.valueToCode(block, 'SHOW', Order.NONE) || 'true';
+  return [`new Turtle(${x}, ${y}, ${show})`, Order.NEW];
 }
 
 export function gfx_new_group(block, generator) {

@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core';
 import {getClassName} from '../generators/javascript/javascript_generator';
 import LocalStorageManager from '../utils/LocalStorageManager';
+import {getGraphicsSuperArgNames} from './java_graphics_blocks';
 
 Blockly.Blocks["defconstructor"] = {
   init: function () {
@@ -446,9 +447,14 @@ Blockly.Blocks['java_super_call'] = {
   _getParentClass: function () {
     if (!this.workspace) return null;
     const extendsBlocks = this.workspace.getBlocksByType('java_extends', false);
-    if (!extendsBlocks.length) return null;
-    const val = extendsBlocks[0].getFieldValue('PARENT_CLASS');
-    return (val && val !== 'NONE') ? val : null;
+    if (extendsBlocks.length) {
+      const val = extendsBlocks[0].getFieldValue('PARENT_CLASS');
+      if (val && val !== 'NONE') return val;
+    }
+    const gfxExtendsBlocks = this.workspace.getBlocksByType('gfx_extends', false);
+    if (!gfxExtendsBlocks.length) return null;
+    const gfxVal = gfxExtendsBlocks[0].getFieldValue('PARENT_CLASS');
+    return (gfxVal && gfxVal !== 'NONE') ? gfxVal : null;
   },
 
   /**
@@ -462,7 +468,12 @@ Blockly.Blocks['java_super_call'] = {
     if (parentClass) {
       const allCtrs = LocalStorageManager.getAllConstructors();
       const ctrs = allCtrs[parentClass] || [];
-      if (ctrs.length > 0) argNames = ctrs[0].arguments || [];
+      if (ctrs.length > 0) {
+        argNames = ctrs[0].arguments || [];
+      } else {
+        const gfxArgs = getGraphicsSuperArgNames(parentClass);
+        if (gfxArgs != null) argNames = gfxArgs;
+      }
     }
     this.updateShape_(argNames);
   },
