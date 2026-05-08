@@ -838,10 +838,20 @@ export class Scrollbar {
    */
   private updateMetrics() {
     const ratio = this.getRatio_();
+    // Only update workspace metrics if the ratio has actually changed
+    // This prevents canvas jumping when scrollbars are resized after block drops
     if (this.horizontal) {
-      this.workspace.setMetrics({x: ratio});
+      const currentRatio = this.workspace.getMetrics().scrollLeft / 
+        (this.workspace.getMetrics().scrollWidth - this.workspace.getMetrics().viewWidth);
+      if (Math.abs(ratio - currentRatio) > 0.001) {
+        this.workspace.setMetrics({x: ratio});
+      }
     } else {
-      this.workspace.setMetrics({y: ratio});
+      const currentRatio = this.workspace.getMetrics().scrollTop / 
+        (this.workspace.getMetrics().scrollHeight - this.workspace.getMetrics().viewHeight);
+      if (Math.abs(ratio - currentRatio) > 0.001) {
+        this.workspace.setMetrics({y: ratio});
+      }
     }
   }
 
