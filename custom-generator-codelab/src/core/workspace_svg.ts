@@ -2564,18 +2564,18 @@ export class WorkspaceSvg extends Workspace implements IASTNodeLocationSvg {
   ) {
     const metrics = this.getMetrics();
 
-    if (typeof xyRatio.x === 'number') {
-      this.scrollX = -(
-        metrics.scrollLeft +
-        (metrics.scrollWidth - metrics.viewWidth) * xyRatio.x
-      );
-    }
-    if (typeof xyRatio.y === 'number') {
-      this.scrollY = -(
-        metrics.scrollTop +
-        (metrics.scrollHeight - metrics.viewHeight) * xyRatio.y
-      );
-    }
+    if (typeof xyRatio.x === 'number' && xyRatio.x !== 0) {
+        this.scrollX = -(
+          metrics.scrollLeft +
+          (metrics.scrollWidth - metrics.viewWidth) * xyRatio.x
+        );
+      }
+    if (typeof xyRatio.y === 'number' && xyRatio.y !== 0) {
+        this.scrollY = -(
+          metrics.scrollTop +
+          (metrics.scrollHeight - metrics.viewHeight) * xyRatio.y
+        );
+      }
     // We have to shift the translation so that when the canvas is at 0, 0 the
     // workspace origin is not underneath the toolbox.
     const x = this.scrollX + metrics.absoluteLeft;
