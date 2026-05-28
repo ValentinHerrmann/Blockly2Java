@@ -731,6 +731,7 @@ export function onBlocksChange() {
     );
 
     if (otherClasses.length > 0) {
+      const viewport = captureWorkspaceViewport(ws);
       // Pass 1 — propagate from active class outward.
       for (const cls of otherClasses) {
         silentGenerateForClass(cls);
@@ -744,6 +745,7 @@ export function onBlocksChange() {
       IdeBridge.selected_file_name = activeClass + '.java';
       setClassName(activeClass);
       load(ws);
+      restoreWorkspaceViewport(ws, viewport);
 
       // Re-generate the active class now that all downstream hints are fresh.
       LocalStorageManager.clearConstructors(activeClass);
@@ -793,6 +795,25 @@ function onXmlLoaded(xhttp) {
  */
 function generateCode() {
   return javaGenerator.workspaceToCode(ws);
+}
+
+function captureWorkspaceViewport(workspace) {
+  if (!workspace) return null;
+  return {
+    scrollX: workspace.scrollX,
+    scrollY: workspace.scrollY,
+    scale: typeof workspace.getScale === 'function' ? workspace.getScale() : workspace.scale,
+  };
+}
+
+function restoreWorkspaceViewport(workspace, viewport) {
+  if (!workspace || !viewport) return;
+  if (typeof workspace.setScale === 'function' && typeof viewport.scale === 'number') {
+    workspace.setScale(viewport.scale);
+  }
+  if (typeof workspace.scroll === 'function') {
+    workspace.scroll(viewport.scrollX, viewport.scrollY);
+  }
 }
 
 // ---------------------------------------------------------------------------
