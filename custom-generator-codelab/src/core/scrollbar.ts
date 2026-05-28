@@ -838,35 +838,9 @@ export class Scrollbar {
    */
   private updateMetrics() {
     const ratio = this.getRatio_();
-    // Only update workspace metrics if the ratio has actually changed.
-    // Match the scroll ratio used by resizeContent to avoid jumps after drops.
-    const metrics = this.workspace.getMetrics();
     if (this.horizontal) {
-      const maxScrollDistance = metrics.scrollWidth - metrics.viewWidth;
-      if (maxScrollDistance <= 0) {
-        return;
-      }
-      const currentRatio =
-        (metrics.viewLeft - metrics.scrollLeft) / maxScrollDistance;
-      if (!Number.isFinite(currentRatio)) {
-        return;
-      }
-      if (Math.abs(ratio - currentRatio) > 0.001) {
-        this.workspace.setMetrics({x: ratio});
-      }
-      return;
-    }
-
-    const maxScrollDistance = metrics.scrollHeight - metrics.viewHeight;
-    if (maxScrollDistance <= 0) {
-      return;
-    }
-    const currentRatio =
-      (metrics.viewTop - metrics.scrollTop) / maxScrollDistance;
-    if (!Number.isFinite(currentRatio)) {
-      return;
-    }
-    if (Math.abs(ratio - currentRatio) > 0.001) {
+      this.workspace.setMetrics({x: ratio});
+    } else {
       this.workspace.setMetrics({y: ratio});
     }
   }
