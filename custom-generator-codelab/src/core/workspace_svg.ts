@@ -2564,14 +2564,13 @@ export class WorkspaceSvg extends Workspace implements IASTNodeLocationSvg {
   ) {
     const metrics = this.getMetrics();
 
-    // Preserve scroll position when xyRatio is 0 (no scroll requested)
-    if (typeof xyRatio.x === 'number' && xyRatio.x !== 0) {
+    if (typeof xyRatio.x === 'number') {
       this.scrollX = -(
         metrics.scrollLeft +
         (metrics.scrollWidth - metrics.viewWidth) * xyRatio.x
       );
     }
-    if (typeof xyRatio.y === 'number' && xyRatio.y !== 0) {
+    if (typeof xyRatio.y === 'number') {
       this.scrollY = -(
         metrics.scrollTop +
         (metrics.scrollHeight - metrics.viewHeight) * xyRatio.y
