@@ -33,6 +33,7 @@ import * as eventUtils from './events/utils.js';
 import type {FlyoutButton} from './flyout_button.js';
 import {Gesture} from './gesture.js';
 import {Grid} from './grid.js';
+import {hasBubble} from './interfaces/i_has_bubble.js';
 import type {IASTNodeLocationSvg} from './interfaces/i_ast_node_location_svg.js';
 import type {IBoundedElement} from './interfaces/i_bounded_element.js';
 import type {ICopyData, ICopyable} from './interfaces/i_copyable.js';
@@ -2531,6 +2532,15 @@ export class WorkspaceSvg extends Workspace implements IASTNodeLocationSvg {
     Tooltip.hide();
     WidgetDiv.hide();
     dropDownDiv.hideWithoutAnimation();
+
+    const blocks = this.getAllBlocks(false);
+    for (const block of blocks) {
+      for (const icon of block.getIcons()) {
+        if (hasBubble(icon) && icon.bubbleIsVisible()) {
+          icon.setBubbleVisible(false);
+        }
+      }
+    }
 
     this.hideComponents(onlyClosePopups);
   }

@@ -11,6 +11,9 @@
             "name": "Debug B2J with Chrome",
             "url": "http://localhost:8080",
             "webRoot": "${workspaceFolder}/custom-generator-codelab",
+            "runtimeArgs": [
+                "--incognito"
+            ],
             "preLaunchTask": "npmdev",
             "postDebugTask": "npmstop",
             "sourceMapPathOverrides": {

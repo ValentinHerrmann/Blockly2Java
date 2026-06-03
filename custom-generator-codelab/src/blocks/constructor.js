@@ -48,22 +48,35 @@ Blockly.Blocks["defconstructor"] = {
     this.setTooltip('');
     this.setHelpUrl('');
     this.arguments_ = [];
+    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
   },
 
   mutationToDom: function () {
     let container = document.createElement('mutation');
 
-    for (const element of this.arguments_) {
-      const name = element;
+    // Ensure we have a paramId for each argument.
+    while (this.paramIds_.length < this.arguments_.length) {
+      this.paramIds_.push(Blockly.utils.idGenerator.genUid());
+    }
+
+    for (let i = 0; i < this.arguments_.length; i++) {
+      const name = this.arguments_[i];
       const argument = document.createElement('arg');
       argument.setAttribute('name', name);
-
-      if (!this.workspace.getVariable(name, 'param')) {
-        this.workspace.createVariable(name, 'param');
+      // Use the stored unique ID so that parameters with the same name in
+      // different constructors/methods get distinct variable models.
+      let id = this.paramIds_[i];
+      if (!id || !this.workspace.getVariableById(id)) {
+        // Generate a fresh unique ID and create the variable.
+        id = Blockly.utils.idGenerator.genUid();
+        this.paramIds_[i] = id;
       }
-      const id = this.workspace.getVariable(name, 'param').getId();
       argument.setAttribute('varid', id);
+      if (!this.workspace.getVariableById(id)) {
+        // Create a variable with a unique internal ID to avoid collisions.
+        this.workspace.createVariable(name, 'param', id);
+      }
       container.appendChild(argument);
     }
     // NOTE: do NOT call updateShape_() here.
@@ -75,11 +88,17 @@ Blockly.Blocks["defconstructor"] = {
 
   domToMutation: function (xmlElement) {
     this.arguments_ = [];
+    this.paramIds_ = [];
 
     for (let i = 0, childNode; childNode = xmlElement.childNodes[i]; i++) {
       if (childNode.nodeName.toLowerCase() == 'arg') {
         const name = childNode.getAttribute('name');
         this.arguments_.push(name);
+        // Restore the unique variable ID if present.
+        const varid = childNode.getAttribute('varid');
+        if (varid) {
+          this.paramIds_.push(varid);
+        }
       }
     }
     this.updateShape_();
@@ -101,25 +120,35 @@ Blockly.Blocks["defconstructor"] = {
 
   compose: function (containerBlock) {
     const oldArguments = this.arguments_.slice();
+    const oldParamIds = this.paramIds_ ? this.paramIds_.slice() : [];
     let itemBlock = containerBlock.getInputTargetBlock('STACK');
     this.arguments_ = [];
+    this.paramIds_ = [];
     while (itemBlock) {
       const name = itemBlock.getFieldValue('NAME');
       this.arguments_.push(name);
       itemBlock = itemBlock.nextConnection?.targetBlock();
     }
     // Delete workspace variables for params that no longer exist.
-    for (const oldName of oldArguments) {
-      if (!this.arguments_.includes(oldName)) {
-        const oldVar = this.workspace.getVariable(oldName, 'param');
+    for (let i = 0; i < oldArguments.length; i++) {
+      if (!this.arguments_.includes(oldArguments[i])) {
+        const oldVar = this.workspace.getVariableById(oldParamIds[i]);
         if (oldVar) this.workspace.deleteVariableById(oldVar.getId());
       }
     }
-    // Ensure workspace variables exist for every current param.
-    for (const name of this.arguments_) {
-      if (!this.workspace.getVariable(name, 'param')) {
-        this.workspace.createVariable(name, 'param');
+    // Ensure workspace variables exist for every current param with unique IDs.
+    for (let i = 0; i < this.arguments_.length; i++) {
+      const name = this.arguments_[i];
+      const existingId = this.paramIds_[i];
+      if (existingId && this.workspace.getVariableById(existingId)) {
+        // Variable already exists with this ID.
+        continue;
       }
+      // Create a new variable with a unique ID to avoid collisions with
+      // parameters of the same name in other blocks.
+      const uid = Blockly.utils.idGenerator.genUid();
+      this.paramIds_[i] = uid;
+      this.workspace.createVariable(name, 'param', uid);
     }
     this.updateShape_();
   },
@@ -131,8 +160,10 @@ Blockly.Blocks["defconstructor"] = {
     this.setFieldValue(display, 'PARAMS');
   },
   getVarModels: function() {
-    return this.arguments_
-      .map(name => this.workspace.getVariable(name, 'param'))
+    // Use the unique paramIds_ to get the correct variable model for each
+    // parameter, even when multiple parameters share the same name.
+    return (this.paramIds_ || [])
+      .map(id => this.workspace.getVariableById(id))
       .filter(Boolean);
   }
 };

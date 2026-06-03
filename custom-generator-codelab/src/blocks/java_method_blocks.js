@@ -18,19 +18,58 @@ const STATIC_METHOD_COLOUR = '#AA5555';  // red-ish – static methods
 const NORMAL_METHOD_COLOUR = '#995599';  // purple-ish – instance methods (additional blocks)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: shared mutation / decompose / compose logic for both method blocks
+// Helper: shared mutation / decompose / compose logic for method blocks.
+//
+// Option A: Parameter metadata (name, unique ID, type) is stored directly on
+// the block instance and in mutation DOM — NO workspace-level 'param' variables
+// are created or looked up.  This avoids Blockly's VariableMap collision bug
+// where two methods with same-named parameters would conflict.
+//
+// Data structures on the block:
+//   paramIds_   : string[] — unique Blockly UIDs per parameter slot
+//   paramTypes_ : string[] — explicit type per parameter slot (e.g. "String")
+//                 populated when the user writes "int count" in the mutator.
 // ─────────────────────────────────────────────────────────────────────────────
 const paramMixin = {
+
+  /**
+   * Parse a parameter name string for an optional explicit type prefix.
+   * E.g. "int count" → { type: 'int', name: 'count' }
+   *      "count"      → { type: null,    name: 'count' }
+   */
+  _parseParamName_: function (name) {
+    // Common Java types to check for.
+    const knownTypes = [
+      'int', 'long', 'float', 'double', 'boolean', 'char', 'byte', 'short',
+      'String', 'Object', 'boolean',
+    ];
+    for (const t of knownTypes) {
+      const regex = new RegExp('^' + t + '\\s+(.+)');
+      const m = name.match(regex);
+      if (m) {
+        return { type: t, name: m[1] };
+      }
+    }
+    return { type: null, name: name };
+  },
+
   mutationToDom: function () {
     const container = document.createElement('mutation');
-    for (const element of this.arguments_) {
-      const name = element;
+    // Ensure we have a paramId and paramType for each argument.
+    while (this.paramIds_.length < this.arguments_.length) {
+      this.paramIds_.push(Blockly.utils.idGenerator.genUid());
+    }
+    while (this.paramTypes_.length < this.arguments_.length) {
+      this.paramTypes_.push('');
+    }
+    for (let i = 0; i < this.arguments_.length; i++) {
       const arg = document.createElement('arg');
-      arg.setAttribute('name', name);
-      if (!this.workspace.getVariable(name, 'param')) {
-        this.workspace.createVariable(name, 'param');
+      arg.setAttribute('name', this.arguments_[i]);
+      arg.setAttribute('varid', this.paramIds_[i]);
+      const parsed = this._parseParamName_(this.arguments_[i]);
+      if (parsed.type) {
+        arg.setAttribute('type', parsed.type);
       }
-      arg.setAttribute('varid', this.workspace.getVariable(name, 'param').getId());
       container.appendChild(arg);
     }
     this.updateShape_();
@@ -39,9 +78,21 @@ const paramMixin = {
 
   domToMutation: function (xmlElement) {
     this.arguments_ = [];
+    this.paramIds_ = [];
+    this.paramTypes_ = [];
     for (let i = 0, child; (child = xmlElement.childNodes[i]); i++) {
       if (child.nodeName.toLowerCase() === 'arg') {
-        this.arguments_.push(child.getAttribute('name'));
+        const rawName = child.getAttribute('name');
+        this.arguments_.push(rawName);
+        const varid = child.getAttribute('varid');
+        if (varid) {
+          this.paramIds_.push(varid);
+        }
+        // Restore explicit type if present in mutation DOM.
+        const t = child.getAttribute('type');
+        if (t) {
+          this.paramTypes_.push(t);
+        }
       }
     }
     this.updateShape_();
@@ -62,27 +113,28 @@ const paramMixin = {
   },
 
   compose: function (containerBlock) {
-    // Snapshot old args before overwriting so we can clean up stale variables.
+    // Snapshot old args and IDs before overwriting so we can track changes.
     const oldArguments = this.arguments_.slice();
+    const oldParamIds = this.paramIds_ ? this.paramIds_.slice() : [];
+    const oldParamTypes = this.paramTypes_ ? this.paramTypes_.slice() : [];
 
     let itemBlock = containerBlock.getInputTargetBlock('STACK');
     this.arguments_ = [];
+    this.paramIds_ = [];
+    this.paramTypes_ = [];
     while (itemBlock) {
-      this.arguments_.push(itemBlock.getFieldValue('NAME'));
+      const rawName = itemBlock.getFieldValue('NAME');
+      this.arguments_.push(rawName);
+      // Generate a fresh unique ID for each parameter slot.
+      this.paramIds_.push(Blockly.utils.idGenerator.genUid());
       itemBlock = itemBlock.nextConnection?.targetBlock();
     }
 
-    // Delete workspace variables for params that no longer exist.
-    for (const oldName of oldArguments) {
-      if (!this.arguments_.includes(oldName)) {
-        const oldVar = this.workspace.getVariable(oldName, 'param');
-        if (oldVar) this.workspace.deleteVariableById(oldVar.getId());
-      }
-    }
-    // Ensure workspace variables exist for every current param.
-    for (const name of this.arguments_) {
-      if (!this.workspace.getVariable(name, 'param')) {
-        this.workspace.createVariable(name, 'param');
+    // Restore explicit types for params that still exist at the same index.
+    for (let i = 0; i < this.arguments_.length; i++) {
+      const idx = oldArguments.indexOf(this.arguments_[i]);
+      if (idx >= 0 && oldParamTypes[idx]) {
+        this.paramTypes_[i] = oldParamTypes[idx];
       }
     }
 
@@ -101,8 +153,37 @@ const paramMixin = {
     this.setFieldValue(display, 'PARAMS');
   },
 
-  getVarModels: function () {
-    return this.arguments_.map(name => this.workspace.getVariable(name, 'param')).filter(Boolean);
+  /**
+   * Returns an array of parameter metadata objects instead of Blockly
+   * variable models.  Each object has: { id, name, type }.
+   *
+   * This replaces getVarModels() which relied on workspace variables.
+   */
+  getParams: function () {
+    const params = [];
+    for (let i = 0; i < this.arguments_.length; i++) {
+      const rawName = this.arguments_[i];
+      const parsed = this._parseParamName_(rawName);
+      params.push({
+        id: this.paramIds_[i] || null,
+        name: parsed.name,
+        // Explicit type from prefix takes priority; fall back to paramTypes_
+        // stored in mutation DOM (for cross-class type hints).
+        type: parsed.type || (this.paramTypes_[i] || ''),
+      });
+    }
+    return params;
+  },
+
+  /**
+   * Set the inferred type for a parameter by slot index.
+   * Used by the generator to store cross-class type hints back on the block.
+   */
+  setParamType: function (index, type) {
+    while (this.paramTypes_.length <= index) {
+      this.paramTypes_.push('');
+    }
+    this.paramTypes_[index] = type;
   },
 };
 
@@ -111,7 +192,6 @@ const paramMixin = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_static_method_noreturn'] = {
   init: function () {
-    // Inputs are created in their final order — updateShape_ must not move them.
     this.appendDummyInput('TOP_LINE')
       .appendField('Klassen-Methode')
       .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
@@ -123,6 +203,8 @@ Blockly.Blocks['java_static_method_noreturn'] = {
     this.setTooltip('Definiert eine Klassen-Methode ohne Rückgabewert.');
     this.setHelpUrl('');
     this.arguments_ = [];
+    this.paramIds_ = [];
+    this.paramTypes_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },
@@ -148,6 +230,7 @@ Blockly.Blocks['java_static_method_return'] = {
     this.setTooltip('Definiert eine Klassen-Methode mit Rückgabewert.');
     this.setHelpUrl('');
     this.arguments_ = [];
+    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },
@@ -170,6 +253,7 @@ Blockly.Blocks['java_method_noreturn'] = {
     this.setTooltip('Definiert eine Instanzmethode ohne Rückgabewert.');
     this.setHelpUrl('');
     this.arguments_ = [];
+    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },
@@ -195,6 +279,7 @@ Blockly.Blocks['java_method_return'] = {
     this.setTooltip('Definiert eine Instanzmethode mit Rückgabewert.');
     this.setHelpUrl('');
     this.arguments_ = [];
+    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },

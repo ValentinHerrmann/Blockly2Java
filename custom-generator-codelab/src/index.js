@@ -51,6 +51,78 @@ function hideIdeLoadingOverlay() {
 // Passing onXmlLoaded as callback for REST response
 const restManager = new RestManager(onXmlLoaded, UiManager.showCodeDiv);
 
+/**
+ * Applies runtime patches/fixes to the Blockly core module because the local
+ * changes in `src/core` are not compiled by the project's build system.
+ */
+function applyBlocklyPatches() {
+  // 1. Track the last pointerdown/mousedown target to detect clicks inside bubbles.
+  let lastPointerDownTarget = null;
+
+  const handlePointerDown = (e) => {
+    lastPointerDownTarget = e.target;
+  };
+
+  globalThis.document?.addEventListener('pointerdown', handlePointerDown, true);
+  globalThis.document?.addEventListener('mousedown', handlePointerDown, true);
+
+  // 2. Patch hideChaff to close mutator and comment bubbles when clicking outside.
+  if (Blockly.WorkspaceSvg && Blockly.WorkspaceSvg.prototype) {
+    const originalHideChaff = Blockly.WorkspaceSvg.prototype.hideChaff;
+    Blockly.WorkspaceSvg.prototype.hideChaff = function (onlyClosePopups) {
+      // Call original hideChaff to hide dropdowns and widgetDiv
+      originalHideChaff.call(this, onlyClosePopups);
+
+      // If the last click was inside a bubble, do not close any bubbles.
+      if (lastPointerDownTarget && lastPointerDownTarget.closest('.blocklyBubbleCanvas')) {
+        return;
+      }
+
+      // Close all mutators and comments
+      const blocks = this.getAllBlocks(false);
+      for (const block of blocks) {
+        if (typeof block.getIcons === 'function') {
+          for (const icon of block.getIcons()) {
+            if (
+              typeof icon.bubbleIsVisible === 'function' &&
+              icon.bubbleIsVisible() &&
+              typeof icon.setBubbleVisible === 'function'
+            ) {
+              icon.setBubbleVisible(false);
+            }
+          }
+        }
+      }
+    };
+  }
+
+  // 3. Patch MutatorIcon to debounce recomposition and ignore intermediate field changes.
+  if (Blockly.icons && Blockly.icons.MutatorIcon) {
+    const originalIsIgnorable = Blockly.icons.MutatorIcon.isIgnorableMutatorEvent;
+    Blockly.icons.MutatorIcon.isIgnorableMutatorEvent = function (e) {
+      if (!e) return true;
+      return (
+        originalIsIgnorable.call(this, e) ||
+        e.type === 'block_field_intermediate_change' ||
+        (Blockly.Events && e.type === Blockly.Events.BLOCK_FIELD_INTERMEDIATE_CHANGE)
+      );
+    };
+
+    Blockly.icons.MutatorIcon.prototype.createMiniWorkspaceChangeListener = function () {
+      return (e) => {
+        if (!Blockly.icons.MutatorIcon.isIgnorableMutatorEvent(e)) {
+          if (this.updateWorkspacePid) {
+            clearTimeout(this.updateWorkspacePid);
+          }
+          this.updateWorkspacePid = setTimeout(() => {
+            this.updateWorkspacePid = null;
+            this.recomposeSourceBlock();
+          }, 300);
+        }
+      };
+    };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Step 1 – Initialization  (page opens)
@@ -62,6 +134,7 @@ const restManager = new RestManager(onXmlLoaded, UiManager.showCodeDiv);
  * initial load, first code generation, and listener registration.
  */
 function init() {
+  applyBlocklyPatches();
   const theme = UiManager.setupTheme();
   ws = setupBlockly(theme);
   UiManager.setupLayout(ws);
