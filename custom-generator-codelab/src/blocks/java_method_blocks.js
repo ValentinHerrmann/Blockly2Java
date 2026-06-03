@@ -55,6 +55,8 @@ const paramMixin = {
 
   mutationToDom: function () {
     const container = document.createElement('mutation');
+    if (!this.paramIds_) this.paramIds_ = [];
+    if (!this.paramTypes_) this.paramTypes_ = [];
     // Ensure we have a paramId and paramType for each argument.
     while (this.paramIds_.length < this.arguments_.length) {
       this.paramIds_.push(Blockly.utils.idGenerator.genUid());
@@ -84,15 +86,12 @@ const paramMixin = {
       if (child.nodeName.toLowerCase() === 'arg') {
         const rawName = child.getAttribute('name');
         this.arguments_.push(rawName);
-        const varid = child.getAttribute('varid');
-        if (varid) {
-          this.paramIds_.push(varid);
-        }
+        // Always ensure a valid unique ID exists for this slot.
+        const varid = child.getAttribute('varid') || Blockly.utils.idGenerator.genUid();
+        this.paramIds_.push(varid);
         // Restore explicit type if present in mutation DOM.
         const t = child.getAttribute('type');
-        if (t) {
-          this.paramTypes_.push(t);
-        }
+        this.paramTypes_.push(t || '');
       }
     }
     this.updateShape_();
@@ -115,27 +114,27 @@ const paramMixin = {
   compose: function (containerBlock) {
     // Snapshot old args and IDs before overwriting so we can track changes.
     const oldArguments = this.arguments_.slice();
-    const oldParamIds = this.paramIds_ ? this.paramIds_.slice() : [];
+    const oldParamIds  = this.paramIds_  ? this.paramIds_.slice()  : [];
     const oldParamTypes = this.paramTypes_ ? this.paramTypes_.slice() : [];
 
     let itemBlock = containerBlock.getInputTargetBlock('STACK');
-    this.arguments_ = [];
-    this.paramIds_ = [];
+    this.arguments_  = [];
+    this.paramIds_   = [];
     this.paramTypes_ = [];
+
     while (itemBlock) {
       const rawName = itemBlock.getFieldValue('NAME');
       this.arguments_.push(rawName);
-      // Generate a fresh unique ID for each parameter slot.
-      this.paramIds_.push(Blockly.utils.idGenerator.genUid());
+      // Reuse the existing ID if this param name survived the edit,
+      // otherwise generate a fresh unique ID.
+      const oldIdx = oldArguments.indexOf(rawName);
+      const reuseId = (oldIdx >= 0 && oldParamIds[oldIdx])
+        ? oldParamIds[oldIdx]
+        : Blockly.utils.idGenerator.genUid();
+      this.paramIds_.push(reuseId);
+      // Restore type annotation if name survived.
+      this.paramTypes_.push(oldIdx >= 0 ? (oldParamTypes[oldIdx] || '') : '');
       itemBlock = itemBlock.nextConnection?.targetBlock();
-    }
-
-    // Restore explicit types for params that still exist at the same index.
-    for (let i = 0; i < this.arguments_.length; i++) {
-      const idx = oldArguments.indexOf(this.arguments_[i]);
-      if (idx >= 0 && oldParamTypes[idx]) {
-        this.paramTypes_[i] = oldParamTypes[idx];
-      }
     }
 
     this.updateShape_();
@@ -165,11 +164,11 @@ const paramMixin = {
       const rawName = this.arguments_[i];
       const parsed = this._parseParamName_(rawName);
       params.push({
-        id: this.paramIds_[i] || null,
+        id: this.paramIds_ ? this.paramIds_[i] : null,
         name: parsed.name,
         // Explicit type from prefix takes priority; fall back to paramTypes_
         // stored in mutation DOM (for cross-class type hints).
-        type: parsed.type || (this.paramTypes_[i] || ''),
+        type: parsed.type || ((this.paramTypes_ && this.paramTypes_[i]) || ''),
       });
     }
     return params;
@@ -180,6 +179,9 @@ const paramMixin = {
    * Used by the generator to store cross-class type hints back on the block.
    */
   setParamType: function (index, type) {
+    if (!this.paramTypes_) {
+      this.paramTypes_ = [];
+    }
     while (this.paramTypes_.length <= index) {
       this.paramTypes_.push('');
     }
@@ -231,6 +233,7 @@ Blockly.Blocks['java_static_method_return'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
+    this.paramTypes_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },
@@ -254,6 +257,7 @@ Blockly.Blocks['java_method_noreturn'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
+    this.paramTypes_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },
@@ -280,6 +284,7 @@ Blockly.Blocks['java_method_return'] = {
     this.setHelpUrl('');
     this.arguments_ = [];
     this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
+    this.paramTypes_ = [];
     this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
     this.setCommentText('');
   },

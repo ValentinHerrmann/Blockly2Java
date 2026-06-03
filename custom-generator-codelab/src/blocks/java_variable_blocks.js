@@ -130,6 +130,35 @@ Blockly.Blocks['java_param_get'] = {
     this.setTooltip('Liest einen Methodenparameter. Umbenennen nur über den Methodenkopf möglich.');
     this.setHelpUrl('');
   },
+
+  /**
+   * When this block is placed in the workspace (not inside a flyout),
+   * ensure the workspace variable it references actually exists.
+   * This replaces the need for paramMixin.compose to call createVariable.
+   */
+  onchange: function (event) {
+    // Only act once when the block is first moved to the main workspace.
+    if (this.isInFlyout) return;
+    if (event.type !== Blockly.Events.BLOCK_MOVE && event.type !== Blockly.Events.BLOCK_CREATE) return;
+    if (event.blockId !== this.id) return;
+
+    const varId = this.getFieldValue('VAR');
+    if (!varId) return;
+    if (this.workspace.getVariableById(varId)) return; // already exists
+
+    // Retrieve the name from the field (FieldVariable stores it internally).
+    const field = this.getField('VAR');
+    const varName = field?.getText?.() || 'param';
+
+    // Only create if no same-name param variable already exists to avoid collision.
+    const existing = this.workspace.getVariable(varName, VAR_TYPE_PARAM);
+    if (existing) {
+      // Redirect this field to point at the existing variable.
+      field.setValue(existing.getId());
+    } else {
+      this.workspace.createVariable(varName, VAR_TYPE_PARAM, varId);
+    }
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -442,17 +471,22 @@ function _appendParentClassMethods(workspace, xmlList, includeStaticMethods = tr
 
 /**
  * Appends inline param-get blocks for argNames when the Parameter category is hidden.
+ * Uses paramIds array to build XML directly from block data instead of workspace variables.
  */
-function _appendInlineParams(workspace, xmlList, argNames) {
+function _appendInlineParams(workspace, xmlList, argNames, paramIds) {
   for (let pi = 0; pi < argNames.length; pi++) {
-    const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
-    if (paramVar) {
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_param_get');
-      getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
-      getBlock.appendChild(varField(paramVar));
-      xmlList.push(getBlock);
-    }
+    const paramId = paramIds ? paramIds[pi] : null;
+    if (!paramId) continue;
+    const getBlock = Blockly.utils.xml.createElement('block');
+    getBlock.setAttribute('type', 'java_param_get');
+    getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
+    const field = Blockly.utils.xml.createElement('field');
+    field.setAttribute('name', 'VAR');
+    field.setAttribute('id', paramId);
+    field.setAttribute('variabletype', VAR_TYPE_PARAM);
+    field.appendChild(document.createTextNode(argNames[pi]));
+    getBlock.appendChild(field);
+    xmlList.push(getBlock);
   }
 }
 
@@ -469,9 +503,10 @@ export function methodFlyoutCategory(workspace) {
     const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
     for (const ctrBlock of ctrBlocks) {
       const argNames = ctrBlock.arguments_ || [];
+      const paramIds = ctrBlock.paramIds_ || [];
       if (argNames.length === 0) continue;
       xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
-      _appendInlineParams(workspace, xmlList, argNames);
+      _appendInlineParams(workspace, xmlList, argNames, paramIds);
     }
   }
 
@@ -511,7 +546,7 @@ export function methodFlyoutCategory(workspace) {
         xmlList.push(callBlock);
 
         // Inline param-get blocks when Parameter category is hidden.
-        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
+        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames, block.paramIds_);
       }
     }
 
@@ -559,9 +594,10 @@ function _methodFlyoutCategoryFor(
     const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
     for (const ctrBlock of ctrBlocks) {
       const argNames = ctrBlock.arguments_ || [];
+      const paramIds = ctrBlock.paramIds_ || [];
       if (argNames.length === 0) continue;
       xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
-      _appendInlineParams(workspace, xmlList, argNames);
+      _appendInlineParams(workspace, xmlList, argNames, paramIds);
     }
   }
 
@@ -585,7 +621,7 @@ function _methodFlyoutCategoryFor(
         const callBlock = makeCallBlock(callType, name, argNames);
         callBlock.setAttribute('gap', showParamsInline && argNames.length > 0 ? '4' : '16');
         xmlList.push(callBlock);
-        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
+        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames, block.paramIds_);
       }
     }
 
@@ -690,24 +726,26 @@ export function paramFlyoutCategory(workspace) {
     xmlList.push(lbl);
   }
 
-  // Helper to push a param-get block for a variable
-  function pushParamBlock(variable, isLast) {
-    const getBlock = Blockly.utils.xml.createElement('block');
-    getBlock.setAttribute('type', 'java_param_get');
-    getBlock.setAttribute('gap', isLast ? '16' : '4');
-    getBlock.appendChild(varField(variable));
-    xmlList.push(getBlock);
-  }
-
   // ── Constructor parameters ──────────────────────────────────────────────
   const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
   for (const ctrBlock of ctrBlocks) {
-    const argNames = ctrBlock.arguments_ || [];
+    const argNames  = ctrBlock.arguments_  || [];
+    const paramIds  = ctrBlock.paramIds_   || [];
     if (argNames.length === 0) continue;
     pushLabel('Konstruktor(' + argNames.join(', ') + ')');
     for (let i = 0; i < argNames.length; i++) {
-      const paramVar = workspace.getVariable(argNames[i], VAR_TYPE_PARAM);
-      if (paramVar) pushParamBlock(paramVar, i === argNames.length - 1);
+      const paramId = paramIds[i];
+      if (!paramId) continue;
+      const getBlock = Blockly.utils.xml.createElement('block');
+      getBlock.setAttribute('type', 'java_param_get');
+      getBlock.setAttribute('gap', i === argNames.length - 1 ? '16' : '4');
+      const field = Blockly.utils.xml.createElement('field');
+      field.setAttribute('name', 'VAR');
+      field.setAttribute('id', paramId);
+      field.setAttribute('variabletype', VAR_TYPE_PARAM);
+      field.appendChild(document.createTextNode(argNames[i]));
+      getBlock.appendChild(field);
+      xmlList.push(getBlock);
     }
   }
 
@@ -721,13 +759,24 @@ export function paramFlyoutCategory(workspace) {
 
   for (const blockType of METHOD_BLOCK_TYPES) {
     for (const methodBlock of workspace.getBlocksByType(blockType, true)) {
-      const argNames = methodBlock.arguments_ || [];
+      const argNames  = methodBlock.arguments_  || [];
+      const paramIds  = methodBlock.paramIds_   || [];
       if (argNames.length === 0) continue;
       const methodName = methodBlock.getFieldValue('NAME') || 'unbekannt';
       pushLabel(methodName + '(' + argNames.join(', ') + ')');
       for (let i = 0; i < argNames.length; i++) {
-        const paramVar = workspace.getVariable(argNames[i], VAR_TYPE_PARAM);
-        if (paramVar) pushParamBlock(paramVar, i === argNames.length - 1);
+        const paramId = paramIds[i];
+        if (!paramId) continue;
+        const getBlock = Blockly.utils.xml.createElement('block');
+        getBlock.setAttribute('type', 'java_param_get');
+        getBlock.setAttribute('gap', i === argNames.length - 1 ? '16' : '4');
+        const field = Blockly.utils.xml.createElement('field');
+        field.setAttribute('name', 'VAR');
+        field.setAttribute('id', paramId);
+        field.setAttribute('variabletype', VAR_TYPE_PARAM);
+        field.appendChild(document.createTextNode(argNames[i]));
+        getBlock.appendChild(field);
+        xmlList.push(getBlock);
       }
     }
   }
