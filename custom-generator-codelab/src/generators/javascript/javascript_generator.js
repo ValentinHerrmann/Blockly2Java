@@ -91,7 +91,7 @@ export const TYPES = {
   INTEGER: 'int',
   STRING: 'String',
   DOUBLE: 'double',
-  LIST: 'List<Object>',
+  LIST: 'Object[]',
   OBJECT: 'Object',
   FORINT: 'forint',
   UNKNOWN: 'var',
@@ -561,7 +561,7 @@ function findCommonSupertype(types) {
 }
 
 /** Primitive / built-in Java types that are NOT class names. */
-const PRIMITIVE_TYPES = new Set(['int', 'double', 'boolean', 'String', 'Object', 'List<Object>', 'forint', 'void']);
+const PRIMITIVE_TYPES = new Set(['int', 'double', 'boolean', 'String', 'Object', 'Object[]', 'forint', 'void']);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -859,7 +859,7 @@ function _resolveByAssignedVars(workSpace, vars, recursionDeepness) {
 function _resolveSetterType(setterTypes) {
   if (setterTypes.length === 0) return null;
   if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
-  if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
+  if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t) && !t.endsWith('[]'))) return findCommonSupertype(setterTypes);
   return setterTypes[0];
 }
 

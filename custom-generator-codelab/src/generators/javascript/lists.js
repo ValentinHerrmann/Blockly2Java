@@ -9,35 +9,32 @@
  * @suppress {missingRequire}
  */
 
-// Former goog.module ID: Blockly.JavaScript.lists
-
 import * as Blockly from 'blockly/core';
-// import {NameType} from 'blockly/core/names.js';
 import {Order} from './javascript_generator.js';
 
 export function lists_create_empty(block, generator) {
-  // Create an empty list in Java.
-  return ["new ArrayList<>()", Order.ATOMIC];
-};
+  // Create an empty array in Java.
+  return ["new Object[0]", Order.ATOMIC];
+}
 
 export function lists_create_with(block, generator) {
-  // Create a list with any number of elements of any type in Java.
+  // Create an array with any number of elements of any type in Java.
   const elements = new Array(block.itemCount_);
   for (let i = 0; i < block.itemCount_; i++) {
     elements[i] =
         generator.valueToCode(block, 'ADD' + i, Order.NONE) || 'null';
   }
-  const code = "Arrays.asList( new Object[] {" + elements.join(', ') + "} )";
+  const code = "new Object[] {" + elements.join(', ') + "}";
   return [code, Order.ATOMIC];
-};
+}
 
 export function lists_repeat(block, generator) {
-  // Create a list with one element repeated in Java.
+  // Create an array with one element repeated in Java.
   const functionName = generator.provideFunction_('listsRepeat', `
-public static List<Object> ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object value, int n) {
-  List<Object> array = new ArrayList<>();
+public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object value, int n) {
+  Object[] array = new Object[n];
   for (int i = 0; i < n; i++) {
-    array.add(value);
+    array[i] = value;
   }
   return array;
 }
@@ -48,340 +45,253 @@ public static List<Object> ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object value,
       generator.valueToCode(block, 'NUM', Order.NONE) || '0';
   const code = functionName + '(' + element + ', ' + repeatCount + ')';
   return [code, Order.FUNCTION_CALL];
-};
+}
 
 export function lists_length(block, generator) {
-  // String or array length in Java.
+  // Array length in Java.
   const list =
-      generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new ArrayList<>()";
-  return [list + ".size()", Order.MEMBER];
-};
+      generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
+  return [list + ".length", Order.MEMBER];
+}
 
 export function lists_isEmpty(block, generator) {
-  // Checks if the list is null or empty in Java.
+  // Checks if the array is empty in Java.
   const list =
-      generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new ArrayList<>()";
-  return ["!" + list + ".isEmpty()", Order.LOGICAL_NOT];
-};
+      generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
+  return [list + ".length == 0", Order.EQUALITY];
+}
 
 export function lists_indexOf(block, generator) {
-  // Find an item in the list in Java.
+  // Find an item in the array in Java.
   const operator =
       block.getFieldValue('END') === 'FIRST' ? 'indexOf' : 'lastIndexOf';
   const item =
       generator.valueToCode(block, 'FIND', Order.NONE) || "''";
   const list =
-      generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new ArrayList<>()";
-  let code = list + '.' + operator + '(' + item + ')';
-  /*if (block.workspace.options.oneBasedIndex) { // is this necessary?
-    code += ' + 1';
-  }*/
+      generator.valueToCode(block, 'VALUE', Order.NONE) || "new Object[0]";
+  let functionName;
+  if (operator === 'indexOf') {
+    functionName = generator.provideFunction_('listsIndexOf', `
+public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, Object item) {
+  if (array == null) return -1;
+  for (int i = 0; i < array.length; i++) {
+    if ((array[i] == null && item == null) || (array[i] != null && array[i].equals(item))) {
+      return i;
+    }
+  }
+  return -1;
+}
+`);
+  } else {
+    functionName = generator.provideFunction_('listsLastIndexOf', `
+public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, Object item) {
+  if (array == null) return -1;
+  for (int i = array.length - 1; i >= 0; i--) {
+    if ((array[i] == null && item == null) || (array[i] != null && array[i].equals(item))) {
+      return i;
+    }
+  }
+  return -1;
+}
+`);
+  }
+  const code = functionName + '(' + list + ', ' + item + ')';
   return [code, Order.FUNCTION_CALL];
-};
+}
 
 export function lists_getIndex(block, generator) {
   // Get element at index in Java.
   const mode = block.getFieldValue('MODE') || 'GET';
   const where = block.getFieldValue('WHERE') || 'FROM_START';
-  let list = generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new ArrayList<>()";
+  let list = generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
 
+  let at;
   switch (where) {
-    case ('FIRST'):
-      if (mode === 'GET') {
-        return [list + ".get(0)", Order.MEMBER];
-      } else if (mode === 'GET_REMOVE') {
-        return [list + ".remove(0)", Order.MEMBER];
-      } else if (mode === 'REMOVE') {
-        return list + ".remove(0);\n";
-      }
+    case 'FIRST':
+      at = '0';
       break;
-    case ('LAST'):
-      if (mode === 'GET') {
-        return [list + ".get(" + list + ".size() - 1)", Order.MEMBER];
-      } else if (mode === 'GET_REMOVE') {
-        return [list + ".remove(" + list + ".size() - 1)", Order.MEMBER];
-      } else if (mode === 'REMOVE') {
-        return list + ".remove(" + list + ".size() - 1);\n";
-      }
+    case 'LAST':
+      at = list + '.length - 1';
       break;
-    case ('FROM_START'): {
-      const at = generator.getAdjusted(block, 'AT');
-      if (mode === 'GET') {
-        return [list + ".get(" + at + ")", Order.MEMBER];
-      } else if (mode === 'GET_REMOVE') {
-        return [list + ".remove(" + at + ")", Order.FUNCTION_CALL];
-      } else if (mode === 'REMOVE') {
-        return list + ".remove(" + at + ");\n";
-      }
+    case 'FROM_START':
+      at = generator.getAdjusted(block, 'AT');
       break;
-    }
-    case ('FROM_END'): {
-      const at = generator.getAdjusted(block, 'AT', 1, true);
-      if (mode === 'GET') {
-        return [list + ".get(" + list + ".size() - " + at + ")", Order.FUNCTION_CALL];
-      } else if (mode === 'GET_REMOVE') {
-        return [list + ".remove(" + list + ".size() - " + at + ")", Order.FUNCTION_CALL];
-      } else if (mode === 'REMOVE') {
-        return list + ".remove(" + list + ".size() - " + at + ");\n";
-      }
+    case 'FROM_END':
+      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1, true);
       break;
-    }
-    case ('RANDOM'): {
-      const functionName = generator.provideFunction_('listsGetRandomItem', `
-public static Object ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Object> list, boolean remove) {
-  int x = new Random().nextInt(list.size());
-  if (remove) {
-    return list.remove(x);
-  } else {
-    return list.get(x);
+    case 'RANDOM':
+      at = 'new java.util.Random().nextInt(' + list + '.length)';
+      break;
   }
-}
-`);
-      const code = functionName + '(' + list + ', ' + (mode !== 'GET') + ')';
-      if (mode === 'GET' || mode === 'GET_REMOVE') {
-        return [code, Order.FUNCTION_CALL];
-      } else if (mode === 'REMOVE') {
-        return code + ';\n';
-      }
-      break;
+
+  if (mode === 'GET') {
+    return [list + '[' + at + ']', Order.MEMBER];
+  } else {
+    // REMOVE or GET_REMOVE: since arrays are fixed-size, we can't remove in-place.
+    // Fall back to safe alternatives or comments.
+    if (mode === 'GET_REMOVE') {
+      return [list + '[' + at + ']', Order.MEMBER];
+    } else if (mode === 'REMOVE') {
+      return '// entfernen auf Arrays nicht unterstützt\n';
     }
   }
   throw Error('Unhandled combination (lists_getIndex).');
-};
+}
 
 export function lists_setIndex(block, generator) {
   // Set element at index in Java.
-  let list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new ArrayList<>()';
-  const mode = block.getFieldValue('MODE') || 'GET';
+  let list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new Object[0]';
+  const mode = block.getFieldValue('MODE') || 'SET';
   const where = block.getFieldValue('WHERE') || 'FROM_START';
   const value = generator.valueToCode(block, 'TO', Order.ASSIGNMENT) || 'null';
 
+  let at;
   switch (where) {
-    case ('FIRST'):
-      if (mode === 'SET') {
-        return list + ".set(0, " + value + ");\n";
-      } else if (mode === 'INSERT') {
-        return list + ".add(0, " + value + ");\n";
-      }
+    case 'FIRST':
+      at = '0';
       break;
-    case ('LAST'):
-      if (mode === 'SET') {
-        return list + ".set(" + list + ".size() - 1, " + value + ");\n";
-      } else if (mode === 'INSERT') {
-        return list + ".add(" + value + ");\n";
-      }
+    case 'LAST':
+      at = list + '.length - 1';
       break;
-    case ('FROM_START'): {
-      const at = generator.getAdjusted(block, 'AT');
-      if (mode === 'SET') {
-        return list + ".set(" + at + ", " + value + ");\n";
-      } else if (mode === 'INSERT') {
-        return list + ".add(" + at + ", " + value + ");\n";
-      }
+    case 'FROM_START':
+      at = generator.getAdjusted(block, 'AT');
       break;
-    }
-    case ('FROM_END'): {
-      const at = generator.getAdjusted(block, 'AT', 1, false, Order.SUBTRACTION);
-      if (mode === 'SET') {
-        return list + ".set(" + list + ".size() - " + at + ", " + value + ");\n";
-      } else if (mode === 'INSERT') {
-        return list + ".add(" + (list + ".size() - " + at) + ", " + value + ");\n";
-      }
+    case 'FROM_END':
+      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1, true);
       break;
-    }
-    case ('RANDOM'): {
-      const xVar = generator.nameDB_.getDistinctName('tmpX', Blockly.Names.NameType.VARIABLE);
-      const randomCode = 'int ' + xVar + ' = new Random().nextInt(' + list + '.size());\n';
-      if (mode === 'SET') {
-        return randomCode + list + ".set(" + xVar + ", " + value + ");\n";
-      } else if (mode === 'INSERT') {
-        return randomCode + list + ".add(" + xVar + ", " + value + ");\n";
-      }
+    case 'RANDOM':
+      at = 'new java.util.Random().nextInt(' + list + '.length)';
       break;
-    }
+  }
+
+  if (mode === 'SET') {
+    return list + '[' + at + '] = ' + value + ';\n';
+  } else if (mode === 'INSERT') {
+    return '// Einfügen auf Arrays nicht unterstützt\n';
   }
   throw Error('Unhandled combination (lists_setIndex).');
-};
-
-/**
- * Returns an expression calculating the index into a list.
- * @param {string} listName Name of the list, used to calculate length.
- * @param {string} where The method of indexing, selected by dropdown in Blockly
- * @param {string=} opt_at The optional offset when indexing from start/end.
- * @return {string|undefined} Index expression.
- */
-const getSubstringIndex = function(listName, where, opt_at) {
-  if (where === 'FIRST') {
-    return '0';
-  } else if (where === 'FROM_END') {
-    return listName + '.size() - 1 - ' + opt_at;
-  } else if (where === 'LAST') {
-    return listName + '.size() - 1';
-  } else {
-    return opt_at;
-  }
-};
+}
 
 export function lists_getSublist(block, generator) {
-  // Get sublist in Java.
-  const list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new ArrayList<>()';
+  // Get sublist (range copy) in Java.
+  const list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new Object[0]';
   const where1 = block.getFieldValue('WHERE1');
   const where2 = block.getFieldValue('WHERE2');
-  let code;
-  if (where1 === 'FIRST' && where2 === 'LAST') {
-    code = list + '.subList(0, ' + list + '.size())';
-  } else if (
-      list.match(/^\w+$/) ||
-      (where1 !== 'FROM_END' && where2 === 'FROM_START')
-  ) {
-    // If the list is a variable or doesn't require a call for length, don't
-    // generate a helper function.
-    let at1;
-    switch (where1) {
-      case 'FROM_START':
-        at1 = generator.getAdjusted(block, 'AT1');
-        break;
-      case 'FROM_END':
-        at1 = generator.getAdjusted(block, 'AT1', 1, false, Order.SUBTRACTION);
-        at1 = list + '.size() - ' + at1;
-        break;
-      case 'FIRST':
-        at1 = '0';
-        break;
-      default:
-        throw Error('Unhandled option (lists_getSublist).');
-    }
-    let at2;
-    switch (where2) {
-      case 'FROM_START':
-        at2 = generator.getAdjusted(block, 'AT2', 1);
-        break;
-      case 'FROM_END':
-        at2 = generator.getAdjusted(block, 'AT2', 0, false, Order.SUBTRACTION);
-        at2 = list + '.size() - ' + at2;
-        break;
-      case 'LAST':
-        at2 = list + '.size()';
-        break;
-      default:
-        throw Error('Unhandled option (lists_getSublist).');
-    }
-    code = list + '.subList(' + at1 + ', ' + at2 + ')';
-  } else {
-    const at1 = generator.getAdjusted(block, 'AT1');
-    const at2 = generator.getAdjusted(block, 'AT2');
-    const wherePascalCase = {
-      FIRST: 'First',
-      LAST: 'Last',
-      FROM_START: 'FromStart',
-      FROM_END: 'FromEnd',
-    };
-    // The value for 'FROM_END' and 'FROM_START' depends on `at` so
-    // we add it as a parameter.
-    const at1Param =
-        where1 === 'FROM_END' || where1 === 'FROM_START' ? ', at1' : '';
-    const at2Param =
-        where2 === 'FROM_END' || where2 === 'FROM_START' ? ', at2' : '';
-    const functionName = generator.provideFunction_(
-        'subsequence' + wherePascalCase[where1] + wherePascalCase[where2],
-        `
-      public static ArrayList<String> ${generator.FUNCTION_NAME_PLACEHOLDER_}(ArrayList<String> sequence${at1Param}${at2Param}) {
-        int start = ${getSubstringIndex('sequence', where1, 'at1')};
-        int end = ${getSubstringIndex('sequence', where2, 'at2')} + 1;
-        return new ArrayList<>(sequence.subList(start, end));
-      }
-      `
-    );
-    code =
-        functionName +
-        '(' +
-        list +
-        // The value for 'FROM_END' and 'FROM_START' depends on `at` so we
-        // pass it.
-        (where1 === 'FROM_END' || where1 === 'FROM_START' ? ', ' + at1 : '') +
-        (where2 === 'FROM_END' || where2 === 'FROM_START' ? ', ' + at2 : '') +
-        ')';
+
+  let at1;
+  switch (where1) {
+    case 'FROM_START':
+      at1 = generator.getAdjusted(block, 'AT1');
+      break;
+    case 'FROM_END':
+      at1 = list + '.length - ' + generator.getAdjusted(block, 'AT1', 1, false, Order.SUBTRACTION);
+      break;
+    case 'FIRST':
+      at1 = '0';
+      break;
+    default:
+      throw Error('Unhandled option (lists_getSublist).');
   }
+
+  let at2;
+  switch (where2) {
+    case 'FROM_START':
+      at2 = generator.getAdjusted(block, 'AT2', 1);
+      break;
+    case 'FROM_END':
+      at2 = list + '.length - ' + generator.getAdjusted(block, 'AT2', 0, false, Order.SUBTRACTION);
+      break;
+    case 'LAST':
+      at2 = list + '.length';
+      break;
+    default:
+      throw Error('Unhandled option (lists_getSublist).');
+  }
+
+  const code = 'java.util.Arrays.copyOfRange(' + list + ', ' + at1 + ', ' + at2 + ')';
   return [code, Order.FUNCTION_CALL];
-};
+}
 
 export function lists_sort(block, generator) {
-  // Block for sorting a list in Java.
+  // Block for sorting an array in Java.
   const list =
-      generator.valueToCode(block, 'LIST', Order.FUNCTION_CALL) || 'new ArrayList<>()';
+      generator.valueToCode(block, 'LIST', Order.NONE) || 'new Object[0]';
   const direction = block.getFieldValue('DIRECTION') === '1' ? 1 : -1;
   const type = block.getFieldValue('TYPE');
 
-  let compareFunction = '';
-
-  switch (type) {
-    case 'NUMERIC':
-      compareFunction = `(a, b) -> Integer.compare(Integer.parseInt(a), Integer.parseInt(b))`;
-      break;
-    case 'TEXT':
-      compareFunction = `Comparator.naturalOrder()`;
-      break;
-    case 'IGNORE_CASE':
-      compareFunction = `String.CASE_INSENSITIVE_ORDER`;
-      break;
-    default:
-      compareFunction = `Comparator.naturalOrder()`;
-      break;
-  }
-
-  /*const getCompareFunctionName = generator.provideFunction_(
-      'listsGetSortCompare',
-      `
-    Comparator<String> ${generator.FUNCTION_NAME_PLACEHOLDER_}(String type, int direction) {
-      HashMap<String, Comparator<String>> compareFuncs = new HashMap<>();
-      compareFuncs.put("NUMERIC", (a, b) -> Integer.compare(Integer.parseInt(a), Integer.parseInt(b)));
-      compareFuncs.put("TEXT", Comparator.naturalOrder());
-      compareFuncs.put("IGNORE_CASE", String.CASE_INSENSITIVE_ORDER);
-
-      Comparator<String> compare = compareFuncs.get(type);
-      return (a, b) -> compare.compare(a, b) * direction;
+  const functionName = generator.provideFunction_('listsSort', `
+public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, final String type, final int direction) {
+  Object[] copy = java.util.Arrays.copyOf(array, array.length);
+  java.util.Arrays.sort(copy, new java.util.Comparator<Object>() {
+    @Override
+    public int compare(Object a, Object b) {
+      if (type.equals("NUMERIC")) {
+        double d1 = Double.parseDouble(String.valueOf(a));
+        double d2 = Double.parseDouble(String.valueOf(b));
+        return Double.compare(d1, d2) * direction;
+      } else if (type.equals("IGNORE_CASE")) {
+        return String.valueOf(a).compareToIgnoreCase(String.valueOf(b)) * direction;
+      } else {
+        return String.valueOf(a).compareTo(String.valueOf(b)) * direction;
+      }
     }
-    `
-  );*/
-  const reversedOrder = direction === 1 ? '' : '.reversed()';
-  return [
-    `Collections.sort(new ArrayList<>(Arrays.asList(${list})), ${compareFunction}${reversedOrder}.thenComparing())`,
-    Order.FUNCTION_CALL
-  ];
-};
+  });
+  return copy;
+}
+`);
+  const code = functionName + '(' + list + ', "' + type + '", ' + direction + ')';
+  return [code, Order.FUNCTION_CALL];
+}
 
 export function lists_split(block, generator) {
-  // Block for splitting text into a list, or joining a list into text in Java.
+  // Block for splitting text into an array, or joining an array into text in Java.
   let input = generator.valueToCode(block, 'INPUT', Order.MEMBER);
   const delimiter =
       generator.valueToCode(block, 'DELIM', Order.NONE) || "''";
   const mode = block.getFieldValue('MODE');
-  let methodName, joinDelimiter;
   if (mode === 'SPLIT') {
     if (!input) {
       input = "''";
     }
-    methodName = "split";
-    joinDelimiter = '", "';
+    const code = input + '.split(' + delimiter + ')';
+    return [code, Order.FUNCTION_CALL];
   } else if (mode === 'JOIN') {
     if (!input) {
-      input = 'new ArrayList<>()';
+      input = 'new Object[0]';
     }
-    methodName = "String.join";
-    joinDelimiter = '", " + ';
+    const functionName = generator.provideFunction_('listsJoin', `
+public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String delimiter, Object[] array) {
+  if (array == null || array.length == 0) return "";
+  StringBuilder sb = new StringBuilder();
+  sb.append(array[0]);
+  for (int i = 1; i < array.length; i++) {
+    sb.append(delimiter).append(array[i]);
+  }
+  return sb.toString();
+}
+`);
+    const code = functionName + '(' + delimiter + ', ' + input + ')';
+    return [code, Order.FUNCTION_CALL];
   } else {
     throw Error('Unknown mode: ' + mode);
   }
-  const code = methodName === 'String.join' ?
-      methodName + '(' + delimiter + joinDelimiter + input + ')' :
-      input + '.' + methodName + '(' + delimiter + ')';
-  return [code, Order.FUNCTION_CALL];
-};
+}
 
 export function lists_reverse(block, generator) {
-  // Block for reversing a list in Java.
+  // Block for reversing an array in Java.
   const list =
-      generator.valueToCode(block, 'LIST', Order.FUNCTION_CALL) || 'new ArrayList<>()';
-  const code = 'Collections.reverse(' + list + ')';
+      generator.valueToCode(block, 'LIST', Order.NONE) || 'new Object[0]';
+  const functionName = generator.provideFunction_('listsReverse', `
+public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array) {
+  Object[] copy = java.util.Arrays.copyOf(array, array.length);
+  for (int i = 0; i < copy.length / 2; i++) {
+    Object temp = copy[i];
+    copy[i] = copy[copy.length - 1 - i];
+    copy[copy.length - 1 - i] = temp;
+  }
+  return copy;
+}
+`);
+  const code = functionName + '(' + list + ')';
   return [code, Order.FUNCTION_CALL];
-};
+}

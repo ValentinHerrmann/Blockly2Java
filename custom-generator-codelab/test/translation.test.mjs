@@ -27,6 +27,10 @@ Object.defineProperty(globalThis, 'navigator', {
 // Import standard Blockly blocks
 import 'blockly/blocks.js';
 
+import * as Blockly from 'blockly/core';
+import deLocale from 'blockly/msg/de.js';
+Blockly.setLocale(deLocale);
+
 // Import custom blocks to register them
 import '../src/blocks/constructor.js';
 import '../src/blocks/java_method_blocks.js';
@@ -36,7 +40,6 @@ import '../src/blocks/text.js';
 import '../src/blocks/custom_loops.js';
 import { javaGenerator, setClassName, setExtendsClass } from '../src/generators/java.js';
 import { CodeTransformer } from '../src/utils/CodeTransformer.js';
-import * as Blockly from 'blockly/core';
 
 describe('Blockly to Java Translation Tests', () => {
   const fixturesDir = path.resolve(__dirname, 'fixtures');
@@ -87,6 +90,12 @@ describe('Blockly to Java Translation Tests', () => {
   describe('Project: twomethod_parameters', () => {
     it('should translate twomethod_parameters/Main correctly to Java', () => {
       runTestCase('Main', path.join(fixturesDir, 'twomethod_parameters', 'Main.json'), path.join(fixturesDir, 'twomethod_parameters', 'Main.java'));
+    });
+  });
+
+  describe('Project: arrays', () => {
+    it('should translate arrays/Main correctly to Java', () => {
+      runTestCase('Main', path.join(fixturesDir, 'arrays', 'Main.json'), path.join(fixturesDir, 'arrays', 'Main.java'));
     });
   });
 });

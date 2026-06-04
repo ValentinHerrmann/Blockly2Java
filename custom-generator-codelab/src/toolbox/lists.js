@@ -1,6 +1,6 @@
 export const listenCategory = {
     'kind': 'category',
-    'name': 'Listen',
+    'name': 'Arrays',
     'categorystyle': 'list_category',
     'contents': [
         { 'kind': 'block', 'type': 'lists_create_with' },
