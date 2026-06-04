@@ -33,6 +33,7 @@ import * as eventUtils from './events/utils.js';
 import type {FlyoutButton} from './flyout_button.js';
 import {Gesture} from './gesture.js';
 import {Grid} from './grid.js';
+import {hasBubble} from './interfaces/i_has_bubble.js';
 import type {IASTNodeLocationSvg} from './interfaces/i_ast_node_location_svg.js';
 import type {IBoundedElement} from './interfaces/i_bounded_element.js';
 import type {ICopyData, ICopyable} from './interfaces/i_copyable.js';
@@ -2532,6 +2533,15 @@ export class WorkspaceSvg extends Workspace implements IASTNodeLocationSvg {
     WidgetDiv.hide();
     dropDownDiv.hideWithoutAnimation();
 
+    const blocks = this.getAllBlocks(false);
+    for (const block of blocks) {
+      for (const icon of block.getIcons()) {
+        if (hasBubble(icon) && icon.bubbleIsVisible()) {
+          icon.setBubbleVisible(false);
+        }
+      }
+    }
+
     this.hideComponents(onlyClosePopups);
   }
 
@@ -2576,6 +2586,7 @@ export class WorkspaceSvg extends Workspace implements IASTNodeLocationSvg {
         (metrics.scrollHeight - metrics.viewHeight) * xyRatio.y
       );
     }
+
     // We have to shift the translation so that when the canvas is at 0, 0 the
     // workspace origin is not underneath the toolbox.
     const x = this.scrollX + metrics.absoluteLeft;

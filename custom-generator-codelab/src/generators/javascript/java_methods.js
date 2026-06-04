@@ -14,9 +14,80 @@
  * the existing getVariableType helper.
  */
 
-import {getType, getVariableType, parseExplicitSignature, Order, getClassName} from './javascript_generator.js';
+import {getType, getVariableType, parseExplicitSignature, Order, getClassName, TYPES} from './javascript_generator.js';
 import * as Blockly from 'blockly';
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scope-aware parameter type inference.
+//
+// Blockly's VariableMap enforces a (name, type) uniqueness constraint.  When
+// two methods share a same-named parameter, the java_param_get onchange handler
+// may redirect one method's block to reuse the other method's variable ID.
+// A workspace-wide, ID-based lookup (getVariableType) then finds usages in the
+// WRONG method and returns a wrong type.
+//
+// Fix: walk only the current method's descendant blocks and match java_param_get
+// blocks by their *display name* — no IDs involved, no cross-method leakage.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TYPE_AGNOSTIC_PARENTS = new Set([
+  'text_join', 'text_print', 'text_append',
+]);
+
+function isDescendantOf(block, ancestor) {
+  let anc = block.getParent?.();
+  while (anc) {
+    if (anc === ancestor) return true;
+    anc = anc.getParent?.();
+  }
+  return false;
+}
+
+function _checkParamBlock(pb, paramName, ws) {
+  const varId = pb.getFieldValue('VAR');
+  if (!varId) return null;
+  const varModel = ws?.getVariableById(varId);
+  const displayName = varModel?.name ?? pb.getField('VAR')?.getText?.() ?? '';
+  if (displayName !== paramName) return null;
+
+  const parent = pb.getParent();
+  if (!parent || TYPE_AGNOSTIC_PARENTS.has(parent.type)) return null;
+  const t = getType(parent.type);
+  return (t && t !== TYPES.UNKNOWN) ? t : null;
+}
+
+function _scanDescendantsForParamType(methodBlock, paramName, ws) {
+  for (const descendant of methodBlock.getDescendants(false)) {
+    if (descendant.type === 'java_param_get') {
+      const t = _checkParamBlock(descendant, paramName, ws);
+      if (t) return t;
+    }
+  }
+  return null;
+}
+
+function _scanWorkspaceForParamType(methodBlock, paramName, ws) {
+  if (!ws) return null;
+  for (const pb of ws.getBlocksByType('java_param_get', false)) {
+    if (isDescendantOf(pb, methodBlock)) {
+      const t = _checkParamBlock(pb, paramName, ws);
+      if (t) return t;
+    }
+  }
+  return null;
+}
+
+function _inferParamTypeInScope(methodBlock, paramIndex) {
+  const paramName = methodBlock.arguments_?.[paramIndex];
+  if (!paramName) return TYPES.UNKNOWN;
+
+  const ws = methodBlock.workspace;
+  return _scanDescendantsForParamType(methodBlock, paramName, ws)
+    || _scanWorkspaceForParamType(methodBlock, paramName, ws)
+    || TYPES.UNKNOWN;
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helper: compute the Java return type of a method block.
@@ -36,6 +107,50 @@ function _computeReturnType(block) {
     }
   }
   return returnType;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helper: build parameter type declarations.
+// ─────────────────────────────────────────────────────────────────────────────
+function _buildParams(block, funcName, isStatic) {
+  const args = [];
+  if (!block.arguments_ || !block.arguments_.length) {
+    return args;
+  }
+  // Retrieve any cross-class call-site type hints stored by other classes
+  // that called this method via java_obj_method_call_* / java_ext_static_call_*.
+  // Key: "methodName" for instance methods, "ClassName::methodName" for static.
+  const _hintKey = isStatic ? (getClassName() + '::' + funcName) : funcName;
+  const _crossClassHints = LocalStorageManager.getObjCallTypeHints(_hintKey);
+  for (let i = 0; i < block.arguments_.length; i++) {
+    const rawParamName = block.arguments_[i];
+    // Allow an explicit type prefix in the parameter name (e.g. "int count" → type "int", identifier "count").
+    const _parsedParam = parseExplicitSignature(rawParamName);
+    if (_parsedParam?.type) {
+      args.push(_parsedParam.type + ' ' + _parsedParam.name);
+      continue;
+    }
+    const paramName = _parsedParam ? _parsedParam.name : rawParamName;
+    // getVariableType looks up how the variable is actually *used* in the
+    // body to infer its type.
+    // ── Scoped inference: search only this method's body by display name ──
+    // Two strategies (getDescendants + ancestor walk) ensure we find the
+    // block even if getDescendants has edge-case gaps.
+    // NO fallback to workspace-wide getVariableType: that would pick up
+    // java_param_get blocks from OTHER methods that share a redirected ID,
+    // producing cross-method type contamination.
+    const scopedType = _inferParamTypeInScope(block, i);
+    let paramType = (scopedType && scopedType !== TYPES.UNKNOWN) ? scopedType : 'Object';
+    if (paramType === 'forint') paramType = 'int';
+    // Fall back to cross-class call-site hints when the workspace-internal
+    // inference couldn't determine a concrete type.
+    if (paramType === 'Object' && _crossClassHints) {
+      const _hint = _crossClassHints[i];
+      if (_hint && _hint !== 'var') paramType = _hint;
+    }
+    args.push(paramType + ' ' + paramName);
+  }
+  return args;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,19 +197,7 @@ function buildMethodCode(block, generator, isStatic) {
   let xfix2 = '';
   if (returnValue) {
     if (branch) xfix2 = xfix1; // revisit block after body
-    const retBlock = block.getInputTargetBlock('RETURN');
-    if (retBlock) {
-      returnType = getType(retBlock.type);
-      if (returnType === 'var') {
-        const id = retBlock.getFieldValue('VAR');
-        if (id) {
-          returnType = getVariableType(Blockly.getMainWorkspace(), id, true);
-          if (returnType === 'var') returnType = 'Object';
-        } else {
-          returnType = 'Object';
-        }
-      }
-    }
+    returnType = _computeReturnType(block);
     returnValue = generator.INDENT + 'return ' + returnValue + ';\n';
   }
 
@@ -103,38 +206,7 @@ function buildMethodCode(block, generator, isStatic) {
   if (explicitReturnType) returnType = explicitReturnType;
 
   // --- parameters ---
-  const ws = Blockly.getMainWorkspace();
-  const args = [];
-  if (block.arguments_ && block.arguments_.length) {
-    const varModels = block.getVarModels ? block.getVarModels() : [];
-    // Retrieve any cross-class call-site type hints stored by other classes
-    // that called this method via java_obj_method_call_* / java_ext_static_call_*.
-    // Key: "methodName" for instance methods, "ClassName::methodName" for static.
-    const _hintKey = isStatic ? (getClassName() + '::' + funcName) : funcName;
-    const _crossClassHints = LocalStorageManager.getObjCallTypeHints(_hintKey);
-    for (let i = 0; i < block.arguments_.length; i++) {
-      const rawParamName = block.arguments_[i];
-      // Allow an explicit type prefix in the parameter name (e.g. "int count" → type "int", identifier "count").
-      const _parsedParam = parseExplicitSignature(rawParamName);
-      if (_parsedParam?.type) {
-        args.push(_parsedParam.type + ' ' + _parsedParam.name);
-        continue;
-      }
-      const paramName = _parsedParam ? _parsedParam.name : rawParamName;
-      let paramType = varModels[i]
-        ? getVariableType(ws, varModels[i].getId(), true)
-        : 'Object';
-      if (paramType === 'var' || !paramType) paramType = 'Object';
-      if (paramType === 'forint') paramType = 'int';
-      // Fall back to cross-class call-site hints when the workspace-internal
-      // inference couldn't determine a concrete type.
-      if (paramType === 'Object' && _crossClassHints) {
-        const _hint = _crossClassHints[i];
-        if (_hint && _hint !== 'var') paramType = _hint;
-      }
-      args.push(paramType + ' ' + paramName);
-    }
-  }
+  const args = _buildParams(block, funcName, isStatic);
 
   const staticMod = isStatic ? 'static ' : '';
   const accessMod = explicitModifier || 'public';
@@ -142,6 +214,7 @@ function buildMethodCode(block, generator, isStatic) {
   const code = `${signature} {\n${xfix1}${loopTrap}${branch}${xfix2}${returnValue}}`;
   return generator.scrub_(block, code);
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block generators

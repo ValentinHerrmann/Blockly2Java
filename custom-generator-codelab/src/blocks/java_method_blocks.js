@@ -18,19 +18,60 @@ const STATIC_METHOD_COLOUR = '#AA5555';  // red-ish – static methods
 const NORMAL_METHOD_COLOUR = '#995599';  // purple-ish – instance methods (additional blocks)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: shared mutation / decompose / compose logic for both method blocks
+// Helper: shared mutation / decompose / compose logic for method blocks.
+//
+// Option A: Parameter metadata (name, unique ID, type) is stored directly on
+// the block instance and in mutation DOM — NO workspace-level 'param' variables
+// are created or looked up.  This avoids Blockly's VariableMap collision bug
+// where two methods with same-named parameters would conflict.
+//
+// Data structures on the block:
+//   paramIds_   : string[] — unique Blockly UIDs per parameter slot
+//   paramTypes_ : string[] — explicit type per parameter slot (e.g. "String")
+//                 populated when the user writes "int count" in the mutator.
 // ─────────────────────────────────────────────────────────────────────────────
 const paramMixin = {
+
+  /**
+   * Parse a parameter name string for an optional explicit type prefix.
+   * E.g. "int count" → { type: 'int', name: 'count' }
+   *      "count"      → { type: null,    name: 'count' }
+   */
+  _parseParamName_: function (name) {
+    // Common Java types to check for.
+    const knownTypes = [
+      'int', 'long', 'float', 'double', 'boolean', 'char', 'byte', 'short',
+      'String', 'Object', 'boolean',
+    ];
+    for (const t of knownTypes) {
+      const regex = new RegExp(String.raw`^${t}\s+(.+)`);
+      const m = name.match(regex);
+      if (m) {
+        return { type: t, name: m[1] };
+      }
+    }
+    return { type: null, name: name };
+  },
+
   mutationToDom: function () {
     const container = document.createElement('mutation');
-    for (const element of this.arguments_) {
-      const name = element;
+    if (!this.paramIds_) this.paramIds_ = [];
+    if (!this.paramTypes_) this.paramTypes_ = [];
+    // Ensure we have a paramId and paramType for each argument.
+    while (this.paramIds_.length < this.arguments_.length) {
+      this.paramIds_.push(Blockly.utils.idGenerator.genUid());
+    }
+    while (this.paramTypes_.length < this.arguments_.length) {
+      this.paramTypes_.push('');
+    }
+    for (let i = 0; i < this.arguments_.length; i++) {
       const arg = document.createElement('arg');
-      arg.setAttribute('name', name);
-      if (!this.workspace.getVariable(name, 'param')) {
-        this.workspace.createVariable(name, 'param');
+      arg.setAttribute('name', this.arguments_[i]);
+      arg.setAttribute('varid', this.paramIds_[i]);
+      const parsed = this._parseParamName_(this.arguments_[i]);
+      if (parsed.type) {
+        arg.setAttribute('type', parsed.type);
       }
-      arg.setAttribute('varid', this.workspace.getVariable(name, 'param').getId());
       container.appendChild(arg);
     }
     this.updateShape_();
@@ -39,9 +80,18 @@ const paramMixin = {
 
   domToMutation: function (xmlElement) {
     this.arguments_ = [];
+    this.paramIds_ = [];
+    this.paramTypes_ = [];
     for (let i = 0, child; (child = xmlElement.childNodes[i]); i++) {
       if (child.nodeName.toLowerCase() === 'arg') {
-        this.arguments_.push(child.getAttribute('name'));
+        const rawName = child.getAttribute('name');
+        this.arguments_.push(rawName);
+        // Always ensure a valid unique ID exists for this slot.
+        const varid = child.getAttribute('varid') || Blockly.utils.idGenerator.genUid();
+        this.paramIds_.push(varid);
+        // Restore explicit type if present in mutation DOM.
+        const t = child.getAttribute('type');
+        this.paramTypes_.push(t || '');
       }
     }
     this.updateShape_();
@@ -62,28 +112,29 @@ const paramMixin = {
   },
 
   compose: function (containerBlock) {
-    // Snapshot old args before overwriting so we can clean up stale variables.
+    // Snapshot old args and IDs before overwriting so we can track changes.
     const oldArguments = this.arguments_.slice();
+    const oldParamIds  = this.paramIds_  ? this.paramIds_.slice()  : [];
+    const oldParamTypes = this.paramTypes_ ? this.paramTypes_.slice() : [];
 
     let itemBlock = containerBlock.getInputTargetBlock('STACK');
-    this.arguments_ = [];
-    while (itemBlock) {
-      this.arguments_.push(itemBlock.getFieldValue('NAME'));
-      itemBlock = itemBlock.nextConnection?.targetBlock();
-    }
+    this.arguments_  = [];
+    this.paramIds_   = [];
+    this.paramTypes_ = [];
 
-    // Delete workspace variables for params that no longer exist.
-    for (const oldName of oldArguments) {
-      if (!this.arguments_.includes(oldName)) {
-        const oldVar = this.workspace.getVariable(oldName, 'param');
-        if (oldVar) this.workspace.deleteVariableById(oldVar.getId());
-      }
-    }
-    // Ensure workspace variables exist for every current param.
-    for (const name of this.arguments_) {
-      if (!this.workspace.getVariable(name, 'param')) {
-        this.workspace.createVariable(name, 'param');
-      }
+    while (itemBlock) {
+      const rawName = itemBlock.getFieldValue('NAME');
+      this.arguments_.push(rawName);
+      // Reuse the existing ID if this param name survived the edit,
+      // otherwise generate a fresh unique ID.
+      const oldIdx = oldArguments.indexOf(rawName);
+      const reuseId = (oldIdx >= 0 && oldParamIds[oldIdx])
+        ? oldParamIds[oldIdx]
+        : Blockly.utils.idGenerator.genUid();
+      this.paramIds_.push(reuseId);
+      // Restore type annotation if name survived.
+      this.paramTypes_.push(oldIdx >= 0 ? (oldParamTypes[oldIdx] || '') : '');
+      itemBlock = itemBlock.nextConnection?.targetBlock();
     }
 
     this.updateShape_();
@@ -101,30 +152,72 @@ const paramMixin = {
     this.setFieldValue(display, 'PARAMS');
   },
 
-  getVarModels: function () {
-    return this.arguments_.map(name => this.workspace.getVariable(name, 'param')).filter(Boolean);
+  /**
+   * Returns an array of parameter metadata objects instead of Blockly
+   * variable models.  Each object has: { id, name, type }.
+   *
+   * This replaces getVarModels() which relied on workspace variables.
+   */
+  getParams: function () {
+    const params = [];
+    for (let i = 0; i < this.arguments_.length; i++) {
+      const rawName = this.arguments_[i];
+      const parsed = this._parseParamName_(rawName);
+      params.push({
+        id: this.paramIds_ ? this.paramIds_[i] : null,
+        name: parsed.name,
+        // Explicit type from prefix takes priority; fall back to paramTypes_
+        // stored in mutation DOM (for cross-class type hints).
+        type: parsed.type || (this.paramTypes_?.[i] || ''),
+      });
+    }
+    return params;
+  },
+
+  /**
+   * Set the inferred type for a parameter by slot index.
+   * Used by the generator to store cross-class type hints back on the block.
+   */
+  setParamType: function (index, type) {
+    if (!this.paramTypes_) {
+      this.paramTypes_ = [];
+    }
+    while (this.paramTypes_.length <= index) {
+      this.paramTypes_.push('');
+    }
+    this.paramTypes_[index] = type;
   },
 };
+
+function initMethodBlock(block, label, colour, hasReturn, tooltip) {
+  block.appendDummyInput('TOP_LINE')
+    .appendField(label)
+    .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
+    .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
+  block.appendStatementInput('STACK');
+  if (hasReturn) {
+    block.appendValueInput('RETURN')
+      .setAlign(Blockly.inputs.Align.RIGHT)
+      .appendField('return');
+  }
+  block.setPreviousStatement(false, null);
+  block.setNextStatement(false, null);
+  block.setColour(colour);
+  block.setTooltip(tooltip);
+  block.setHelpUrl('');
+  block.arguments_ = [];
+  block.paramIds_ = [];
+  block.paramTypes_ = [];
+  block.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], block));
+  block.setCommentText('');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. STATIC METHOD – NO RETURN
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_static_method_noreturn'] = {
   init: function () {
-    // Inputs are created in their final order — updateShape_ must not move them.
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Klassen-Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(STATIC_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Klassen-Methode ohne Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Klassen-Methode', STATIC_METHOD_COLOUR, false, 'Definiert eine Klassen-Methode ohne Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -134,22 +227,7 @@ Blockly.Blocks['java_static_method_noreturn'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_static_method_return'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Klassen-Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.appendValueInput('RETURN')
-      .setAlign(Blockly.inputs.Align.RIGHT)
-      .appendField('return');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(STATIC_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Klassen-Methode mit Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Klassen-Methode', STATIC_METHOD_COLOUR, true, 'Definiert eine Klassen-Methode mit Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -159,19 +237,7 @@ Blockly.Blocks['java_static_method_return'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_method_noreturn'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(NORMAL_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Instanzmethode ohne Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Methode', NORMAL_METHOD_COLOUR, false, 'Definiert eine Instanzmethode ohne Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -181,22 +247,7 @@ Blockly.Blocks['java_method_noreturn'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_method_return'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.appendValueInput('RETURN')
-      .setAlign(Blockly.inputs.Align.RIGHT)
-      .appendField('return');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(NORMAL_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Instanzmethode mit Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Methode', NORMAL_METHOD_COLOUR, true, 'Definiert eine Instanzmethode mit Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -226,6 +277,46 @@ Blockly.Blocks['call_arg_input'] = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+export function decomposeCallArg(block, workspace) {
+  const container = workspace.newBlock('call_arg_container');
+  container.initSvg();
+  let connection = container.getInput('STACK').connection;
+  for (let i = 0; i < block.argCount_; i++) {
+    const argBlock = workspace.newBlock('call_arg_input');
+    argBlock.initSvg();
+    connection.connect(argBlock.previousConnection);
+    connection = argBlock.nextConnection;
+  }
+  return container;
+}
+
+export function composeCallArg(block, containerBlock, inputPrefix, rebuildFnName) {
+  // Save existing connections so attached blocks survive.
+  const savedConns = [];
+  for (let i = 0; i < block.argCount_; i++) {
+    const inp = block.getInput(inputPrefix + i);
+    savedConns[i] = inp?.connection?.targetConnection;
+  }
+
+  // Count new items in mutator container.
+  let newCount = 0;
+  let itemBlock = containerBlock.getInputTargetBlock('STACK');
+  while (itemBlock) {
+    newCount++;
+    itemBlock = itemBlock.nextConnection?.targetBlock();
+  }
+  block.argCount_ = newCount;
+  block[rebuildFnName]();
+
+  // Reconnect surviving blocks.
+  for (let i = 0; i < savedConns.length && i < block.argCount_; i++) {
+    if (savedConns[i]?.getSourceBlock()?.workspace) {
+      block.getInput(inputPrefix + i).connection.connect(savedConns[i]);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Shared mixin for call blocks (manages ARG0, ARG1, … value inputs)
 // ─────────────────────────────────────────────────────────────────────────────
 const callArgMixin = {
@@ -253,41 +344,11 @@ const callArgMixin = {
   },
 
   decompose: function (workspace) {
-    const container = workspace.newBlock('call_arg_container');
-    container.initSvg();
-    let connection = container.getInput('STACK').connection;
-    for (let i = 0; i < this.argCount_; i++) {
-      const argBlock = workspace.newBlock('call_arg_input');
-      argBlock.initSvg();
-      connection.connect(argBlock.previousConnection);
-      connection = argBlock.nextConnection;
-    }
-    return container;
+    return decomposeCallArg(this, workspace);
   },
 
   compose: function (containerBlock) {
-    // Save existing connections so blocks plugged into ARG inputs survive.
-    const savedConns = [];
-    for (let i = 0; i < this.argCount_; i++) {
-      const inp = this.getInput('ARG' + i);
-      savedConns[i] = inp?.connection?.targetConnection;
-    }
-
-    let newCount = 0;
-    let itemBlock = containerBlock.getInputTargetBlock('STACK');
-    while (itemBlock) {
-      newCount++;
-      itemBlock = itemBlock.nextConnection?.targetBlock()
-    }
-    this.argCount_ = newCount;
-    this.updateArgInputs_();
-
-    // Reconnect surviving blocks.
-    for (let i = 0; i < savedConns.length && i < this.argCount_; i++) {
-      if (savedConns[i]?.getSourceBlock().workspace) {
-        this.getInput('ARG' + i).connection.connect(savedConns[i]);
-      }
-    }
+    composeCallArg(this, containerBlock, 'ARG', 'updateArgInputs_');
   },
 
   updateArgInputs_: function () {

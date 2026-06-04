@@ -33,16 +33,75 @@ export const STATIC_COLOUR = '#5555AA';   // indigo – static attribute
 // Shows the variable dropdown but omits "Rename" and "Delete" entries so that
 // parameters can only be managed via the method declaration block's mutator.
 // ─────────────────────────────────────────────────────────────────────────────
+// Block types that can own parameters (used for ancestor-walking in getOptions).
+const METHOD_BLOCK_TYPES = new Set([
+  'java_method_noreturn', 'java_method_return',
+  'java_static_method_noreturn', 'java_static_method_return',
+  'defconstructor',
+]);
+
 class ParamFieldVariable extends Blockly.FieldVariable {
   getOptions(opt_useCache) {
     const options = super.getOptions(opt_useCache);
-    // 'RENAME_VARIABLE_ID' / 'DELETE_VARIABLE_ID' are the constant string
-    // values Blockly uses as the second element of the rename/delete menu items.
-    return options.filter(
+    // Remove Rename/Delete entries — params are managed via the method mutator.
+    const filtered = options.filter(
       ([, value]) => value !== 'RENAME_VARIABLE_ID' && value !== 'DELETE_VARIABLE_ID'
     );
+
+    // ── Scope filter: only show params of the enclosing method block ──────
+    const sourceBlock = this.getSourceBlock?.();
+    if (!sourceBlock) return filtered;
+
+    // Walk up the parent chain to find the nearest enclosing method block.
+    let parent = sourceBlock.getParent?.();
+    while (parent) {
+      if (METHOD_BLOCK_TYPES.has(parent.type)) break;
+      parent = parent.getParent?.();
+    }
+    // If the block is not inside a method (e.g. in the flyout), show all.
+    if (!parent) return filtered;
+
+    // ── Scope filter: keep only params belonging to this method ──────────
+    // Filter by param *name* (from arguments_), NOT by variable ID (paramIds_).
+    // Rationale: when two methods share a same-named parameter, Blockly's
+    // VariableMap can only hold one workspace variable per (name, type) pair.
+    // The onchange handler redirects the 2nd method's block to reuse the 1st
+    // method's variable ID.  After the redirect, paramIds_[i] no longer matches
+    // the workspace variable ID, so an ID-based filter would hide the entry.
+    // Filtering by name is always correct because VariableMap (name+type)
+    // uniqueness guarantees exactly one entry per param name in the dropdown.
+    const allowedNames = new Set(parent.arguments_ || []);
+    if (allowedNames.size === 0) return filtered;
+
+    const scoped = filtered.filter(([name,]) => allowedNames.has(name));
+
+    // ── Header label: show which method these params belong to ────────────
+    // Build a human-readable label like "▸ myMethod(x, y)" and prepend it as
+    // a non-selectable header so the user always knows the scope context.
+    const isConstructor = parent.type === 'defconstructor';
+    const rawMethodName = isConstructor
+      ? 'Konstruktor'
+      : (parent.getFieldValue('NAME') || 'Methode');
+    const argNames = parent.arguments_ || [];
+    const headerLabel = '▸ ' + rawMethodName + '(' + argNames.join(', ') + ')';
+
+    // Prepend [displayText, sentinelValue] — the sentinel is filtered out on
+    // selection via doValueUpdate_ below so clicking the header is a no-op.
+    return [['── ' + headerLabel + ' ──', ParamFieldVariable.HEADER_SENTINEL], ...scoped];
+  }
+
+  /**
+   * Intercept value updates: ignore clicks on the header label entry so that
+   * the current variable selection does not change when the user clicks it.
+   */
+  doValueUpdate_(newValue) {
+    if (newValue === ParamFieldVariable.HEADER_SENTINEL) return;
+    super.doValueUpdate_(newValue);
   }
 }
+
+/** Sentinel used as the value of the non-selectable method-name header row. */
+ParamFieldVariable.HEADER_SENTINEL = '__PARAM_GROUP_HEADER__';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. LOCAL VARIABLE – GET  (looks like variables_get, but green)
@@ -129,6 +188,42 @@ Blockly.Blocks['java_param_get'] = {
     this.setColour(PARAM_COLOUR);
     this.setTooltip('Liest einen Methodenparameter. Umbenennen nur über den Methodenkopf möglich.');
     this.setHelpUrl('');
+  },
+
+  /**
+   * When this block is placed in the workspace (not inside a flyout),
+   * ensure the workspace variable it references actually exists.
+   * This replaces the need for paramMixin.compose to call createVariable.
+   */
+  onchange: function (event) {
+    // Only act once when the block is first moved to the main workspace.
+    if (this.isInFlyout) return;
+    if (event.type !== Blockly.Events.BLOCK_MOVE && event.type !== Blockly.Events.BLOCK_CREATE) return;
+    if (event.blockId !== this.id) return;
+
+    const varId = this.getFieldValue('VAR');
+    if (!varId) return;
+    if (this.workspace.getVariableById(varId)) return; // already exists — nothing to do
+
+    // Retrieve the display name from the field.
+    const field = this.getField('VAR');
+    const varName = field?.getText?.() || 'param';
+
+    // Always try to create a workspace variable using the param's own ID
+    // (which is unique per method slot).  This preserves scoping: two methods
+    // with a same-named param will have distinct IDs and therefore distinct
+    // workspace variables, so ParamFieldVariable.getOptions() can filter them.
+    try {
+      this.workspace.createVariable(varName, VAR_TYPE_PARAM, varId);
+    } catch (e) {
+      console.warn("Variable creation failed, falling back to existing parameter variable:", e);
+      // Blockly's VariableMap throws when a same-name+type variable with a
+      // *different* ID already exists.  This can happen if the user loaded
+      // a workspace where variable IDs were not unique.  Fall back gracefully:
+      // redirect to the existing variable so the block is not left broken.
+      const existing = this.workspace.getVariable(varName, VAR_TYPE_PARAM);
+      if (existing) field.setValue(existing.getId());
+    }
   },
 };
 
@@ -442,17 +537,22 @@ function _appendParentClassMethods(workspace, xmlList, includeStaticMethods = tr
 
 /**
  * Appends inline param-get blocks for argNames when the Parameter category is hidden.
+ * Uses paramIds array to build XML directly from block data instead of workspace variables.
  */
-function _appendInlineParams(workspace, xmlList, argNames) {
+function _appendInlineParams(workspace, xmlList, argNames, paramIds) {
   for (let pi = 0; pi < argNames.length; pi++) {
-    const paramVar = workspace.getVariable(argNames[pi], VAR_TYPE_PARAM);
-    if (paramVar) {
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_param_get');
-      getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
-      getBlock.appendChild(varField(paramVar));
-      xmlList.push(getBlock);
-    }
+    const paramId = paramIds ? paramIds[pi] : null;
+    if (!paramId) continue;
+    const getBlock = Blockly.utils.xml.createElement('block');
+    getBlock.setAttribute('type', 'java_param_get');
+    getBlock.setAttribute('gap', pi === argNames.length - 1 ? '20' : '4');
+    const field = Blockly.utils.xml.createElement('field');
+    field.setAttribute('name', 'VAR');
+    field.setAttribute('id', paramId);
+    field.setAttribute('variabletype', VAR_TYPE_PARAM);
+    field.appendChild(document.createTextNode(argNames[pi]));
+    getBlock.appendChild(field);
+    xmlList.push(getBlock);
   }
 }
 
@@ -469,9 +569,10 @@ export function methodFlyoutCategory(workspace) {
     const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
     for (const ctrBlock of ctrBlocks) {
       const argNames = ctrBlock.arguments_ || [];
+      const paramIds = ctrBlock.paramIds_ || [];
       if (argNames.length === 0) continue;
       xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
-      _appendInlineParams(workspace, xmlList, argNames);
+      _appendInlineParams(workspace, xmlList, argNames, paramIds);
     }
   }
 
@@ -511,7 +612,7 @@ export function methodFlyoutCategory(workspace) {
         xmlList.push(callBlock);
 
         // Inline param-get blocks when Parameter category is hidden.
-        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
+        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames, block.paramIds_);
       }
     }
 
@@ -559,9 +660,10 @@ function _methodFlyoutCategoryFor(
     const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
     for (const ctrBlock of ctrBlocks) {
       const argNames = ctrBlock.arguments_ || [];
+      const paramIds = ctrBlock.paramIds_ || [];
       if (argNames.length === 0) continue;
       xmlList.push(makeLabel('Konstruktor(' + argNames.join(', ') + ')'));
-      _appendInlineParams(workspace, xmlList, argNames);
+      _appendInlineParams(workspace, xmlList, argNames, paramIds);
     }
   }
 
@@ -585,7 +687,7 @@ function _methodFlyoutCategoryFor(
         const callBlock = makeCallBlock(callType, name, argNames);
         callBlock.setAttribute('gap', showParamsInline && argNames.length > 0 ? '4' : '16');
         xmlList.push(callBlock);
-        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames);
+        if (showParamsInline) _appendInlineParams(workspace, xmlList, argNames, block.paramIds_);
       }
     }
 
@@ -636,6 +738,54 @@ export function staticMethodFlyoutCategory(workspace) {
   );
 }
 
+function fillVariableFlyout(workspace, varType, prefix, opts, xmlList) {
+  const variables = workspace.getVariablesOfType(varType);
+  for (let idx = 0; idx < variables.length; idx++) {
+    const variable = variables[idx];
+    const id = variable.getId();
+    _registerManage(workspace, prefix, idx, id);
+
+    // Only show setter/getter blocks for the first variable.
+    if (idx === 0) {
+      const setBlock = Blockly.utils.xml.createElement('block');
+      setBlock.setAttribute('type', opts.setBlockType);
+      setBlock.setAttribute('gap', '8');
+      setBlock.appendChild(varField(variable));
+      xmlList.push(setBlock);
+
+      const getBlock = Blockly.utils.xml.createElement('block');
+      getBlock.setAttribute('type', opts.getBlockType);
+      getBlock.setAttribute('gap', '8');
+      getBlock.appendChild(varField(variable));
+      xmlList.push(getBlock);
+    }
+
+    const manageBtn = Blockly.utils.xml.createElement('button');
+    manageBtn.setAttribute('text', '📝     ' + variable.name);
+    manageBtn.setAttribute('callbackKey', 'MANAGE_' + prefix + '_' + idx);
+    manageBtn.setAttribute('web-class', opts.btnClass);
+    manageBtn.setAttribute('gap', String(opts.gap));
+    xmlList.push(manageBtn);
+  }
+}
+
+function _appendParamBlocks(argNames, paramIds, xmlList) {
+  for (let i = 0; i < argNames.length; i++) {
+    const paramId = paramIds[i];
+    if (!paramId) continue;
+    const getBlock = Blockly.utils.xml.createElement('block');
+    getBlock.setAttribute('type', 'java_param_get');
+    getBlock.setAttribute('gap', i === argNames.length - 1 ? '16' : '4');
+    const field = Blockly.utils.xml.createElement('field');
+    field.setAttribute('name', 'VAR');
+    field.setAttribute('id', paramId);
+    field.setAttribute('variabletype', VAR_TYPE_PARAM);
+    field.appendChild(document.createTextNode(argNames[i]));
+    getBlock.appendChild(field);
+    xmlList.push(getBlock);
+  }
+}
+
 export function normalAttrFlyoutCategory(workspace) {
   const xmlList = [];
 
@@ -645,34 +795,12 @@ export function normalAttrFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-normal-attr');
   xmlList.push(button);
 
-  const variables = workspace.getVariablesOfType(VAR_TYPE_NORMAL);
-  for (let idx = 0; idx < variables.length; idx++) {
-    const variable = variables[idx];
-    const id = variable.getId();
-    _registerManage(workspace, 'NORMAL', idx, id);
-
-    // Only show setter/getter blocks for the first variable.
-    if (idx === 0) {
-      const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', 'java_normal_attr_set');
-      setBlock.setAttribute('gap', '8');
-      setBlock.appendChild(varField(variable));
-      xmlList.push(setBlock);
-
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_normal_attr_get');
-      getBlock.setAttribute('gap', '8');
-      getBlock.appendChild(varField(variable));
-      xmlList.push(getBlock);
-    }
-
-    const manageBtn = Blockly.utils.xml.createElement('button');
-    manageBtn.setAttribute('text', '📝     ' + variable.name);
-    manageBtn.setAttribute('callbackKey', 'MANAGE_NORMAL_' + idx);
-    manageBtn.setAttribute('web-class', 'b2j-btn-normal-attr');
-    manageBtn.setAttribute('gap', '0');
-    xmlList.push(manageBtn);
-  }
+  fillVariableFlyout(workspace, VAR_TYPE_NORMAL, 'NORMAL', {
+    setBlockType: 'java_normal_attr_set',
+    getBlockType: 'java_normal_attr_get',
+    btnClass: 'b2j-btn-normal-attr',
+    gap: 0
+  }, xmlList);
 
   return xmlList;
 }
@@ -690,25 +818,14 @@ export function paramFlyoutCategory(workspace) {
     xmlList.push(lbl);
   }
 
-  // Helper to push a param-get block for a variable
-  function pushParamBlock(variable, isLast) {
-    const getBlock = Blockly.utils.xml.createElement('block');
-    getBlock.setAttribute('type', 'java_param_get');
-    getBlock.setAttribute('gap', isLast ? '16' : '4');
-    getBlock.appendChild(varField(variable));
-    xmlList.push(getBlock);
-  }
-
   // ── Constructor parameters ──────────────────────────────────────────────
   const ctrBlocks = workspace.getBlocksByType('defconstructor', true);
   for (const ctrBlock of ctrBlocks) {
-    const argNames = ctrBlock.arguments_ || [];
+    const argNames  = ctrBlock.arguments_  || [];
+    const paramIds  = ctrBlock.paramIds_   || [];
     if (argNames.length === 0) continue;
     pushLabel('Konstruktor(' + argNames.join(', ') + ')');
-    for (let i = 0; i < argNames.length; i++) {
-      const paramVar = workspace.getVariable(argNames[i], VAR_TYPE_PARAM);
-      if (paramVar) pushParamBlock(paramVar, i === argNames.length - 1);
-    }
+    _appendParamBlocks(argNames, paramIds, xmlList);
   }
 
   // ── Method parameters ───────────────────────────────────────────────────
@@ -721,14 +838,12 @@ export function paramFlyoutCategory(workspace) {
 
   for (const blockType of METHOD_BLOCK_TYPES) {
     for (const methodBlock of workspace.getBlocksByType(blockType, true)) {
-      const argNames = methodBlock.arguments_ || [];
+      const argNames  = methodBlock.arguments_  || [];
+      const paramIds  = methodBlock.paramIds_   || [];
       if (argNames.length === 0) continue;
       const methodName = methodBlock.getFieldValue('NAME') || 'unbekannt';
       pushLabel(methodName + '(' + argNames.join(', ') + ')');
-      for (let i = 0; i < argNames.length; i++) {
-        const paramVar = workspace.getVariable(argNames[i], VAR_TYPE_PARAM);
-        if (paramVar) pushParamBlock(paramVar, i === argNames.length - 1);
-      }
+      _appendParamBlocks(argNames, paramIds, xmlList);
     }
   }
 
@@ -744,34 +859,12 @@ export function localVarFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-local-var');
   xmlList.push(button);
 
-  const variables = workspace.getVariablesOfType(VAR_TYPE_LOCAL);
-  for (let idx = 0; idx < variables.length; idx++) {
-    const variable = variables[idx];
-    const id = variable.getId();
-    _registerManage(workspace, 'LOCAL', idx, id);
-
-    // Only show setter/getter blocks for the first variable.
-    if (idx === 0) {
-      const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', 'java_local_var_set');
-      setBlock.setAttribute('gap', '8');
-      setBlock.appendChild(varField(variable));
-      xmlList.push(setBlock);
-
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_local_var_get');
-      getBlock.setAttribute('gap', '8');
-      getBlock.appendChild(varField(variable));
-      xmlList.push(getBlock);
-    }
-
-    const manageBtn = Blockly.utils.xml.createElement('button');
-    manageBtn.setAttribute('text', '📝     ' + variable.name);
-    manageBtn.setAttribute('callbackKey', 'MANAGE_LOCAL_' + idx);
-    manageBtn.setAttribute('web-class', 'b2j-btn-local-var');
-    manageBtn.setAttribute('gap', '4');
-    xmlList.push(manageBtn);
-  }
+  fillVariableFlyout(workspace, VAR_TYPE_LOCAL, 'LOCAL', {
+    setBlockType: 'java_local_var_set',
+    getBlockType: 'java_local_var_get',
+    btnClass: 'b2j-btn-local-var',
+    gap: 4
+  }, xmlList);
 
   return xmlList;
 }
@@ -785,34 +878,12 @@ export function staticAttrFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-static-attr');
   xmlList.push(button);
 
-  const variables = workspace.getVariablesOfType(VAR_TYPE_STATIC);
-  for (let idx = 0; idx < variables.length; idx++) {
-    const variable = variables[idx];
-    const id = variable.getId();
-    _registerManage(workspace, 'STATIC', idx, id);
-
-    // Only show setter/getter blocks for the first variable.
-    if (idx === 0) {
-      const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', 'java_static_attr_set');
-      setBlock.setAttribute('gap', '8');
-      setBlock.appendChild(varField(variable));
-      xmlList.push(setBlock);
-
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_static_attr_get');
-      getBlock.setAttribute('gap', '8');
-      getBlock.appendChild(varField(variable));
-      xmlList.push(getBlock);
-    }
-
-    const manageBtn = Blockly.utils.xml.createElement('button');
-    manageBtn.setAttribute('text', '📝     ' + variable.name);
-    manageBtn.setAttribute('callbackKey', 'MANAGE_STATIC_' + idx);
-    manageBtn.setAttribute('web-class', 'b2j-btn-static-attr');
-    manageBtn.setAttribute('gap', '4');
-    xmlList.push(manageBtn);
-  }
+  fillVariableFlyout(workspace, VAR_TYPE_STATIC, 'STATIC', {
+    setBlockType: 'java_static_attr_set',
+    getBlockType: 'java_static_attr_get',
+    btnClass: 'b2j-btn-static-attr',
+    gap: 4
+  }, xmlList);
 
   return xmlList;
 }

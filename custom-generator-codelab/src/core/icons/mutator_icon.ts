@@ -278,15 +278,21 @@ export class MutatorIcon extends Icon implements IHasBubble {
 
   /**
    * Creates a change listener to add to the mini workspace which recomposes
-   * the block.
+   * the block.  Uses a 300 ms debounce delay so that rapid successive events
+   * (e.g. keystrokes in a FieldTextInput) are batched into a single
+   * recomposition.  This prevents the widget dialog from closing mid-edit.
    */
   private createMiniWorkspaceChangeListener() {
     return (e: Abstract) => {
-      if (!MutatorIcon.isIgnorableMutatorEvent(e) && !this.updateWorkspacePid) {
+      if (!MutatorIcon.isIgnorableMutatorEvent(e)) {
+        // Clear any pending recomposition so we restart the debounce timer.
+        if (this.updateWorkspacePid) {
+          clearTimeout(this.updateWorkspacePid);
+        }
         this.updateWorkspacePid = setTimeout(() => {
           this.updateWorkspacePid = null;
           this.recomposeSourceBlock();
-        }, 0);
+        }, 300);
       }
     };
   }
@@ -301,6 +307,7 @@ export class MutatorIcon extends Icon implements IHasBubble {
     return (
       e.isUiEvent ||
       e.type === eventUtils.CREATE ||
+      e.type === eventUtils.BLOCK_FIELD_INTERMEDIATE_CHANGE ||
       (e.type === eventUtils.CHANGE &&
         (e as BlockChange).element === 'disabled')
     );
