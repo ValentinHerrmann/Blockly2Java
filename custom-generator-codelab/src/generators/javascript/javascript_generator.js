@@ -457,6 +457,10 @@ export function resolveArgBlockType(argBlock, workspace) {
     const mode = argBlock.getFieldValue('MODE');
     return mode === 'SPLIT' ? 'String[]' : 'String';
   }
+  if (argBlock.type === 'lists_repeat') {
+    const type = argBlock.getFieldValue('TYPE') || 'Object';
+    return type + '[]';
+  }
   if (argBlock.type === 'lists_getIndex') {
     const arrayBlock = argBlock.getInputTargetBlock('VALUE');
     if (arrayBlock) {

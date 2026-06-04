@@ -38,6 +38,7 @@ import '../src/blocks/java_object_call_blocks.js';
 import '../src/blocks/java_graphics_blocks.js';
 import '../src/blocks/text.js';
 import '../src/blocks/custom_loops.js';
+import '../src/blocks/lists.js';
 import { javaGenerator, setClassName, setExtendsClass } from '../src/generators/java.js';
 import { CodeTransformer } from '../src/utils/CodeTransformer.js';
 

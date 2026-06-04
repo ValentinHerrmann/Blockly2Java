@@ -15,6 +15,7 @@ import './blocks/java_object_call_blocks.js';
 import './blocks/java_graphics_blocks.js';
 import './blocks/text.js';
 import './blocks/custom_loops.js';
+import './blocks/lists.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
@@ -151,8 +152,9 @@ function applyBlocklyPatches() {
     Blockly.Msg["LISTS_GET_SUBLIST_TOOLTIP"] = "Erstellt eine Kopie mit dem angegebenen Abschnitt des Arrays.";
     Blockly.Msg["LISTS_ISEMPTY_TOOLTIP"] = "Ist wahr, falls das Array leer ist.";
     Blockly.Msg["LISTS_LENGTH_TOOLTIP"] = "Die Anzahl von Elementen im Array.";
-    Blockly.Msg["LISTS_REPEAT_TITLE"] = "erzeuge Array mit %2-mal dem Element %1";
-    Blockly.Msg["LISTS_REPEAT_TOOLTIP"] = "Erzeugt ein Array mit einer variablen Anzahl von Elementen.";
+    Blockly.Msg["LISTS_REPEAT_TITLE_TYPE"] = "erzeuge Array vom Typ";
+    Blockly.Msg["LISTS_REPEAT_TITLE_LENGTH"] = "mit Länge";
+    Blockly.Msg["LISTS_REPEAT_TOOLTIP"] = "Erzeugt ein Array mit der angegebenen Länge ohne Werte.";
     Blockly.Msg["LISTS_REVERSE_TOOLTIP"] = "Kehre eine Kopie eines Arrays um.";
     Blockly.Msg["LISTS_SET_INDEX_TOOLTIP_INSERT_FIRST"] = "Fügt das Element an den Anfang des Arrays an.";
     Blockly.Msg["LISTS_SET_INDEX_TOOLTIP_INSERT_FROM"] = "Fügt das Element an der angegebenen Position in das Array ein.";

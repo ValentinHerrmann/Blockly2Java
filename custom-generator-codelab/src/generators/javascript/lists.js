@@ -41,22 +41,12 @@ export function lists_create_with(block, generator) {
 }
 
 export function lists_repeat(block, generator) {
-  // Create an array with one element repeated in Java.
-  const functionName = generator.provideFunction_('listsRepeat', `
-public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object value, int n) {
-  Object[] array = new Object[n];
-  for (int i = 0; i < n; i++) {
-    array[i] = value;
-  }
-  return array;
-}
-`);
-  const element =
-      generator.valueToCode(block, 'ITEM', Order.NONE) || 'null';
+  // Create an array with specified length but without values in Java.
+  const type = block.getFieldValue('TYPE') || 'Object';
   const repeatCount =
       generator.valueToCode(block, 'NUM', Order.NONE) || '0';
-  const code = functionName + '(' + element + ', ' + repeatCount + ')';
-  return [code, Order.FUNCTION_CALL];
+  const code = 'new ' + type + '[' + repeatCount + ']';
+  return [code, Order.ATOMIC];
 }
 
 export function lists_length(block, generator) {
