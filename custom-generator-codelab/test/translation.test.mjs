@@ -68,47 +68,26 @@ describe('Blockly to Java Translation Tests', () => {
     }
   }
 
-  const files = fs.readdirSync(fixturesDir);
-  const singleTestCases = [];
-  const projects = [];
-
-  files.forEach(file => {
-    const filePath = path.join(fixturesDir, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isDirectory()) {
-      projects.push({
-        name: file,
-        dir: filePath
-      });
-    } else if (file.endsWith('.json')) {
-      singleTestCases.push(path.basename(file, '.json'));
-    }
-  });
-
-  // Run single-file test cases
-  singleTestCases.forEach(testCase => {
-    it(`should translate ${testCase} correctly to Java`, () => {
-      const jsonPath = path.join(fixturesDir, `${testCase}.json`);
-      const javaPath = path.join(fixturesDir, `${testCase}.java`);
-      runTestCase(testCase, jsonPath, javaPath);
+  describe('Project: empty_main', () => {
+    it('should translate empty_main/test_main correctly to Java', () => {
+      runTestCase('test_main', path.join(fixturesDir, 'empty_main', 'test_main.json'), path.join(fixturesDir, 'empty_main', 'test_main.java'));
     });
   });
 
-  // Run project-based test cases (folders)
-  projects.forEach(project => {
-    describe(`Project: ${project.name}`, () => {
-      const projectFiles = fs.readdirSync(project.dir);
-      const testCases = projectFiles
-        .filter(file => file.endsWith('.json'))
-        .map(file => path.basename(file, '.json'));
+  describe('Project: twoclass_mtdctr_params', () => {
+    it('should translate twoclass_mtdctr_params/Main correctly to Java', () => {
+      runTestCase('Main', path.join(fixturesDir, 'twoclass_mtdctr_params', 'Main.json'), path.join(fixturesDir, 'twoclass_mtdctr_params', 'Main.java'));
+    });
 
-      testCases.forEach(testCase => {
-        it(`should translate ${project.name}/${testCase} correctly to Java`, () => {
-          const jsonPath = path.join(project.dir, `${testCase}.json`);
-          const javaPath = path.join(project.dir, `${testCase}.java`);
-          runTestCase(testCase, jsonPath, javaPath);
-        });
-      });
+    it('should translate twoclass_mtdctr_params/Test correctly to Java', () => {
+      runTestCase('Test', path.join(fixturesDir, 'twoclass_mtdctr_params', 'Test.json'), path.join(fixturesDir, 'twoclass_mtdctr_params', 'Test.java'));
+    });
+  });
+
+  describe('Project: twomethod_parameters', () => {
+    it('should translate twomethod_parameters/Main correctly to Java', () => {
+      runTestCase('Main', path.join(fixturesDir, 'twomethod_parameters', 'Main.json'), path.join(fixturesDir, 'twomethod_parameters', 'Main.java'));
     });
   });
 });
+
