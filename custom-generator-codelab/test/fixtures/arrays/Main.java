@@ -18,8 +18,6 @@ public class Main {
         String[] arr_str = {"a", "b", "c", "d", "e"};
         Shape[] arr_clz = {new Ellipse(0, 0, 0, 0), new Circle(0, 0, 0)};
         Object[] arr_mix = {1, "b", new Main()};
-        String[] arr_split = "".split(",");
-        arr_split = "a,b,c,d".split(",");
         String ele = arr_str[1];
         arr[1] = 30;
     }

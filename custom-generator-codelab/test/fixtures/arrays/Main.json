@@ -304,27 +304,39 @@
                                                     "next": {
                                                         "block": {
                                                             "type": "java_local_var_set",
-                                                            "id": "j2-a(/^)T[5#|OFH/`F6",
+                                                            "id": ";n(=+r8:xxWuQ]9v-1QI",
                                                             "fields": {
                                                                 "VAR": {
-                                                                    "id": "tYtqfuKx*sQ*yP]kIf!%"
+                                                                    "id": "f#11AN:{zs9.B?BR:IZh"
                                                                 }
                                                             },
                                                             "inputs": {
                                                                 "VALUE": {
                                                                     "block": {
-                                                                        "type": "lists_split",
-                                                                        "id": "h6_:vaOO#f-9A-cW]Z-/",
+                                                                        "type": "lists_getIndex",
+                                                                        "id": "lqpkHAUk[4^%t!V?SN#J",
                                                                         "fields": {
-                                                                            "MODE": "SPLIT"
+                                                                            "MODE": "GET",
+                                                                            "WHERE": "FROM_START"
                                                                         },
                                                                         "inputs": {
-                                                                            "DELIM": {
-                                                                                "shadow": {
-                                                                                    "type": "text",
-                                                                                    "id": "VvOCIG~x;.;N#oJ#7[)f",
+                                                                            "VALUE": {
+                                                                                "block": {
+                                                                                    "type": "java_local_var_get",
+                                                                                    "id": "LdWv@P$y-=].2${J`vwp",
                                                                                     "fields": {
-                                                                                        "TEXT": ","
+                                                                                        "VAR": {
+                                                                                            "id": "+Ssena7J7(.m8]mh)/!{"
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            },
+                                                                            "AT": {
+                                                                                "block": {
+                                                                                    "type": "math_number",
+                                                                                    "id": "M8HemRQ_om(?[lQt?=%R",
+                                                                                    "fields": {
+                                                                                        "NUM": 1
                                                                                     }
                                                                                 }
                                                                             }
@@ -334,126 +346,39 @@
                                                             },
                                                             "next": {
                                                                 "block": {
-                                                                    "type": "java_local_var_set",
-                                                                    "id": "jAe93]B2rFP9]/9Ezq$H",
+                                                                    "type": "lists_setIndex",
+                                                                    "id": "Enfd*vQ{8mMLDDnf?:dA",
                                                                     "fields": {
-                                                                        "VAR": {
-                                                                            "id": "tYtqfuKx*sQ*yP]kIf!%"
-                                                                        }
+                                                                        "MODE": "SET",
+                                                                        "WHERE": "FROM_START"
                                                                     },
                                                                     "inputs": {
-                                                                        "VALUE": {
+                                                                        "LIST": {
                                                                             "block": {
-                                                                                "type": "lists_split",
-                                                                                "id": "~=`o^A0$~bX}o?{a^84]",
+                                                                                "type": "java_local_var_get",
+                                                                                "id": "M0?d]]{@htOJH,n=B[-`",
                                                                                 "fields": {
-                                                                                    "MODE": "SPLIT"
-                                                                                },
-                                                                                "inputs": {
-                                                                                    "INPUT": {
-                                                                                        "block": {
-                                                                                            "type": "text",
-                                                                                            "id": "tuSK@oRM?bzF`JFe6v{n",
-                                                                                            "fields": {
-                                                                                                "TEXT": "a,b,c,d"
-                                                                                            }
-                                                                                        }
-                                                                                    },
-                                                                                    "DELIM": {
-                                                                                        "shadow": {
-                                                                                            "type": "text",
-                                                                                            "id": "fq1mrxTLVMyUr-ZFn#YU",
-                                                                                            "fields": {
-                                                                                                "TEXT": ","
-                                                                                            }
-                                                                                        }
+                                                                                    "VAR": {
+                                                                                        "id": "y3aufHc.|tV!OiWfRYe="
                                                                                     }
                                                                                 }
                                                                             }
-                                                                        }
-                                                                    },
-                                                                    "next": {
-                                                                        "block": {
-                                                                            "type": "java_local_var_set",
-                                                                            "id": ";n(=+r8:xxWuQ]9v-1QI",
-                                                                            "fields": {
-                                                                                "VAR": {
-                                                                                    "id": "f#11AN:{zs9.B?BR:IZh"
+                                                                        },
+                                                                        "AT": {
+                                                                            "block": {
+                                                                                "type": "math_number",
+                                                                                "id": "+(PSL9LFcB*GjF6}KF}[",
+                                                                                "fields": {
+                                                                                    "NUM": 1
                                                                                 }
-                                                                            },
-                                                                            "inputs": {
-                                                                                "VALUE": {
-                                                                                    "block": {
-                                                                                        "type": "lists_getIndex",
-                                                                                        "id": "lqpkHAUk[4^%t!V?SN#J",
-                                                                                        "fields": {
-                                                                                            "MODE": "GET",
-                                                                                            "WHERE": "FROM_START"
-                                                                                        },
-                                                                                        "inputs": {
-                                                                                            "VALUE": {
-                                                                                                "block": {
-                                                                                                    "type": "java_local_var_get",
-                                                                                                    "id": "LdWv@P$y-=].2${J`vwp",
-                                                                                                    "fields": {
-                                                                                                        "VAR": {
-                                                                                                            "id": "+Ssena7J7(.m8]mh)/!{"
-                                                                                                        }
-                                                                                                    }
-                                                                                                }
-                                                                                            },
-                                                                                            "AT": {
-                                                                                                "block": {
-                                                                                                    "type": "math_number",
-                                                                                                    "id": "M8HemRQ_om(?[lQt?=%R",
-                                                                                                    "fields": {
-                                                                                                        "NUM": 1
-                                                                                                    }
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            },
-                                                                            "next": {
-                                                                                "block": {
-                                                                                    "type": "lists_setIndex",
-                                                                                    "id": "Enfd*vQ{8mMLDDnf?:dA",
-                                                                                    "fields": {
-                                                                                        "MODE": "SET",
-                                                                                        "WHERE": "FROM_START"
-                                                                                    },
-                                                                                    "inputs": {
-                                                                                        "LIST": {
-                                                                                            "block": {
-                                                                                                "type": "java_local_var_get",
-                                                                                                "id": "M0?d]]{@htOJH,n=B[-`",
-                                                                                                "fields": {
-                                                                                                    "VAR": {
-                                                                                                        "id": "y3aufHc.|tV!OiWfRYe="
-                                                                                                    }
-                                                                                                }
-                                                                                            }
-                                                                                        },
-                                                                                        "AT": {
-                                                                                            "block": {
-                                                                                                "type": "math_number",
-                                                                                                "id": "+(PSL9LFcB*GjF6}KF}[",
-                                                                                                "fields": {
-                                                                                                    "NUM": 1
-                                                                                                }
-                                                                                            }
-                                                                                        },
-                                                                                        "TO": {
-                                                                                            "block": {
-                                                                                                "type": "math_number",
-                                                                                                "id": "auto_gen_num_30",
-                                                                                                "fields": {
-                                                                                                    "NUM": 30
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
+                                                                            }
+                                                                        },
+                                                                        "TO": {
+                                                                            "block": {
+                                                                                "type": "math_number",
+                                                                                "id": "auto_gen_num_30",
+                                                                                "fields": {
+                                                                                    "NUM": 30
                                                                                 }
                                                                             }
                                                                         }
@@ -493,11 +418,6 @@
         {
             "name": "arr_mix",
             "id": "A74:xBl#ZvU[;jqirIyC",
-            "type": "local"
-        },
-        {
-            "name": "arr_split",
-            "id": "tYtqfuKx*sQ*yP]kIf!%",
             "type": "local"
         },
         {

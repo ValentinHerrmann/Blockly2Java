@@ -78,3 +78,54 @@ Blockly.Blocks['lists_repeat'] = {
     }
   }
 };
+
+// Override lists_getIndex to remove the MODE dropdown and always use GET
+const originalGetIndexInit = Blockly.Blocks['lists_getIndex'].init;
+Blockly.Blocks['lists_getIndex'].init = function() {
+  originalGetIndexInit.call(this);
+  const fieldMode = this.getField('MODE');
+  if (fieldMode) {
+    const input = fieldMode.getParentInput();
+    if (input) {
+      let fieldIndex = -1;
+      for (let i = 0; i < input.fieldRow.length; i++) {
+        if (input.fieldRow[i] === fieldMode) {
+          fieldIndex = i;
+          break;
+        }
+      }
+      if (fieldIndex !== -1) {
+        const labelText = Blockly.Msg['LISTS_GET_INDEX_GET'] || 'nimm';
+        input.removeField('MODE');
+        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel(labelText));
+      }
+    }
+  }
+  // Ensure it's always outputting a value and has no previous/next statements
+  this.updateStatement_(false);
+};
+
+// Override lists_setIndex to remove the insert option and always use SET
+const originalSetIndexInit = Blockly.Blocks['lists_setIndex'].init;
+Blockly.Blocks['lists_setIndex'].init = function() {
+  originalSetIndexInit.call(this);
+  const fieldMode = this.getField('MODE');
+  if (fieldMode) {
+    const input = fieldMode.getParentInput();
+    if (input) {
+      let fieldIndex = -1;
+      for (let i = 0; i < input.fieldRow.length; i++) {
+        if (input.fieldRow[i] === fieldMode) {
+          fieldIndex = i;
+          break;
+        }
+      }
+      if (fieldIndex !== -1) {
+        const labelText = Blockly.Msg['LISTS_SET_INDEX_SET'] || 'setze';
+        input.removeField('MODE');
+        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel(labelText));
+      }
+    }
+  }
+};
+

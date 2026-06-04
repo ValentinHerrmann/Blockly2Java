@@ -13,11 +13,6 @@ export const arraysCategory = {
         { 'kind': 'block', 'type': 'lists_isEmpty' },
         {
             'kind': 'block',
-            'type': 'lists_indexOf',
-            'inputs': { 'VALUE': { 'block': { 'type': 'variables_get' } } },
-        },
-        {
-            'kind': 'block',
             'type': 'lists_getIndex',
             'inputs': { 'VALUE': { 'block': { 'type': 'variables_get' } } },
         },
@@ -26,17 +21,5 @@ export const arraysCategory = {
             'type': 'lists_setIndex',
             'inputs': { 'LIST': { 'block': { 'type': 'variables_get' } } },
         },
-        {
-            'kind': 'block',
-            'type': 'lists_getSublist',
-            'inputs': { 'LIST': { 'block': { 'type': 'variables_get' } } },
-        },
-        {
-            'kind': 'block',
-            'type': 'lists_split',
-            'inputs': { 'DELIM': { 'shadow': { 'type': 'text', 'fields': { 'TEXT': ',' } } } },
-        },
-        { 'kind': 'block', 'type': 'lists_sort' },
-        { 'kind': 'block', 'type': 'lists_reverse' },
     ],
 };

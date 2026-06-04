@@ -302,7 +302,6 @@ export function getType(var_type) {
     case 'lists_create_empty': 
     case 'lists_create_with': 
     case 'lists_repeat': 
-    case 'lists_getSublist': 
     case 'lists_split': 
     case 'lists_sort':
       return TYPES.LIST;
