@@ -10,6 +10,7 @@ Blockly.Blocks['lists_repeat'] = {
         .appendField(Blockly.Msg["LISTS_REPEAT_TITLE_LENGTH"] || 'mit Länge');
     this.appendValueInput('NUM')
         .setCheck('Number');
+    this.setInputsInline(true);
     this.setOutput(true, 'Array');
     this.setStyle('list_blocks');
     this.setTooltip(Blockly.Msg["LISTS_REPEAT_TOOLTIP"] || 'Erzeugt ein Array mit der angegebenen Länge ohne Werte.');
@@ -79,87 +80,66 @@ Blockly.Blocks['lists_repeat'] = {
   }
 };
 
-// Override lists_getIndex to remove the MODE dropdown and always use GET
-const originalGetIndexInit = Blockly.Blocks['lists_getIndex'].init;
-Blockly.Blocks['lists_getIndex'].init = function() {
-  originalGetIndexInit.call(this);
-  const fieldMode = this.getField('MODE');
-  if (fieldMode) {
-    const input = fieldMode.getParentInput();
-    if (input) {
-      let fieldIndex = -1;
-      for (let i = 0; i < input.fieldRow.length; i++) {
-        if (input.fieldRow[i] === fieldMode) {
-          fieldIndex = i;
-          break;
-        }
-      }
-      if (fieldIndex !== -1) {
-        const labelText = Blockly.Msg['LISTS_GET_INDEX_GET'] || 'nimm';
-        input.removeField('MODE');
-        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel(labelText));
-      }
-    }
+// Override lists_length to look like: array . Länge
+Blockly.Blocks['lists_length'] = {
+  init: function() {
+    this.appendValueInput('VALUE')
+        .setCheck('Array');
+    this.appendDummyInput()
+        .appendField('. Länge');
+    this.setInputsInline(true);
+    this.setOutput(true, 'Number');
+    this.setStyle('list_blocks');
+    this.setTooltip(Blockly.Msg["LISTS_LENGTH_TOOLTIP"] || 'Die Anzahl von Elementen im Array.');
   }
-  const fieldWhere = this.getField('WHERE');
-  if (fieldWhere) {
-    const input = fieldWhere.getParentInput();
-    if (input) {
-      let fieldIndex = -1;
-      for (let i = 0; i < input.fieldRow.length; i++) {
-        if (input.fieldRow[i] === fieldWhere) {
-          fieldIndex = i;
-          break;
-        }
-      }
-      if (fieldIndex !== -1) {
-        input.removeField('WHERE');
-        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel('#'));
-      }
-    }
-  }
-  // Ensure it's always outputting a value and has no previous/next statements
-  this.updateStatement_(false);
 };
 
-// Override lists_setIndex to remove the insert option and always use SET
-const originalSetIndexInit = Blockly.Blocks['lists_setIndex'].init;
-Blockly.Blocks['lists_setIndex'].init = function() {
-  originalSetIndexInit.call(this);
-  const fieldMode = this.getField('MODE');
-  if (fieldMode) {
-    const input = fieldMode.getParentInput();
-    if (input) {
-      let fieldIndex = -1;
-      for (let i = 0; i < input.fieldRow.length; i++) {
-        if (input.fieldRow[i] === fieldMode) {
-          fieldIndex = i;
-          break;
-        }
-      }
-      if (fieldIndex !== -1) {
-        const labelText = Blockly.Msg['LISTS_SET_INDEX_SET'] || 'setze';
-        input.removeField('MODE');
-        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel(labelText));
-      }
-    }
+// Override lists_isEmpty to look like: array . ist leer
+Blockly.Blocks['lists_isEmpty'] = {
+  init: function() {
+    this.appendValueInput('VALUE')
+        .setCheck('Array');
+    this.appendDummyInput()
+        .appendField('. ist leer');
+    this.setInputsInline(true);
+    this.setOutput(true, 'Boolean');
+    this.setStyle('list_blocks');
+    this.setTooltip(Blockly.Msg["LISTS_ISEMPTY_TOOLTIP"] || 'Ist wahr, falls das Array leer ist.');
   }
-  const fieldWhere = this.getField('WHERE');
-  if (fieldWhere) {
-    const input = fieldWhere.getParentInput();
-    if (input) {
-      let fieldIndex = -1;
-      for (let i = 0; i < input.fieldRow.length; i++) {
-        if (input.fieldRow[i] === fieldWhere) {
-          fieldIndex = i;
-          break;
-        }
-      }
-      if (fieldIndex !== -1) {
-        input.removeField('WHERE');
-        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel('#'));
-      }
-    }
+};
+
+// Override lists_getIndex to look like: array . an Stelle [ index ]
+Blockly.Blocks['lists_getIndex'] = {
+  init: function() {
+    this.appendValueInput('VALUE')
+        .setCheck('Array');
+    this.appendValueInput('AT')
+        .setCheck('Number')
+        .appendField('. an Stelle');
+    this.setInputsInline(true);
+    this.setOutput(true);
+    this.setStyle('list_blocks');
+    this.setTooltip(Blockly.Msg["LISTS_GET_INDEX_TOOLTIP_GET_FROM"] || 'Extrahiert das Element an der angegebenen Position im Array.');
+  }
+};
+
+// Override lists_setIndex to look like: array . an Stelle [ index ] auf [ value ] setzen
+Blockly.Blocks['lists_setIndex'] = {
+  init: function() {
+    this.appendValueInput('LIST')
+        .setCheck('Array');
+    this.appendValueInput('AT')
+        .setCheck('Number')
+        .appendField('. an Stelle');
+    this.appendValueInput('TO')
+        .appendField('auf');
+    this.appendDummyInput()
+        .appendField('setzen');
+    this.setInputsInline(true);
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle('list_blocks');
+    this.setTooltip(Blockly.Msg["LISTS_SET_INDEX_TOOLTIP_SET_FROM"] || 'Setzt das Element an der angegebenen Position im Array.');
   }
 };
 
