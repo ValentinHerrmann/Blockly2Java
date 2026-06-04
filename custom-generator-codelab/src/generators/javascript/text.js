@@ -174,12 +174,12 @@ export function text_charAt(block, generator) {
       return [code, Order.FUNCTION_CALL];
     }
     case 'FROM_START': {
-      const at = generator.getAdjusted(block, 'AT')+1;
+      const at = generator.getAdjusted(block, 'AT', 1);
       const code = text + ".charAt(" + at + ")";
       return [code, Order.FUNCTION_CALL];
     }
     case 'FROM_END': {
-      const at = generator.getAdjusted(block, 'AT', 1, true);
+      const at = generator.getAdjusted(block, 'AT', 1);
       const code = text + ".charAt(" + text + ".length() - " + at + " - 1)";
       return [code, Order.FUNCTION_CALL];
     }

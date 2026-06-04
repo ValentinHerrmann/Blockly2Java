@@ -126,10 +126,10 @@ export function lists_getIndex(block, generator) {
       at = list + '.length - 1';
       break;
     case 'FROM_START':
-      at = generator.getAdjusted(block, 'AT')+1;
+      at = generator.getAdjusted(block, 'AT', 1);
       break;
     case 'FROM_END':
-      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1, true);
+      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1);
       break;
     case 'RANDOM':
       at = 'Random.randint(0, ' + list + '.length-1)';
@@ -166,10 +166,10 @@ export function lists_setIndex(block, generator) {
       at = list + '.length - 1';
       break;
     case 'FROM_START':
-      at = generator.getAdjusted(block, 'AT')+1;
+      at = generator.getAdjusted(block, 'AT', 1);
       break;
     case 'FROM_END':
-      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1, true);
+      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1);
       break;
     case 'RANDOM':
       at = 'Random.randint(0, ' + list + '.length-1)';
