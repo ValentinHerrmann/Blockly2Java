@@ -14,7 +14,7 @@
 
 import {JavascriptGenerator} from './javascript/javascript_generator.js';
 import * as colour from './javascript/colour.js';
-import * as lists from './javascript/lists.js';
+import * as arrays from './javascript/arrays.js';
 import * as logic from './javascript/logic.js';
 import * as loops from './javascript/loops.js';
 import * as math from './javascript/math.js';
@@ -38,6 +38,6 @@ export const javaGenerator = new JavascriptGenerator();
 // Install per-block-type generator functions:
 Object.assign(
   javaGenerator.forBlock,
-  colour, lists, logic, loops, math, procedures,
+  colour, arrays, logic, loops, math, procedures,
   text, variables, variablesDynamic, defconstructor, javaMethods, javaObjectCalls, graphics
 );

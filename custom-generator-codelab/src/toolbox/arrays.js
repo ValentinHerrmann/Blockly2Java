@@ -1,4 +1,4 @@
-export const listenCategory = {
+export const arraysCategory = {
     'kind': 'category',
     'name': 'Arrays',
     'categorystyle': 'list_category',

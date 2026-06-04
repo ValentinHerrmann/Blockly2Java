@@ -51,16 +51,16 @@ export function lists_repeat(block, generator) {
 
 export function lists_length(block, generator) {
   // Array length in Java.
-  const list =
+  const array =
       generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
-  return [list + ".length", Order.MEMBER];
+  return [array + ".length", Order.MEMBER];
 }
 
 export function lists_isEmpty(block, generator) {
   // Checks if the array is empty in Java.
-  const list =
+  const array =
       generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
-  return [list + ".length == 0", Order.EQUALITY];
+  return [array + ".length == 0", Order.EQUALITY];
 }
 
 export function lists_indexOf(block, generator) {
@@ -69,11 +69,11 @@ export function lists_indexOf(block, generator) {
       block.getFieldValue('END') === 'FIRST' ? 'indexOf' : 'lastIndexOf';
   const item =
       generator.valueToCode(block, 'FIND', Order.NONE) || "''";
-  const list =
+  const array =
       generator.valueToCode(block, 'VALUE', Order.NONE) || "new Object[0]";
   let functionName;
   if (operator === 'indexOf') {
-    functionName = generator.provideFunction_('listsIndexOf', `
+    functionName = generator.provideFunction_('arraysIndexOf', `
 public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, Object item) {
   if (array == null) return -1;
   for (int i = 0; i < array.length; i++) {
@@ -85,7 +85,7 @@ public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, Object
 }
 `);
   } else {
-    functionName = generator.provideFunction_('listsLastIndexOf', `
+    functionName = generator.provideFunction_('arraysLastIndexOf', `
 public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, Object item) {
   if (array == null) return -1;
   for (int i = array.length - 1; i >= 0; i--) {
@@ -97,7 +97,7 @@ public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, Object
 }
 `);
   }
-  const code = functionName + '(' + list + ', ' + item + ')';
+  const code = functionName + '(' + array + ', ' + item + ')';
   return [code, Order.FUNCTION_CALL];
 }
 
@@ -105,7 +105,7 @@ export function lists_getIndex(block, generator) {
   // Get element at index in Java.
   const mode = block.getFieldValue('MODE') || 'GET';
   const where = block.getFieldValue('WHERE') || 'FROM_START';
-  let list = generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
+  let array = generator.valueToCode(block, 'VALUE', Order.MEMBER) || "new Object[0]";
 
   let at;
   switch (where) {
@@ -113,26 +113,26 @@ export function lists_getIndex(block, generator) {
       at = '0';
       break;
     case 'LAST':
-      at = list + '.length - 1';
+      at = array + '.length - 1';
       break;
     case 'FROM_START':
       at = generator.getAdjusted(block, 'AT', 1);
       break;
     case 'FROM_END':
-      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1);
+      at = array + '.length - ' + generator.getAdjusted(block, 'AT', 1);
       break;
     case 'RANDOM':
-      at = 'Random.randint(0, ' + list + '.length-1)';
+      at = 'Random.randint(0, ' + array + '.length-1)';
       break;
   }
 
   if (mode === 'GET') {
-    return [list + '[' + at + ']', Order.MEMBER];
+    return [array + '[' + at + ']', Order.MEMBER];
   } else {
     // REMOVE or GET_REMOVE: since arrays are fixed-size, we can't remove in-place.
     // Fall back to safe alternatives or comments.
     if (mode === 'GET_REMOVE') {
-      return [list + '[' + at + ']', Order.MEMBER];
+      return [array + '[' + at + ']', Order.MEMBER];
     } else if (mode === 'REMOVE') {
       return '// entfernen auf Arrays nicht unterstützt\n';
     }
@@ -142,7 +142,7 @@ export function lists_getIndex(block, generator) {
 
 export function lists_setIndex(block, generator) {
   // Set element at index in Java.
-  let list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new Object[0]';
+  let array = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new Object[0]';
   const mode = block.getFieldValue('MODE') || 'SET';
   const where = block.getFieldValue('WHERE') || 'FROM_START';
   const value = generator.valueToCode(block, 'TO', Order.ASSIGNMENT) || 'null';
@@ -153,21 +153,21 @@ export function lists_setIndex(block, generator) {
       at = '0';
       break;
     case 'LAST':
-      at = list + '.length - 1';
+      at = array + '.length - 1';
       break;
     case 'FROM_START':
       at = generator.getAdjusted(block, 'AT', 1);
       break;
     case 'FROM_END':
-      at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1);
+      at = array + '.length - ' + generator.getAdjusted(block, 'AT', 1);
       break;
     case 'RANDOM':
-      at = 'Random.randint(0, ' + list + '.length-1)';
+      at = 'Random.randint(0, ' + array + '.length-1)';
       break;
   }
 
   if (mode === 'SET') {
-    return list + '[' + at + '] = ' + value + ';\n';
+    return array + '[' + at + '] = ' + value + ';\n';
   } else if (mode === 'INSERT') {
     return '// Einfügen auf Arrays nicht unterstützt\n';
   }
@@ -176,7 +176,7 @@ export function lists_setIndex(block, generator) {
 
 export function lists_getSublist(block, generator) {
   // Get sublist (range copy) in Java.
-  const list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new Object[0]';
+  const array = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new Object[0]';
   const where1 = block.getFieldValue('WHERE1');
   const where2 = block.getFieldValue('WHERE2');
 
@@ -186,7 +186,7 @@ export function lists_getSublist(block, generator) {
       at1 = generator.getAdjusted(block, 'AT1');
       break;
     case 'FROM_END':
-      at1 = list + '.length - ' + generator.getAdjusted(block, 'AT1', 1, false, Order.SUBTRACTION);
+      at1 = array + '.length - ' + generator.getAdjusted(block, 'AT1', 1, false, Order.SUBTRACTION);
       break;
     case 'FIRST':
       at1 = '0';
@@ -201,27 +201,27 @@ export function lists_getSublist(block, generator) {
       at2 = generator.getAdjusted(block, 'AT2', 1);
       break;
     case 'FROM_END':
-      at2 = list + '.length - ' + generator.getAdjusted(block, 'AT2', 0, false, Order.SUBTRACTION);
+      at2 = array + '.length - ' + generator.getAdjusted(block, 'AT2', 0, false, Order.SUBTRACTION);
       break;
     case 'LAST':
-      at2 = list + '.length';
+      at2 = array + '.length';
       break;
     default:
       throw Error('Unhandled option (lists_getSublist).');
   }
 
-  const code = 'java.util.Arrays.copyOfRange(' + list + ', ' + at1 + ', ' + at2 + ')';
+  const code = 'java.util.Arrays.copyOfRange(' + array + ', ' + at1 + ', ' + at2 + ')';
   return [code, Order.FUNCTION_CALL];
 }
 
 export function lists_sort(block, generator) {
   // Block for sorting an array in Java.
-  const list =
+  const array =
       generator.valueToCode(block, 'LIST', Order.NONE) || 'new Object[0]';
   const direction = block.getFieldValue('DIRECTION') === '1' ? 1 : -1;
   const type = block.getFieldValue('TYPE');
 
-  const functionName = generator.provideFunction_('listsSort', `
+  const functionName = generator.provideFunction_('arraysSort', `
 public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, final String type, final int direction) {
   Object[] copy = java.util.Arrays.copyOf(array, array.length);
   java.util.Arrays.sort(copy, new java.util.Comparator<Object>() {
@@ -241,7 +241,7 @@ public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array, f
   return copy;
 }
 `);
-  const code = functionName + '(' + list + ', "' + type + '", ' + direction + ')';
+  const code = functionName + '(' + array + ', "' + type + '", ' + direction + ')';
   return [code, Order.FUNCTION_CALL];
 }
 
@@ -261,7 +261,7 @@ export function lists_split(block, generator) {
     if (!input) {
       input = 'new Object[0]';
     }
-    const functionName = generator.provideFunction_('listsJoin', `
+    const functionName = generator.provideFunction_('arraysJoin', `
 public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String delimiter, Object[] array) {
   if (array == null || array.length == 0) return "";
   StringBuilder sb = new StringBuilder();
@@ -281,9 +281,9 @@ public static String ${generator.FUNCTION_NAME_PLACEHOLDER_}(String delimiter, O
 
 export function lists_reverse(block, generator) {
   // Block for reversing an array in Java.
-  const list =
+  const array =
       generator.valueToCode(block, 'LIST', Order.NONE) || 'new Object[0]';
-  const functionName = generator.provideFunction_('listsReverse', `
+  const functionName = generator.provideFunction_('arraysReverse', `
 public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array) {
   Object[] copy = java.util.Arrays.copyOf(array, array.length);
   for (int i = 0; i < copy.length / 2; i++) {
@@ -294,6 +294,6 @@ public static Object[] ${generator.FUNCTION_NAME_PLACEHOLDER_}(Object[] array) {
   return copy;
 }
 `);
-  const code = functionName + '(' + list + ')';
+  const code = functionName + '(' + array + ')';
   return [code, Order.FUNCTION_CALL];
 }

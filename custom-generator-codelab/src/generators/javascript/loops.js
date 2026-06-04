@@ -170,15 +170,15 @@ export function controls_forEach(block, generator) {
   branch = generator.addLoopTrap(branch, block);
   let code = '';
   // Cache non-trivial values to variables to prevent repeated look-ups.
-  let listVar = argument0;
+  let arrayVar = argument0;
   if (!argument0.match(/^\w+$/)) {
-    listVar = generator.nameDB_.getDistinctName(
-        variable0 + '_list', Blockly.Names.NameType.VARIABLE);
-    code += 'List<Object> ' + listVar + ' = ' + argument0 + ';\n';
+    arrayVar = generator.nameDB_.getDistinctName(
+        variable0 + '_array', Blockly.Names.NameType.VARIABLE);
+    code += 'Object[] ' + arrayVar + ' = ' + argument0 + ';\n';
   }
   const indexVar = generator.nameDB_.getDistinctName(
       variable0 + '_index', Blockly.Names.NameType.VARIABLE);
-  code += '\nfor (Object ' + variable0 + ' : ' + listVar + ') {\n' +
+  code += '\nfor (Object ' + variable0 + ' : ' + arrayVar + ') {\n' +
       branch + '}\n';
   return code;
 };
