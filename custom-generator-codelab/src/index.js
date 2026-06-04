@@ -16,6 +16,7 @@ import './blocks/java_graphics_blocks.js';
 import './blocks/text.js';
 import './blocks/custom_loops.js';
 import './blocks/arrays.js';
+import './blocks/lists.js';
 import {getClassName, setClassName} from "./generators/javascript/javascript_generator";
 import LocalStorageManager from "./utils/LocalStorageManager.js";
 
@@ -173,6 +174,55 @@ function applyBlocklyPatches() {
     Blockly.Msg["LISTS_SPLIT_TEXT_FROM_LIST"] = "Text aus Array erstellen";
     Blockly.Msg["LISTS_SPLIT_TOOLTIP_JOIN"] = "Array mit Texten in einen Text vereinen, getrennt durch ein Trennzeichen.";
     Blockly.Msg["LISTS_SPLIT_TOOLTIP_SPLIT"] = "Text in ein Array mit Texten aufteilen, unterbrochen bei jedem Trennzeichen.";
+
+    // German translations for list blocks
+    Blockly.Msg["LIST_INLIST"] = "in der Liste";
+    Blockly.Msg["LIST_INDEX_OF_INPUT_IN_LIST"] = "in der Liste";
+    Blockly.Msg["LIST_GET_INDEX_INPUT_IN_LIST"] = "in der Liste";
+    Blockly.Msg["LIST_SET_INDEX_INPUT_IN_LIST"] = "in der Liste";
+    Blockly.Msg["LIST_GET_SUBLIST_INPUT_IN_LIST"] = "in der Liste";
+    Blockly.Msg["LIST_CREATE_EMPTY_TITLE"] = "erzeuge eine leere Liste";
+    Blockly.Msg["LIST_CREATE_EMPTY_TOOLTIP"] = "Erzeugt eine leere Liste ohne Inhalt.";
+    Blockly.Msg["LIST_CREATE_WITH_CONTAINER_TITLE_ADD"] = "Liste";
+    Blockly.Msg["LIST_CREATE_WITH_CONTAINER_TOOLTIP"] = "Hinzufügen, entfernen und sortieren von Elementen.";
+    Blockly.Msg["LIST_CREATE_WITH_INPUT_WITH"] = "erzeuge Liste mit";
+    Blockly.Msg["LIST_CREATE_WITH_ITEM_TOOLTIP"] = "Ein Element zur Liste hinzufügen.";
+    Blockly.Msg["LIST_CREATE_WITH_TOOLTIP"] = "Erzeugt eine Liste aus den angegebenen Elementen.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_FIRST"] = "Extrahiert das erste Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_FROM"] = "Extrahiert das Element an der angegebenen Position in der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_LAST"] = "Extrahiert das letzte Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_RANDOM"] = "Extrahiert ein zufälliges Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_REMOVE_FIRST"] = "Extrahiert und entfernt das erste Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_REMOVE_FROM"] = "Extrahiert und entfernt das Element an der angegebenen Position aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_REMOVE_LAST"] = "Extrahiert und entfernt das letzte Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_GET_REMOVE_RANDOM"] = "Extrahiert und entfernt ein zufälliges Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_REMOVE_FIRST"] = "Entfernt das erste Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_REMOVE_FROM"] = "Entfernt das Element an der angegebenen Position aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_REMOVE_LAST"] = "Entfernt das letzte Element aus der Liste.";
+    Blockly.Msg["LIST_GET_INDEX_TOOLTIP_REMOVE_RANDOM"] = "Entfernt ein zufälliges Element aus der Liste.";
+    Blockly.Msg["LIST_GET_SUBLIST_START_FIRST"] = "nimm Teil-Liste ab erstes";
+    Blockly.Msg["LIST_GET_SUBLIST_START_FROM_END"] = "nimm Teil-Liste ab von hinten";
+    Blockly.Msg["LIST_GET_SUBLIST_START_FROM_START"] = "nimm Teil-Liste ab";
+    Blockly.Msg["LIST_GET_SUBLIST_TOOLTIP"] = "Erstellt eine Kopie mit dem angegebenen Abschnitt der Liste.";
+    Blockly.Msg["LIST_ISEMPTY_TOOLTIP"] = "Ist wahr, falls die Liste leer ist.";
+    Blockly.Msg["LIST_LENGTH_TOOLTIP"] = "Die Anzahl von Elementen in der Liste.";
+    Blockly.Msg["LIST_REPEAT_TITLE_TYPE"] = "erzeuge Liste vom Typ";
+    Blockly.Msg["LIST_REPEAT_TITLE_LENGTH"] = "mit Länge";
+    Blockly.Msg["LIST_REPEAT_TOOLTIP"] = "Erzeugt eine Liste mit der angegebenen Länge ohne Werte.";
+    Blockly.Msg["LIST_REVERSE_TOOLTIP"] = "Kehre eine Kopie einer Liste um.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_INSERT_FIRST"] = "Fügt das Element an den Anfang der Liste an.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_INSERT_FROM"] = "Fügt das Element an der angegebenen Position in die Liste ein.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_INSERT_LAST"] = "Fügt das Element ans Ende der Liste an.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_INSERT_RANDOM"] = "Fügt das Element zufällig in die Liste ein.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_SET_FIRST"] = "Setzt das erste Element in der Liste.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_SET_FROM"] = "Setzt das Element an der angegebenen Position in der Liste.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_SET_LAST"] = "Setzt das letzte Element in die Liste.";
+    Blockly.Msg["LIST_SET_INDEX_TOOLTIP_SET_RANDOM"] = "Setzt ein zufälliges Element in der Liste.";
+    Blockly.Msg["LIST_SORT_TOOLTIP"] = "Eine Kopie einer Liste sortieren.";
+    Blockly.Msg["LIST_SPLIT_LIST_FROM_TEXT"] = "Liste aus Text erstellen";
+    Blockly.Msg["LIST_SPLIT_TEXT_FROM_LIST"] = "Text aus Liste erstellen";
+    Blockly.Msg["LIST_SPLIT_TOOLTIP_JOIN"] = "Liste mit Texten in einen Text vereinen, getrennt durch ein Trennzeichen.";
+    Blockly.Msg["LIST_SPLIT_TOOLTIP_SPLIT"] = "Text in eine Liste mit Texten aufteilen, unterbrochen bei jedem Trennzeichen.";
   }
 }
 

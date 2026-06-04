@@ -351,6 +351,18 @@ export class ToolboxConfigManager {
     lists_split:              'Aufteilen (Array)',
     lists_sort:               'Sortieren (Array)',
     lists_reverse:            'Umkehren (Array)',
+    // Listen
+    list_create_with:         'Liste erstellen',
+    list_repeat:              'Liste wiederholen',
+    list_length:              'Länge der Liste',
+    list_isEmpty:             'Liste leer?',
+    list_indexOf:             'Index suchen (Liste)',
+    list_getIndex:            'Element lesen (Liste)',
+    list_setIndex:            'Element setzen (Liste)',
+    list_getSublist:          'Teil-Liste',
+    list_split:               'Aufteilen (Liste)',
+    list_sort:                'Sortieren (Liste)',
+    list_reverse:             'Umkehren (Liste)',
     // Farben
     colour_picker:            'Farbwähler',
     colour_random:            'Zufallsfarbe',
@@ -375,7 +387,7 @@ export class ToolboxConfigManager {
    * @returns {string}
    */
   static _formatBlockType(type) {
-    const prefixes = ['controls_', 'logic_', 'math_', 'text_', 'lists_', 'java_', 'colour_', 'variables_'];
+    const prefixes = ['controls_', 'logic_', 'math_', 'text_', 'lists_', 'list_', 'java_', 'colour_', 'variables_'];
     let name = type;
     for (const p of prefixes) {
       if (name.startsWith(p)) { name = name.slice(p.length); break; }

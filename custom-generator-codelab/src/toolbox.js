@@ -3,6 +3,7 @@ import { schleifenCategory } from './toolbox/loops.js';
 import { matheCategory } from './toolbox/math.js';
 import { textCategory } from './toolbox/text.js';
 import { arraysCategory } from './toolbox/arrays.js';
+import { listenCategory } from './toolbox/lists.js';
 import { farbenCategory } from './toolbox/colors.js';
 import { javaCategories } from './toolbox/java.js';
 import { graphicsCategories } from './toolbox/graphics.js';
@@ -15,9 +16,11 @@ export const toolbox = {
         matheCategory,
         textCategory,
         arraysCategory,
+        listenCategory,
         farbenCategory,
         { 'kind': 'sep' },
         ...javaCategories,
         ...graphicsCategories,
     ],
 };
+

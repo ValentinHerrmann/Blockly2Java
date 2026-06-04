@@ -246,6 +246,56 @@
       ]
     },
     {
+      "name": "Listen",
+      "active": false,
+      "blocks": [
+        {
+          "type": "list_create_with",
+          "active": true
+        },
+        {
+          "type": "list_repeat",
+          "active": true
+        },
+        {
+          "type": "list_length",
+          "active": true
+        },
+        {
+          "type": "list_isEmpty",
+          "active": true
+        },
+        {
+          "type": "list_indexOf",
+          "active": true
+        },
+        {
+          "type": "list_getIndex",
+          "active": true
+        },
+        {
+          "type": "list_setIndex",
+          "active": true
+        },
+        {
+          "type": "list_getSublist",
+          "active": true
+        },
+        {
+          "type": "list_split",
+          "active": true
+        },
+        {
+          "type": "list_sort",
+          "active": true
+        },
+        {
+          "type": "list_reverse",
+          "active": true
+        }
+      ]
+    },
+    {
       "name": "Farben",
       "active": false,
       "blocks": [
