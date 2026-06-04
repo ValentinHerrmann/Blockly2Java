@@ -101,6 +101,23 @@ Blockly.Blocks['lists_getIndex'].init = function() {
       }
     }
   }
+  const fieldWhere = this.getField('WHERE');
+  if (fieldWhere) {
+    const input = fieldWhere.getParentInput();
+    if (input) {
+      let fieldIndex = -1;
+      for (let i = 0; i < input.fieldRow.length; i++) {
+        if (input.fieldRow[i] === fieldWhere) {
+          fieldIndex = i;
+          break;
+        }
+      }
+      if (fieldIndex !== -1) {
+        input.removeField('WHERE');
+        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel('#'));
+      }
+    }
+  }
   // Ensure it's always outputting a value and has no previous/next statements
   this.updateStatement_(false);
 };
@@ -124,6 +141,23 @@ Blockly.Blocks['lists_setIndex'].init = function() {
         const labelText = Blockly.Msg['LISTS_SET_INDEX_SET'] || 'setze';
         input.removeField('MODE');
         input.insertFieldAt(fieldIndex, new Blockly.FieldLabel(labelText));
+      }
+    }
+  }
+  const fieldWhere = this.getField('WHERE');
+  if (fieldWhere) {
+    const input = fieldWhere.getParentInput();
+    if (input) {
+      let fieldIndex = -1;
+      for (let i = 0; i < input.fieldRow.length; i++) {
+        if (input.fieldRow[i] === fieldWhere) {
+          fieldIndex = i;
+          break;
+        }
+      }
+      if (fieldIndex !== -1) {
+        input.removeField('WHERE');
+        input.insertFieldAt(fieldIndex, new Blockly.FieldLabel('#'));
       }
     }
   }
