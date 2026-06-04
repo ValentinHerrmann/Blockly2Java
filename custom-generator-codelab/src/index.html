@@ -29,11 +29,12 @@
          (monaco-editor, p5, pako, jszip, upng, markdownit, howler, fonts) -->
     <script>
       (function () {
-        var origin = 'https://onlineide.dev.blockly2java.de';
+        var origin = 'https://onlineide.blockly2java.de';
         var host = globalThis.location.hostname || '';
-        if (host !== 'localhost' && host !== '') {
-            origin = globalThis.location.protocol + '//onlineide.' + host + (globalThis.location.port ? ':' + globalThis.location.port : '');
-        }
+        
+        //if (host !== 'localhost' && host !== '') {
+        //    origin = globalThis.location.protocol + '//onlineide.' + host + (globalThis.location.port ? ':' + globalThis.location.port : '');
+        //}
         var s = document.createElement('script');
         s.type = 'module';
         s.crossOrigin = 'anonymous';
