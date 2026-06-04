@@ -277,6 +277,46 @@ Blockly.Blocks['call_arg_input'] = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+export function decomposeCallArg(block, workspace) {
+  const container = workspace.newBlock('call_arg_container');
+  container.initSvg();
+  let connection = container.getInput('STACK').connection;
+  for (let i = 0; i < block.argCount_; i++) {
+    const argBlock = workspace.newBlock('call_arg_input');
+    argBlock.initSvg();
+    connection.connect(argBlock.previousConnection);
+    connection = argBlock.nextConnection;
+  }
+  return container;
+}
+
+export function composeCallArg(block, containerBlock, inputPrefix, rebuildFnName) {
+  // Save existing connections so attached blocks survive.
+  const savedConns = [];
+  for (let i = 0; i < block.argCount_; i++) {
+    const inp = block.getInput(inputPrefix + i);
+    savedConns[i] = inp?.connection?.targetConnection;
+  }
+
+  // Count new items in mutator container.
+  let newCount = 0;
+  let itemBlock = containerBlock.getInputTargetBlock('STACK');
+  while (itemBlock) {
+    newCount++;
+    itemBlock = itemBlock.nextConnection?.targetBlock();
+  }
+  block.argCount_ = newCount;
+  block[rebuildFnName]();
+
+  // Reconnect surviving blocks.
+  for (let i = 0; i < savedConns.length && i < block.argCount_; i++) {
+    if (savedConns[i]?.getSourceBlock()?.workspace) {
+      block.getInput(inputPrefix + i).connection.connect(savedConns[i]);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Shared mixin for call blocks (manages ARG0, ARG1, … value inputs)
 // ─────────────────────────────────────────────────────────────────────────────
 const callArgMixin = {
@@ -304,41 +344,11 @@ const callArgMixin = {
   },
 
   decompose: function (workspace) {
-    const container = workspace.newBlock('call_arg_container');
-    container.initSvg();
-    let connection = container.getInput('STACK').connection;
-    for (let i = 0; i < this.argCount_; i++) {
-      const argBlock = workspace.newBlock('call_arg_input');
-      argBlock.initSvg();
-      connection.connect(argBlock.previousConnection);
-      connection = argBlock.nextConnection;
-    }
-    return container;
+    return decomposeCallArg(this, workspace);
   },
 
   compose: function (containerBlock) {
-    // Save existing connections so blocks plugged into ARG inputs survive.
-    const savedConns = [];
-    for (let i = 0; i < this.argCount_; i++) {
-      const inp = this.getInput('ARG' + i);
-      savedConns[i] = inp?.connection?.targetConnection;
-    }
-
-    let newCount = 0;
-    let itemBlock = containerBlock.getInputTargetBlock('STACK');
-    while (itemBlock) {
-      newCount++;
-      itemBlock = itemBlock.nextConnection?.targetBlock()
-    }
-    this.argCount_ = newCount;
-    this.updateArgInputs_();
-
-    // Reconnect surviving blocks.
-    for (let i = 0; i < savedConns.length && i < this.argCount_; i++) {
-      if (savedConns[i]?.getSourceBlock().workspace) {
-        this.getInput('ARG' + i).connection.connect(savedConns[i]);
-      }
-    }
+    composeCallArg(this, containerBlock, 'ARG', 'updateArgInputs_');
   },
 
   updateArgInputs_: function () {
