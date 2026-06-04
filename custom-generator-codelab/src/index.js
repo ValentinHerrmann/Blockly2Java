@@ -127,6 +127,10 @@ function applyBlocklyPatches() {
   // 4. Override list translations for arrays in German
   if (Blockly.Msg) {
     Blockly.Msg["LISTS_INLIST"] = "im Array";
+    Blockly.Msg["LISTS_INDEX_OF_INPUT_IN_LIST"] = "im Array";
+    Blockly.Msg["LISTS_GET_INDEX_INPUT_IN_LIST"] = "im Array";
+    Blockly.Msg["LISTS_SET_INDEX_INPUT_IN_LIST"] = "im Array";
+    Blockly.Msg["LISTS_GET_SUBLIST_INPUT_IN_LIST"] = "im Array";
     Blockly.Msg["LISTS_CREATE_EMPTY_TITLE"] = "erzeuge ein leeres Array";
     Blockly.Msg["LISTS_CREATE_EMPTY_TOOLTIP"] = "Erzeugt ein leeres Array ohne Inhalt.";
     Blockly.Msg["LISTS_CREATE_WITH_CONTAINER_TITLE_ADD"] = "Array";
