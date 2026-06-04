@@ -189,26 +189,35 @@ const paramMixin = {
   },
 };
 
+function initMethodBlock(block, label, colour, hasReturn, tooltip) {
+  block.appendDummyInput('TOP_LINE')
+    .appendField(label)
+    .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
+    .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
+  block.appendStatementInput('STACK');
+  if (hasReturn) {
+    block.appendValueInput('RETURN')
+      .setAlign(Blockly.inputs.Align.RIGHT)
+      .appendField('return');
+  }
+  block.setPreviousStatement(false, null);
+  block.setNextStatement(false, null);
+  block.setColour(colour);
+  block.setTooltip(tooltip);
+  block.setHelpUrl('');
+  block.arguments_ = [];
+  block.paramIds_ = [];
+  block.paramTypes_ = [];
+  block.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], block));
+  block.setCommentText('');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. STATIC METHOD – NO RETURN
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_static_method_noreturn'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Klassen-Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(STATIC_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Klassen-Methode ohne Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.paramIds_ = [];
-    this.paramTypes_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Klassen-Methode', STATIC_METHOD_COLOUR, false, 'Definiert eine Klassen-Methode ohne Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -218,24 +227,7 @@ Blockly.Blocks['java_static_method_noreturn'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_static_method_return'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Klassen-Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.appendValueInput('RETURN')
-      .setAlign(Blockly.inputs.Align.RIGHT)
-      .appendField('return');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(STATIC_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Klassen-Methode mit Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
-    this.paramTypes_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Klassen-Methode', STATIC_METHOD_COLOUR, true, 'Definiert eine Klassen-Methode mit Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -245,21 +237,7 @@ Blockly.Blocks['java_static_method_return'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_method_noreturn'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(NORMAL_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Instanzmethode ohne Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
-    this.paramTypes_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Methode', NORMAL_METHOD_COLOUR, false, 'Definiert eine Instanzmethode ohne Rückgabewert.');
   },
   ...paramMixin,
 };
@@ -269,24 +247,7 @@ Blockly.Blocks['java_method_noreturn'] = {
 // ─────────────────────────────────────────────────────────────────────────────
 Blockly.Blocks['java_method_return'] = {
   init: function () {
-    this.appendDummyInput('TOP_LINE')
-      .appendField('Methode')
-      .appendField(new Blockly.FieldTextInput('methode'), 'NAME')
-      .appendField(new Blockly.FieldLabel('()'), 'PARAMS');
-    this.appendStatementInput('STACK');
-    this.appendValueInput('RETURN')
-      .setAlign(Blockly.inputs.Align.RIGHT)
-      .appendField('return');
-    this.setPreviousStatement(false, null);
-    this.setNextStatement(false, null);
-    this.setColour(NORMAL_METHOD_COLOUR);
-    this.setTooltip('Definiert eine Instanzmethode mit Rückgabewert.');
-    this.setHelpUrl('');
-    this.arguments_ = [];
-    this.paramIds_ = []; // Unique variable IDs for each parameter (fixes same-name collision)
-    this.paramTypes_ = [];
-    this.setMutator(new Blockly.icons.MutatorIcon(['argument_input'], this));
-    this.setCommentText('');
+    initMethodBlock(this, 'Methode', NORMAL_METHOD_COLOUR, true, 'Definiert eine Instanzmethode mit Rückgabewert.');
   },
   ...paramMixin,
 };

@@ -1,39 +1,7 @@
 import * as Blockly from 'blockly/core';
 import {getClassName} from '../generators/javascript/javascript_generator';
 import LocalStorageManager from '../utils/LocalStorageManager';
-import {getGraphicsSuperArgNames, getGraphicsSuperArgTypes} from './java_graphics_blocks';
-
-// Attach a sensible shadow block to a value input based on its check type.
-function setShadowForInput(block, inputName, checkType) {
-  if (!inputName || !block) return;
-  const inp = block.getInput(inputName);
-  if (!inp || !inp.connection) return;
-  if (!checkType) return; // no shadow for unknown types
-  let shadowType = null;
-  let fieldName = null;
-  let fieldValue = '';
-  switch (checkType) {
-    case 'Number':
-      shadowType = 'math_number'; fieldName = 'NUM'; fieldValue = '0'; break;
-    case 'String':
-      shadowType = 'text'; fieldName = 'TEXT'; fieldValue = '' ; break;
-    case 'Boolean':
-      shadowType = 'logic_boolean'; fieldName = 'BOOL'; fieldValue = 'TRUE'; break;
-    default:
-      return;
-  }
-  try {
-    const shadow = Blockly.utils.xml.createElement('shadow');
-    shadow.setAttribute('type', shadowType);
-    const field = Blockly.utils.xml.createElement('field');
-    field.setAttribute('name', fieldName);
-    field.textContent = fieldValue;
-    shadow.appendChild(field);
-    inp.connection.setShadowDom(shadow);
-  } catch (e) {
-    // Defensive: if Blockly API differs, silently continue.
-  }
-}
+import {getGraphicsSuperArgNames, getGraphicsSuperArgTypes, setShadowForInput} from './java_graphics_blocks';
 
 Blockly.Blocks["defconstructor"] = {
   init: function () {

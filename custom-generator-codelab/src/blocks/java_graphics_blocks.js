@@ -112,7 +112,7 @@ function buildMethodInputs(block, label, params) {
 }
 
 // Attach a sensible shadow block to a value input based on its check type.
-function setShadowForInput(block, inputName, checkType) {
+export function setShadowForInput(block, inputName, checkType) {
   if (!inputName || !block) return;
   const inp = block.getInput(inputName);
   if (!inp || !inp.connection) return;

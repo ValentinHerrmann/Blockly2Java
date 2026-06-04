@@ -737,6 +737,54 @@ export function staticMethodFlyoutCategory(workspace) {
   );
 }
 
+function fillVariableFlyout(workspace, varType, prefix, setBlockType, getBlockType, btnClass, gap, xmlList) {
+  const variables = workspace.getVariablesOfType(varType);
+  for (let idx = 0; idx < variables.length; idx++) {
+    const variable = variables[idx];
+    const id = variable.getId();
+    _registerManage(workspace, prefix, idx, id);
+
+    // Only show setter/getter blocks for the first variable.
+    if (idx === 0) {
+      const setBlock = Blockly.utils.xml.createElement('block');
+      setBlock.setAttribute('type', setBlockType);
+      setBlock.setAttribute('gap', '8');
+      setBlock.appendChild(varField(variable));
+      xmlList.push(setBlock);
+
+      const getBlock = Blockly.utils.xml.createElement('block');
+      getBlock.setAttribute('type', getBlockType);
+      getBlock.setAttribute('gap', '8');
+      getBlock.appendChild(varField(variable));
+      xmlList.push(getBlock);
+    }
+
+    const manageBtn = Blockly.utils.xml.createElement('button');
+    manageBtn.setAttribute('text', '📝     ' + variable.name);
+    manageBtn.setAttribute('callbackKey', 'MANAGE_' + prefix + '_' + idx);
+    manageBtn.setAttribute('web-class', btnClass);
+    manageBtn.setAttribute('gap', String(gap));
+    xmlList.push(manageBtn);
+  }
+}
+
+function _appendParamBlocks(argNames, paramIds, xmlList) {
+  for (let i = 0; i < argNames.length; i++) {
+    const paramId = paramIds[i];
+    if (!paramId) continue;
+    const getBlock = Blockly.utils.xml.createElement('block');
+    getBlock.setAttribute('type', 'java_param_get');
+    getBlock.setAttribute('gap', i === argNames.length - 1 ? '16' : '4');
+    const field = Blockly.utils.xml.createElement('field');
+    field.setAttribute('name', 'VAR');
+    field.setAttribute('id', paramId);
+    field.setAttribute('variabletype', VAR_TYPE_PARAM);
+    field.appendChild(document.createTextNode(argNames[i]));
+    getBlock.appendChild(field);
+    xmlList.push(getBlock);
+  }
+}
+
 export function normalAttrFlyoutCategory(workspace) {
   const xmlList = [];
 
@@ -746,34 +794,7 @@ export function normalAttrFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-normal-attr');
   xmlList.push(button);
 
-  const variables = workspace.getVariablesOfType(VAR_TYPE_NORMAL);
-  for (let idx = 0; idx < variables.length; idx++) {
-    const variable = variables[idx];
-    const id = variable.getId();
-    _registerManage(workspace, 'NORMAL', idx, id);
-
-    // Only show setter/getter blocks for the first variable.
-    if (idx === 0) {
-      const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', 'java_normal_attr_set');
-      setBlock.setAttribute('gap', '8');
-      setBlock.appendChild(varField(variable));
-      xmlList.push(setBlock);
-
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_normal_attr_get');
-      getBlock.setAttribute('gap', '8');
-      getBlock.appendChild(varField(variable));
-      xmlList.push(getBlock);
-    }
-
-    const manageBtn = Blockly.utils.xml.createElement('button');
-    manageBtn.setAttribute('text', '📝     ' + variable.name);
-    manageBtn.setAttribute('callbackKey', 'MANAGE_NORMAL_' + idx);
-    manageBtn.setAttribute('web-class', 'b2j-btn-normal-attr');
-    manageBtn.setAttribute('gap', '0');
-    xmlList.push(manageBtn);
-  }
+  fillVariableFlyout(workspace, VAR_TYPE_NORMAL, 'NORMAL', 'java_normal_attr_set', 'java_normal_attr_get', 'b2j-btn-normal-attr', 0, xmlList);
 
   return xmlList;
 }
@@ -798,20 +819,7 @@ export function paramFlyoutCategory(workspace) {
     const paramIds  = ctrBlock.paramIds_   || [];
     if (argNames.length === 0) continue;
     pushLabel('Konstruktor(' + argNames.join(', ') + ')');
-    for (let i = 0; i < argNames.length; i++) {
-      const paramId = paramIds[i];
-      if (!paramId) continue;
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_param_get');
-      getBlock.setAttribute('gap', i === argNames.length - 1 ? '16' : '4');
-      const field = Blockly.utils.xml.createElement('field');
-      field.setAttribute('name', 'VAR');
-      field.setAttribute('id', paramId);
-      field.setAttribute('variabletype', VAR_TYPE_PARAM);
-      field.appendChild(document.createTextNode(argNames[i]));
-      getBlock.appendChild(field);
-      xmlList.push(getBlock);
-    }
+    _appendParamBlocks(argNames, paramIds, xmlList);
   }
 
   // ── Method parameters ───────────────────────────────────────────────────
@@ -829,20 +837,7 @@ export function paramFlyoutCategory(workspace) {
       if (argNames.length === 0) continue;
       const methodName = methodBlock.getFieldValue('NAME') || 'unbekannt';
       pushLabel(methodName + '(' + argNames.join(', ') + ')');
-      for (let i = 0; i < argNames.length; i++) {
-        const paramId = paramIds[i];
-        if (!paramId) continue;
-        const getBlock = Blockly.utils.xml.createElement('block');
-        getBlock.setAttribute('type', 'java_param_get');
-        getBlock.setAttribute('gap', i === argNames.length - 1 ? '16' : '4');
-        const field = Blockly.utils.xml.createElement('field');
-        field.setAttribute('name', 'VAR');
-        field.setAttribute('id', paramId);
-        field.setAttribute('variabletype', VAR_TYPE_PARAM);
-        field.appendChild(document.createTextNode(argNames[i]));
-        getBlock.appendChild(field);
-        xmlList.push(getBlock);
-      }
+      _appendParamBlocks(argNames, paramIds, xmlList);
     }
   }
 
@@ -858,34 +853,7 @@ export function localVarFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-local-var');
   xmlList.push(button);
 
-  const variables = workspace.getVariablesOfType(VAR_TYPE_LOCAL);
-  for (let idx = 0; idx < variables.length; idx++) {
-    const variable = variables[idx];
-    const id = variable.getId();
-    _registerManage(workspace, 'LOCAL', idx, id);
-
-    // Only show setter/getter blocks for the first variable.
-    if (idx === 0) {
-      const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', 'java_local_var_set');
-      setBlock.setAttribute('gap', '8');
-      setBlock.appendChild(varField(variable));
-      xmlList.push(setBlock);
-
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_local_var_get');
-      getBlock.setAttribute('gap', '8');
-      getBlock.appendChild(varField(variable));
-      xmlList.push(getBlock);
-    }
-
-    const manageBtn = Blockly.utils.xml.createElement('button');
-    manageBtn.setAttribute('text', '📝     ' + variable.name);
-    manageBtn.setAttribute('callbackKey', 'MANAGE_LOCAL_' + idx);
-    manageBtn.setAttribute('web-class', 'b2j-btn-local-var');
-    manageBtn.setAttribute('gap', '4');
-    xmlList.push(manageBtn);
-  }
+  fillVariableFlyout(workspace, VAR_TYPE_LOCAL, 'LOCAL', 'java_local_var_set', 'java_local_var_get', 'b2j-btn-local-var', 4, xmlList);
 
   return xmlList;
 }
@@ -899,34 +867,7 @@ export function staticAttrFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-static-attr');
   xmlList.push(button);
 
-  const variables = workspace.getVariablesOfType(VAR_TYPE_STATIC);
-  for (let idx = 0; idx < variables.length; idx++) {
-    const variable = variables[idx];
-    const id = variable.getId();
-    _registerManage(workspace, 'STATIC', idx, id);
-
-    // Only show setter/getter blocks for the first variable.
-    if (idx === 0) {
-      const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', 'java_static_attr_set');
-      setBlock.setAttribute('gap', '8');
-      setBlock.appendChild(varField(variable));
-      xmlList.push(setBlock);
-
-      const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', 'java_static_attr_get');
-      getBlock.setAttribute('gap', '8');
-      getBlock.appendChild(varField(variable));
-      xmlList.push(getBlock);
-    }
-
-    const manageBtn = Blockly.utils.xml.createElement('button');
-    manageBtn.setAttribute('text', '📝     ' + variable.name);
-    manageBtn.setAttribute('callbackKey', 'MANAGE_STATIC_' + idx);
-    manageBtn.setAttribute('web-class', 'b2j-btn-static-attr');
-    manageBtn.setAttribute('gap', '4');
-    xmlList.push(manageBtn);
-  }
+  fillVariableFlyout(workspace, VAR_TYPE_STATIC, 'STATIC', 'java_static_attr_set', 'java_static_attr_get', 'b2j-btn-static-attr', 4, xmlList);
 
   return xmlList;
 }
