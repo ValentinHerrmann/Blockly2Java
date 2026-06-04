@@ -54,6 +54,7 @@ describe('Blockly to Java Translation Tests', () => {
     setExtendsClass('');
 
     const workspace = new Blockly.Workspace();
+    Blockly.common.setMainWorkspace(workspace);
     try {
       Blockly.serialization.workspaces.load(workspaceJson, workspace);
       const rawCode = javaGenerator.workspaceToCode(workspace);

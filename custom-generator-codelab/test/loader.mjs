@@ -2,7 +2,7 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier === 'blockly/core') {
+  if (specifier === 'blockly/core' || specifier === 'blockly') {
     return {
       shortCircuit: true,
       url: 'virtual:blockly-core'
