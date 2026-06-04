@@ -106,7 +106,6 @@ function buildMethodCode(block, generator, isStatic) {
   const ws = Blockly.getMainWorkspace();
   const args = [];
   if (block.arguments_ && block.arguments_.length) {
-    const varModels = block.getVarModels ? block.getVarModels() : [];
     // Retrieve any cross-class call-site type hints stored by other classes
     // that called this method via java_obj_method_call_* / java_ext_static_call_*.
     // Key: "methodName" for instance methods, "ClassName::methodName" for static.
@@ -121,10 +120,15 @@ function buildMethodCode(block, generator, isStatic) {
         continue;
       }
       const paramName = _parsedParam ? _parsedParam.name : rawParamName;
-      let paramType = varModels[i]
-        ? getVariableType(ws, varModels[i].getId(), true)
-        : 'Object';
-      if (paramType === 'var' || !paramType) paramType = 'Object';
+      // Use the param's own ID from paramIds_ (not getVarModels which is undefined
+      // on paramMixin and always returns []).  getVariableType looks up how the
+      // variable is actually *used* in the body to infer its type.
+      const paramId = block.paramIds_ ? block.paramIds_[i] : null;
+      let paramType = 'Object';
+      if (paramId) {
+        const inferred = getVariableType(ws, paramId, true);
+        if (inferred && inferred !== 'var') paramType = inferred;
+      }
       if (paramType === 'forint') paramType = 'int';
       // Fall back to cross-class call-site hints when the workspace-internal
       // inference couldn't determine a concrete type.

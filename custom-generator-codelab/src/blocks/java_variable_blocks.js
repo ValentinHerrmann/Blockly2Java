@@ -33,16 +33,67 @@ export const STATIC_COLOUR = '#5555AA';   // indigo – static attribute
 // Shows the variable dropdown but omits "Rename" and "Delete" entries so that
 // parameters can only be managed via the method declaration block's mutator.
 // ─────────────────────────────────────────────────────────────────────────────
+// Block types that can own parameters (used for ancestor-walking in getOptions).
+const METHOD_BLOCK_TYPES = new Set([
+  'java_method_noreturn', 'java_method_return',
+  'java_static_method_noreturn', 'java_static_method_return',
+  'defconstructor',
+]);
+
 class ParamFieldVariable extends Blockly.FieldVariable {
   getOptions(opt_useCache) {
     const options = super.getOptions(opt_useCache);
-    // 'RENAME_VARIABLE_ID' / 'DELETE_VARIABLE_ID' are the constant string
-    // values Blockly uses as the second element of the rename/delete menu items.
-    return options.filter(
+    // Remove Rename/Delete entries — params are managed via the method mutator.
+    const filtered = options.filter(
       ([, value]) => value !== 'RENAME_VARIABLE_ID' && value !== 'DELETE_VARIABLE_ID'
     );
+
+    // ── Scope filter: only show params of the enclosing method block ──────
+    const sourceBlock = this.getSourceBlock?.();
+    if (!sourceBlock) return filtered;
+
+    // Walk up the parent chain to find the nearest enclosing method block.
+    let parent = sourceBlock.getParent?.();
+    while (parent) {
+      if (METHOD_BLOCK_TYPES.has(parent.type)) break;
+      parent = parent.getParent?.();
+    }
+    // If the block is not inside a method (e.g. in the flyout), show all.
+    if (!parent) return filtered;
+
+    // Keep only variable entries whose ID appears in this method's paramIds_.
+    const allowedIds = new Set(parent.paramIds_ || []);
+    if (allowedIds.size === 0) return filtered;
+
+    const scoped = filtered.filter(([, id]) => allowedIds.has(id));
+
+    // ── Header label: show which method these params belong to ────────────
+    // Build a human-readable label like "▸ myMethod(x, y)" and prepend it as
+    // a non-selectable header so the user always knows the scope context.
+    const isConstructor = parent.type === 'defconstructor';
+    const rawMethodName = isConstructor
+      ? 'Konstruktor'
+      : (parent.getFieldValue('NAME') || 'Methode');
+    const argNames = parent.arguments_ || [];
+    const headerLabel = '▸ ' + rawMethodName + '(' + argNames.join(', ') + ')';
+
+    // Prepend [displayText, sentinelValue] — the sentinel is filtered out on
+    // selection via doValueUpdate_ below so clicking the header is a no-op.
+    return [['── ' + headerLabel + ' ──', ParamFieldVariable.HEADER_SENTINEL], ...scoped];
+  }
+
+  /**
+   * Intercept value updates: ignore clicks on the header label entry so that
+   * the current variable selection does not change when the user clicks it.
+   */
+  doValueUpdate_(newValue) {
+    if (newValue === ParamFieldVariable.HEADER_SENTINEL) return;
+    super.doValueUpdate_(newValue);
   }
 }
+
+/** Sentinel used as the value of the non-selectable method-name header row. */
+ParamFieldVariable.HEADER_SENTINEL = '__PARAM_GROUP_HEADER__';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. LOCAL VARIABLE – GET  (looks like variables_get, but green)
@@ -144,19 +195,25 @@ Blockly.Blocks['java_param_get'] = {
 
     const varId = this.getFieldValue('VAR');
     if (!varId) return;
-    if (this.workspace.getVariableById(varId)) return; // already exists
+    if (this.workspace.getVariableById(varId)) return; // already exists — nothing to do
 
-    // Retrieve the name from the field (FieldVariable stores it internally).
+    // Retrieve the display name from the field.
     const field = this.getField('VAR');
     const varName = field?.getText?.() || 'param';
 
-    // Only create if no same-name param variable already exists to avoid collision.
-    const existing = this.workspace.getVariable(varName, VAR_TYPE_PARAM);
-    if (existing) {
-      // Redirect this field to point at the existing variable.
-      field.setValue(existing.getId());
-    } else {
+    // Always try to create a workspace variable using the param's own ID
+    // (which is unique per method slot).  This preserves scoping: two methods
+    // with a same-named param will have distinct IDs and therefore distinct
+    // workspace variables, so ParamFieldVariable.getOptions() can filter them.
+    try {
       this.workspace.createVariable(varName, VAR_TYPE_PARAM, varId);
+    } catch (e) {
+      // Blockly's VariableMap throws when a same-name+type variable with a
+      // *different* ID already exists.  This can happen if the user loaded
+      // a workspace where variable IDs were not unique.  Fall back gracefully:
+      // redirect to the existing variable so the block is not left broken.
+      const existing = this.workspace.getVariable(varName, VAR_TYPE_PARAM);
+      if (existing) field.setValue(existing.getId());
     }
   },
 };
