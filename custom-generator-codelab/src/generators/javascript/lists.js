@@ -10,7 +10,7 @@
  */
 
 import * as Blockly from 'blockly/core';
-import {Order} from './javascript_generator.js';
+import {Order, resolveArgBlockType} from './javascript_generator.js';
 
 export function lists_create_empty(block, generator) {
   // Create an empty array in Java.
@@ -24,7 +24,19 @@ export function lists_create_with(block, generator) {
     elements[i] =
         generator.valueToCode(block, 'ADD' + i, Order.NONE) || 'null';
   }
-  const code = "new Object[] {" + elements.join(', ') + "}";
+  let elementType = 'Object';
+  if (block.itemCount_ > 0) {
+    const elementTypes = [];
+    for (let i = 0; i < block.itemCount_; i++) {
+      const target = block.getInputTargetBlock('ADD' + i);
+      elementTypes.push(resolveArgBlockType(target, block.workspace));
+    }
+    const firstType = elementTypes[0];
+    if (firstType && firstType !== 'var' && elementTypes.every(t => t === firstType)) {
+      elementType = firstType;
+    }
+  }
+  const code = "{" + elements.join(', ') + "}";
   return [code, Order.ATOMIC];
 }
 
@@ -114,13 +126,13 @@ export function lists_getIndex(block, generator) {
       at = list + '.length - 1';
       break;
     case 'FROM_START':
-      at = generator.getAdjusted(block, 'AT');
+      at = generator.getAdjusted(block, 'AT')+1;
       break;
     case 'FROM_END':
       at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1, true);
       break;
     case 'RANDOM':
-      at = 'new java.util.Random().nextInt(' + list + '.length)';
+      at = 'Random.randint(0, ' + list + '.length-1)';
       break;
   }
 
@@ -154,13 +166,13 @@ export function lists_setIndex(block, generator) {
       at = list + '.length - 1';
       break;
     case 'FROM_START':
-      at = generator.getAdjusted(block, 'AT');
+      at = generator.getAdjusted(block, 'AT')+1;
       break;
     case 'FROM_END':
       at = list + '.length - ' + generator.getAdjusted(block, 'AT', 1, true);
       break;
     case 'RANDOM':
-      at = 'new java.util.Random().nextInt(' + list + '.length)';
+      at = 'Random.randint(0, ' + list + '.length-1)';
       break;
   }
 
@@ -251,7 +263,7 @@ export function lists_split(block, generator) {
   const mode = block.getFieldValue('MODE');
   if (mode === 'SPLIT') {
     if (!input) {
-      input = "''";
+      input = "\"\"";
     }
     const code = input + '.split(' + delimiter + ')';
     return [code, Order.FUNCTION_CALL];

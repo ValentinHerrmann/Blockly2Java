@@ -439,6 +439,27 @@ const GETTER_ARG_TYPES = new Set([
  */
 export function resolveArgBlockType(argBlock, workspace) {
   if (!argBlock) return TYPES.UNKNOWN;
+  if (argBlock.type === 'math_number') {
+    const numValue = Number(argBlock.getFieldValue('NUM'));
+    if (Number.isInteger(numValue)) {
+      return TYPES.INTEGER;
+    }
+    return TYPES.DOUBLE;
+  }
+  if (argBlock.type === 'lists_split') {
+    const mode = argBlock.getFieldValue('MODE');
+    return mode === 'SPLIT' ? 'String[]' : 'String';
+  }
+  if (argBlock.type === 'lists_getIndex') {
+    const arrayBlock = argBlock.getInputTargetBlock('VALUE');
+    if (arrayBlock) {
+      const arrayType = resolveArgBlockType(arrayBlock, workspace);
+      if (arrayType && arrayType.endsWith('[]')) {
+        return arrayType.slice(0, -2);
+      }
+    }
+    return 'Object';
+  }
   if (argBlock.type === 'callconstructor') return _resolveConstructorArgType(argBlock);
   if (argBlock.type === 'java_method_call_return' ||
       argBlock.type === 'java_static_method_call_return') {
@@ -644,6 +665,20 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
   if (valueBlock.type === 'gfx_new_shape') {
     return valueBlock.getFieldValue('SHAPE') || 'Shape';
   }
+  if (valueBlock.type === 'lists_create_with') {
+    if (valueBlock.itemCount_ > 0) {
+      const elementTypes = [];
+      for (let i = 0; i < valueBlock.itemCount_; i++) {
+        const target = valueBlock.getInputTargetBlock('ADD' + i);
+        elementTypes.push(resolveArgBlockType(target, workSpace));
+      }
+      const firstType = elementTypes[0];
+      if (firstType && firstType !== TYPES.UNKNOWN && elementTypes.every(t => t === firstType)) {
+        return firstType + '[]';
+      }
+    }
+    return 'Object[]';
+  }
   if (valueBlock.type === 'callconstructor') {
     const dv = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
     const si = dv.indexOf(':::');
@@ -707,7 +742,7 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
     const t = valueBlock.getFieldValue('TYPE');
     return (t === 'NUMBER') ? TYPES.DOUBLE : TYPES.STRING;
   }
-  return getType(valueBlock.type);
+  return resolveArgBlockType(valueBlock, workSpace);
 }
 
 /** Checks math_change blocks; returns type or null. */

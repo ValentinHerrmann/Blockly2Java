@@ -65,7 +65,13 @@ describe('Blockly to Java Translation Tests', () => {
 
       // Compare outputs normalizing line endings and trimming
       const normalize = str => str.replace(/\r\n/g, '\n').trim();
-      assert.strictEqual(normalize(generatedCode), normalize(expectedJava));
+      const normGenerated = normalize(generatedCode);
+      const normExpected = normalize(expectedJava);
+      assert.strictEqual(
+        normGenerated,
+        normExpected,
+        `Generated code does not match expected output.\n\nACTUAL:\n${normGenerated}\n\nEXPECTED:\n${normExpected}`
+      );
     } finally {
       workspace.dispose();
     }
