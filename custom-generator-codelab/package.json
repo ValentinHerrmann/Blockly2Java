@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-loader ./test/loader.mjs test/translation.test.mjs",
     "postinstall": "git submodule update --init --recursive 2>/dev/null || true",
     "setup": "bash setup.sh --build-from-submodule || node setup.js --build-from-submodule",
     "setup:submodule": "bash setup.sh --build-from-submodule || node setup.js --build-from-submodule",
@@ -31,8 +31,10 @@
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.7.1",
     "html-webpack-plugin": "^5.6.6",
+    "jsdom": "^24.1.0",
     "source-map-loader": "^4.0.1",
     "style-loader": "^3.3.1",
+    "vitest": "^1.6.0",
     "webpack": "^5.90.3",
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.15.1"

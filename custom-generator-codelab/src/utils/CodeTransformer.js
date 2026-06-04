@@ -33,9 +33,9 @@ export class CodeTransformer {
   }
 
   static defaultCodePrefix(modCode) {
-    const comm = "/**\nErstelle dein Programm über Blockly und\nklicke auf 'Play', um es auszuführen!\n*/\n\n";
+    const comm = "/**\n * Erstelle dein Programm über Blockly und\n * klicke auf 'Play', um es auszuführen!\n */\n\n";
     const extendsClause = getExtendsClass() ? ' extends ' + getExtendsClass() : '';
-    const codePrefix = 'public class ' + getClassName() + extendsClause + ' { \n';
+    const codePrefix = 'public class ' + getClassName() + extendsClause + ' {\n';
     return comm + codePrefix + modCode + '\n}';
   }
 
