@@ -44,7 +44,7 @@ const paramMixin = {
       'String', 'Object', 'boolean',
     ];
     for (const t of knownTypes) {
-      const regex = new RegExp('^' + t + '\\s+(.+)');
+      const regex = new RegExp(String.raw`^${t}\s+(.+)`);
       const m = name.match(regex);
       if (m) {
         return { type: t, name: m[1] };
@@ -168,7 +168,7 @@ const paramMixin = {
         name: parsed.name,
         // Explicit type from prefix takes priority; fall back to paramTypes_
         // stored in mutation DOM (for cross-class type hints).
-        type: parsed.type || ((this.paramTypes_ && this.paramTypes_[i]) || ''),
+        type: parsed.type || (this.paramTypes_?.[i] || ''),
       });
     }
     return params;

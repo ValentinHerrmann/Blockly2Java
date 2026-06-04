@@ -216,6 +216,7 @@ Blockly.Blocks['java_param_get'] = {
     try {
       this.workspace.createVariable(varName, VAR_TYPE_PARAM, varId);
     } catch (e) {
+      console.warn("Variable creation failed, falling back to existing parameter variable:", e);
       // Blockly's VariableMap throws when a same-name+type variable with a
       // *different* ID already exists.  This can happen if the user loaded
       // a workspace where variable IDs were not unique.  Fall back gracefully:
@@ -737,7 +738,7 @@ export function staticMethodFlyoutCategory(workspace) {
   );
 }
 
-function fillVariableFlyout(workspace, varType, prefix, setBlockType, getBlockType, btnClass, gap, xmlList) {
+function fillVariableFlyout(workspace, varType, prefix, opts, xmlList) {
   const variables = workspace.getVariablesOfType(varType);
   for (let idx = 0; idx < variables.length; idx++) {
     const variable = variables[idx];
@@ -747,13 +748,13 @@ function fillVariableFlyout(workspace, varType, prefix, setBlockType, getBlockTy
     // Only show setter/getter blocks for the first variable.
     if (idx === 0) {
       const setBlock = Blockly.utils.xml.createElement('block');
-      setBlock.setAttribute('type', setBlockType);
+      setBlock.setAttribute('type', opts.setBlockType);
       setBlock.setAttribute('gap', '8');
       setBlock.appendChild(varField(variable));
       xmlList.push(setBlock);
 
       const getBlock = Blockly.utils.xml.createElement('block');
-      getBlock.setAttribute('type', getBlockType);
+      getBlock.setAttribute('type', opts.getBlockType);
       getBlock.setAttribute('gap', '8');
       getBlock.appendChild(varField(variable));
       xmlList.push(getBlock);
@@ -762,8 +763,8 @@ function fillVariableFlyout(workspace, varType, prefix, setBlockType, getBlockTy
     const manageBtn = Blockly.utils.xml.createElement('button');
     manageBtn.setAttribute('text', '📝     ' + variable.name);
     manageBtn.setAttribute('callbackKey', 'MANAGE_' + prefix + '_' + idx);
-    manageBtn.setAttribute('web-class', btnClass);
-    manageBtn.setAttribute('gap', String(gap));
+    manageBtn.setAttribute('web-class', opts.btnClass);
+    manageBtn.setAttribute('gap', String(opts.gap));
     xmlList.push(manageBtn);
   }
 }
@@ -794,7 +795,12 @@ export function normalAttrFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-normal-attr');
   xmlList.push(button);
 
-  fillVariableFlyout(workspace, VAR_TYPE_NORMAL, 'NORMAL', 'java_normal_attr_set', 'java_normal_attr_get', 'b2j-btn-normal-attr', 0, xmlList);
+  fillVariableFlyout(workspace, VAR_TYPE_NORMAL, 'NORMAL', {
+    setBlockType: 'java_normal_attr_set',
+    getBlockType: 'java_normal_attr_get',
+    btnClass: 'b2j-btn-normal-attr',
+    gap: 0
+  }, xmlList);
 
   return xmlList;
 }
@@ -853,7 +859,12 @@ export function localVarFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-local-var');
   xmlList.push(button);
 
-  fillVariableFlyout(workspace, VAR_TYPE_LOCAL, 'LOCAL', 'java_local_var_set', 'java_local_var_get', 'b2j-btn-local-var', 4, xmlList);
+  fillVariableFlyout(workspace, VAR_TYPE_LOCAL, 'LOCAL', {
+    setBlockType: 'java_local_var_set',
+    getBlockType: 'java_local_var_get',
+    btnClass: 'b2j-btn-local-var',
+    gap: 4
+  }, xmlList);
 
   return xmlList;
 }
@@ -867,7 +878,12 @@ export function staticAttrFlyoutCategory(workspace) {
   button.setAttribute('web-class', 'b2j-btn-static-attr');
   xmlList.push(button);
 
-  fillVariableFlyout(workspace, VAR_TYPE_STATIC, 'STATIC', 'java_static_attr_set', 'java_static_attr_get', 'b2j-btn-static-attr', 4, xmlList);
+  fillVariableFlyout(workspace, VAR_TYPE_STATIC, 'STATIC', {
+    setBlockType: 'java_static_attr_set',
+    getBlockType: 'java_static_attr_get',
+    btnClass: 'b2j-btn-static-attr',
+    gap: 4
+  }, xmlList);
 
   return xmlList;
 }

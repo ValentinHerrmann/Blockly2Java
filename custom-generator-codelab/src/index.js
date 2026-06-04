@@ -67,14 +67,14 @@ function applyBlocklyPatches() {
   globalThis.document?.addEventListener('mousedown', handlePointerDown, true);
 
   // 2. Patch hideChaff to close mutator and comment bubbles when clicking outside.
-  if (Blockly.WorkspaceSvg && Blockly.WorkspaceSvg.prototype) {
+  if (Blockly.WorkspaceSvg?.prototype) {
     const originalHideChaff = Blockly.WorkspaceSvg.prototype.hideChaff;
     Blockly.WorkspaceSvg.prototype.hideChaff = function (onlyClosePopups) {
       // Call original hideChaff to hide dropdowns and widgetDiv
       originalHideChaff.call(this, onlyClosePopups);
 
       // If the last click was inside a bubble, do not close any bubbles.
-      if (lastPointerDownTarget && lastPointerDownTarget.closest('.blocklyBubbleCanvas')) {
+      if (lastPointerDownTarget?.closest('.blocklyBubbleCanvas')) {
         return;
       }
 
@@ -97,7 +97,7 @@ function applyBlocklyPatches() {
   }
 
   // 3. Patch MutatorIcon to debounce recomposition and ignore intermediate field changes.
-  if (Blockly.icons && Blockly.icons.MutatorIcon) {
+  if (Blockly.icons?.MutatorIcon) {
     const originalIsIgnorable = Blockly.icons.MutatorIcon.isIgnorableMutatorEvent;
     Blockly.icons.MutatorIcon.isIgnorableMutatorEvent = function (e) {
       if (!e) return true;

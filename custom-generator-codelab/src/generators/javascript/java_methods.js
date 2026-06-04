@@ -31,69 +31,55 @@ import LocalStorageManager from '../../utils/LocalStorageManager.js';
 // blocks by their *display name* — no IDs involved, no cross-method leakage.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Infers the Java type of a method parameter from how java_param_get blocks
- * with matching display-name are used inside THIS method's body only.
- *
- * @param {Blockly.Block} methodBlock – the method/constructor def block
- * @param {number} paramIndex         – index into methodBlock.arguments_
- * @returns {string} Java type string, or TYPES.UNKNOWN ('var') if undetermined
- */
+const TYPE_AGNOSTIC_PARENTS = new Set([
+  'text_join', 'text_print', 'text_append',
+]);
+
+function isDescendantOf(block, ancestor) {
+  let anc = block.getParent?.();
+  while (anc) {
+    if (anc === ancestor) return true;
+    anc = anc.getParent?.();
+  }
+  return false;
+}
+
+function _checkParamBlock(pb, paramName, ws) {
+  const varId = pb.getFieldValue('VAR');
+  if (!varId) return null;
+  const varModel = ws?.getVariableById(varId);
+  const displayName = varModel?.name ?? pb.getField('VAR')?.getText?.() ?? '';
+  if (displayName !== paramName) return null;
+
+  const parent = pb.getParent();
+  if (!parent || TYPE_AGNOSTIC_PARENTS.has(parent.type)) return null;
+  const t = getType(parent.type);
+  return (t && t !== TYPES.UNKNOWN) ? t : null;
+}
+
 function _inferParamTypeInScope(methodBlock, paramIndex) {
   const paramName = methodBlock.arguments_?.[paramIndex];
   if (!paramName) return TYPES.UNKNOWN;
 
   const ws = methodBlock.workspace;
 
-  // These parent block types accept any Java Object and therefore do NOT
-  // constrain the type of the value plugged into them.
-  const TYPE_AGNOSTIC_PARENTS = new Set([
-    'text_join', 'text_print', 'text_append',
-  ]);
-
-  /**
-   * Given a java_param_get block, checks whether its variable matches paramName
-   * and, if so, returns the Java type inferred from how it is connected.
-   * Returns null when no conclusion can be drawn.
-   */
-  function _checkParamBlock(pb) {
-    // Match by the workspace variable's display name, NOT by ID.
-    // The ID may have been redirected to another method's variable by the
-    // onchange handler, but the display name is always correct.
-    const varId = pb.getFieldValue('VAR');
-    if (!varId) return null;
-    const varModel = ws?.getVariableById(varId);
-    const displayName = varModel?.name ?? pb.getField('VAR')?.getText?.() ?? '';
-    if (displayName !== paramName) return null;
-
-    const parent = pb.getParent();
-    if (!parent || TYPE_AGNOSTIC_PARENTS.has(parent.type)) return null;
-    const t = getType(parent.type);
-    return (t && t !== TYPES.UNKNOWN) ? t : null;
-  }
-
   // ── Strategy 1: fast path via getDescendants ──────────────────────────────
   // Works in all normal cases (method block is a proper container).
   for (const descendant of methodBlock.getDescendants(false)) {
-    if (descendant.type !== 'java_param_get') continue;
-    const t = _checkParamBlock(descendant);
-    if (t) return t;
+    if (descendant.type === 'java_param_get') {
+      const t = _checkParamBlock(descendant, paramName, ws);
+      if (t) return t;
+    }
   }
 
   // ── Strategy 2: workspace scan with explicit ancestor check ───────────────
   // Fallback for edge cases where getDescendants misses connected blocks.
   if (ws) {
     for (const pb of ws.getBlocksByType('java_param_get', false)) {
-      // Walk up the parent chain to verify this block is inside methodBlock.
-      let anc = pb.getParent?.();
-      let inside = false;
-      while (anc) {
-        if (anc === methodBlock) { inside = true; break; }
-        anc = anc.getParent?.();
+      if (isDescendantOf(pb, methodBlock)) {
+        const t = _checkParamBlock(pb, paramName, ws);
+        if (t) return t;
       }
-      if (!inside) continue;
-      const t = _checkParamBlock(pb);
-      if (t) return t;
     }
   }
 
@@ -202,10 +188,8 @@ function buildMethodCode(block, generator, isStatic) {
         continue;
       }
       const paramName = _parsedParam ? _parsedParam.name : rawParamName;
-      // Use the param's own ID from paramIds_ (not getVarModels which is undefined
-      // on paramMixin and always returns []).  getVariableType looks up how the
-      // variable is actually *used* in the body to infer its type.
-      const paramId = block.paramIds_ ? block.paramIds_[i] : null;
+      // getVariableType looks up how the variable is actually *used* in the
+      // body to infer its type.
       let paramType = 'Object';
       // ── Scoped inference: search only this method's body by display name ──
       // Two strategies (getDescendants + ancestor walk) ensure we find the
