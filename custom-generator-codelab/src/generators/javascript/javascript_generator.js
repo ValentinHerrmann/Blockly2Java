@@ -446,6 +446,13 @@ export function resolveArgBlockType(argBlock, workspace) {
     }
     return TYPES.DOUBLE;
   }
+  if (argBlock.type === 'gfx_new_shape') {
+    return argBlock.getFieldValue('SHAPE') || 'Shape';
+  }
+  if (argBlock.type === 'text_prompt_ext' || argBlock.type === 'text_prompt') {
+    const t = argBlock.getFieldValue('TYPE');
+    return (t === 'NUMBER') ? TYPES.DOUBLE : TYPES.STRING;
+  }
   if (argBlock.type === 'lists_split') {
     const mode = argBlock.getFieldValue('MODE');
     return mode === 'SPLIT' ? 'String[]' : 'String';
@@ -673,8 +680,14 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
         elementTypes.push(resolveArgBlockType(target, workSpace));
       }
       const firstType = elementTypes[0];
-      if (firstType && firstType !== TYPES.UNKNOWN && elementTypes.every(t => t === firstType)) {
-        return firstType + '[]';
+      if (firstType && firstType !== TYPES.UNKNOWN) {
+        if (elementTypes.every(t => t === firstType)) {
+          return firstType + '[]';
+        }
+        if (elementTypes.every(t => t && t !== TYPES.UNKNOWN && !PRIMITIVE_TYPES.has(t) && !t.endsWith('[]'))) {
+          const commonType = findCommonSupertype(elementTypes);
+          return commonType + '[]';
+        }
       }
     }
     return 'Object[]';
