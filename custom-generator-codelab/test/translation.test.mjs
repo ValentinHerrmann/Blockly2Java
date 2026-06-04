@@ -45,35 +45,69 @@ describe('Blockly to Java Translation Tests', () => {
     throw new Error(`Fixtures directory not found at: ${fixturesDir}`);
   }
 
-  const files = fs.readdirSync(fixturesDir);
-  const testCases = files
-    .filter(file => file.endsWith('.json'))
-    .map(file => path.basename(file, '.json'));
+  function runTestCase(className, jsonPath, javaPath) {
+    const workspaceJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+    const expectedJava = fs.readFileSync(javaPath, 'utf-8');
 
-  testCases.forEach(testCase => {
+    // Reset state for each test case
+    setClassName(className);
+    setExtendsClass('');
+
+    const workspace = new Blockly.Workspace();
+    try {
+      Blockly.serialization.workspaces.load(workspaceJson, workspace);
+      const rawCode = javaGenerator.workspaceToCode(workspace);
+      const generatedCode = CodeTransformer.transformCode(rawCode);
+
+      // Compare outputs normalizing line endings and trimming
+      const normalize = str => str.replace(/\r\n/g, '\n').trim();
+      assert.strictEqual(normalize(generatedCode), normalize(expectedJava));
+    } finally {
+      workspace.dispose();
+    }
+  }
+
+  const files = fs.readdirSync(fixturesDir);
+  const singleTestCases = [];
+  const projects = [];
+
+  files.forEach(file => {
+    const filePath = path.join(fixturesDir, file);
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      projects.push({
+        name: file,
+        dir: filePath
+      });
+    } else if (file.endsWith('.json')) {
+      singleTestCases.push(path.basename(file, '.json'));
+    }
+  });
+
+  // Run single-file test cases
+  singleTestCases.forEach(testCase => {
     it(`should translate ${testCase} correctly to Java`, () => {
       const jsonPath = path.join(fixturesDir, `${testCase}.json`);
       const javaPath = path.join(fixturesDir, `${testCase}.java`);
+      runTestCase(testCase, jsonPath, javaPath);
+    });
+  });
 
-      const workspaceJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-      const expectedJava = fs.readFileSync(javaPath, 'utf-8');
+  // Run project-based test cases (folders)
+  projects.forEach(project => {
+    describe(`Project: ${project.name}`, () => {
+      const projectFiles = fs.readdirSync(project.dir);
+      const testCases = projectFiles
+        .filter(file => file.endsWith('.json'))
+        .map(file => path.basename(file, '.json'));
 
-      // Reset state for each test case
-      setClassName(testCase);
-      setExtendsClass('');
-
-      const workspace = new Blockly.Workspace();
-      try {
-        Blockly.serialization.workspaces.load(workspaceJson, workspace);
-        const rawCode = javaGenerator.workspaceToCode(workspace);
-        const generatedCode = CodeTransformer.transformCode(rawCode);
-
-        // Compare outputs normalizing line endings and trimming
-        const normalize = str => str.replace(/\r\n/g, '\n').trim();
-        assert.strictEqual(normalize(generatedCode), normalize(expectedJava));
-      } finally {
-        workspace.dispose();
-      }
+      testCases.forEach(testCase => {
+        it(`should translate ${project.name}/${testCase} correctly to Java`, () => {
+          const jsonPath = path.join(project.dir, `${testCase}.json`);
+          const javaPath = path.join(project.dir, `${testCase}.java`);
+          runTestCase(testCase, jsonPath, javaPath);
+        });
+      });
     });
   });
 });
