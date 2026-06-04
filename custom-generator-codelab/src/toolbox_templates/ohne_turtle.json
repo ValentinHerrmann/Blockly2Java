@@ -197,7 +197,7 @@
     },
     {
       "name": "Arrays",
-      "active": false,
+      "active": true,
       "blocks": [
         {
           "type": "lists_create_with",

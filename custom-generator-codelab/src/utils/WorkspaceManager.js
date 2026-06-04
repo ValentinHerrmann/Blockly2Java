@@ -115,7 +115,7 @@ export const FULL_ACTIVE_CONFIG = {
     },
     {
       name: 'Arrays',
-      active: false, // Klasse 9: nicht im Lehrplan
+      active: true,
       blocks: [
         { type: 'lists_create_with', active: true },
         { type: 'lists_repeat',      active: true },
