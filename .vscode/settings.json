@@ -1,0 +1,16 @@
+{
+    "java.project.sourcePaths": [],
+    "sonarlint.connectedMode.project": {
+        "connectionId": "valentinherrmann",
+        "projectKey": "ValentinHerrmann_Blockly2Java"
+    },
+    "nodejs-testing.extensions": [
+        {
+            "extensions": ["mjs", "cjs", "js"],
+            "parameters": [
+                "--experimental-loader",
+                "${workspaceFolder}/custom-generator-codelab/test/loader.mjs"
+            ]
+        }
+    ]
+}

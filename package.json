@@ -14,6 +14,7 @@
     "build": "cd custom-generator-codelab && npm run build",
     "build:all": "cd custom-generator-codelab && npm run build:all",
     "deploy": "cd custom-generator-codelab && npm run deploy",
+    "test": "cd custom-generator-codelab && npm test",
     "ide:dev": "cd custom-generator-codelab/online-ide-source && npm run dev",
     "ide:build": "cd custom-generator-codelab/online-ide-source && npm run build",
     "ide:preview": "cd custom-generator-codelab/online-ide-source && npm run preview"
