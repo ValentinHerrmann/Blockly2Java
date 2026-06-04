@@ -61,11 +61,19 @@ class ParamFieldVariable extends Blockly.FieldVariable {
     // If the block is not inside a method (e.g. in the flyout), show all.
     if (!parent) return filtered;
 
-    // Keep only variable entries whose ID appears in this method's paramIds_.
-    const allowedIds = new Set(parent.paramIds_ || []);
-    if (allowedIds.size === 0) return filtered;
+    // ── Scope filter: keep only params belonging to this method ──────────
+    // Filter by param *name* (from arguments_), NOT by variable ID (paramIds_).
+    // Rationale: when two methods share a same-named parameter, Blockly's
+    // VariableMap can only hold one workspace variable per (name, type) pair.
+    // The onchange handler redirects the 2nd method's block to reuse the 1st
+    // method's variable ID.  After the redirect, paramIds_[i] no longer matches
+    // the workspace variable ID, so an ID-based filter would hide the entry.
+    // Filtering by name is always correct because VariableMap (name+type)
+    // uniqueness guarantees exactly one entry per param name in the dropdown.
+    const allowedNames = new Set(parent.arguments_ || []);
+    if (allowedNames.size === 0) return filtered;
 
-    const scoped = filtered.filter(([, id]) => allowedIds.has(id));
+    const scoped = filtered.filter(([name,]) => allowedNames.has(name));
 
     // ── Header label: show which method these params belong to ────────────
     // Build a human-readable label like "▸ myMethod(x, y)" and prepend it as
