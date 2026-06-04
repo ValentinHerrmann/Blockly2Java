@@ -114,20 +114,15 @@ export const FULL_ACTIVE_CONFIG = {
       ],
     },
     {
-      name: 'Listen',
-      active: false, // Klasse 9: nicht im Lehrplan
+      name: 'Arrays',
+      active: true,
       blocks: [
         { type: 'lists_create_with', active: true },
         { type: 'lists_repeat',      active: true },
         { type: 'lists_length',      active: true },
         { type: 'lists_isEmpty',     active: true },
-        { type: 'lists_indexOf',     active: true },
         { type: 'lists_getIndex',    active: true },
         { type: 'lists_setIndex',    active: true },
-        { type: 'lists_getSublist',  active: true },
-        { type: 'lists_split',       active: true },
-        { type: 'lists_sort',        active: true },
-        { type: 'lists_reverse',     active: true },
       ],
     },
     {

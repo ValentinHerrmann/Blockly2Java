@@ -202,37 +202,37 @@ export const math_round = math_single;
 export const math_trig = math_single;
 
 export function math_on_list(block, generator) {
-  // Math functions for lists.
+  // Math functions for arrays.
   const func = block.getFieldValue('OP');
-  let list;
+  let array;
   let code;
   switch (func) {
     case 'SUM':
-      list = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new ArrayList<>()';
-      code = list + ".stream().reduce(0, Integer::sum)";
+      array = generator.valueToCode(block, 'LIST', Order.MEMBER) || 'new ArrayList<>()';
+      code = array + ".stream().reduce(0, Integer::sum)";
       break;
     case 'MIN':
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = "Collections.min(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = "Collections.min(" + array + ")";
       break;
     case 'MAX':
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = "Collections.max(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = "Collections.max(" + array + ")";
       break;
     case 'AVERAGE': {
       const functionName = generator.provideFunction_('mathMean', `
-public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
-  return myList.stream().mapToInt(Integer::intValue).average().orElse(0);
+public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myArray) {
+  return myArray.stream().mapToInt(Integer::intValue).average().orElse(0);
 }
 `);
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = functionName + "(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = functionName + "(" + array + ")";
       break;
     }
     case 'MEDIAN': {
       const functionName = generator.provideFunction_('mathMedian', `
-public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myList) {
-  List<Integer> localList = myList.stream().filter(Objects::nonNull).sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myArray) {
+  List<Integer> localList = myArray.stream().filter(Objects::nonNull).sorted(Comparator.reverseOrder()).collect(Collectors.toList());
   if (localList.isEmpty()) return 0;
   int size = localList.size();
   if (size % 2 == 0) {
@@ -242,8 +242,8 @@ public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> myLis
   }
 }
 `);
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = functionName + "(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = functionName + "(" + array + ")";
       break;
     }
     case 'MODE': {
@@ -258,8 +258,8 @@ public static List<Integer> ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer
           .collect(Collectors.toList());
 }
 `);
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = functionName + "(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = functionName + "(" + array + ")";
       break;
     }
     case 'STD_DEV': {
@@ -272,19 +272,19 @@ public static double ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> numbe
   return Math.sqrt(variance);
 }
 `);
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = functionName + "(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = functionName + "(" + array + ")";
       break;
     }
     case 'RANDOM': {
-      const functionName = generator.provideFunction_('mathRandomList', `
-public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> list) {
+      const functionName = generator.provideFunction_('mathRandomArray', `
+public static int ${generator.FUNCTION_NAME_PLACEHOLDER_}(List<Integer> array) {
   Random rand = new Random();
-  return list.get(rand.nextInt(list.size()));
+  return array.get(rand.nextInt(array.size()));
 }
 `);
-      list = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
-      code = functionName + "(" + list + ")";
+      array = generator.valueToCode(block, 'LIST', Order.NONE) || 'new ArrayList<>()';
+      code = functionName + "(" + array + ")";
       break;
     }
     default:

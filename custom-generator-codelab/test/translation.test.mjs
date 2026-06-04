@@ -27,6 +27,10 @@ Object.defineProperty(globalThis, 'navigator', {
 // Import standard Blockly blocks
 import 'blockly/blocks.js';
 
+import * as Blockly from 'blockly/core';
+import deLocale from 'blockly/msg/de.js';
+Blockly.setLocale(deLocale);
+
 // Import custom blocks to register them
 import '../src/blocks/constructor.js';
 import '../src/blocks/java_method_blocks.js';
@@ -34,9 +38,10 @@ import '../src/blocks/java_object_call_blocks.js';
 import '../src/blocks/java_graphics_blocks.js';
 import '../src/blocks/text.js';
 import '../src/blocks/custom_loops.js';
+import '../src/blocks/arrays.js';
+import '../src/blocks/lists.js';
 import { javaGenerator, setClassName, setExtendsClass } from '../src/generators/java.js';
 import { CodeTransformer } from '../src/utils/CodeTransformer.js';
-import * as Blockly from 'blockly/core';
 
 describe('Blockly to Java Translation Tests', () => {
   const fixturesDir = path.resolve(__dirname, 'fixtures');
@@ -62,7 +67,13 @@ describe('Blockly to Java Translation Tests', () => {
 
       // Compare outputs normalizing line endings and trimming
       const normalize = str => str.replace(/\r\n/g, '\n').trim();
-      assert.strictEqual(normalize(generatedCode), normalize(expectedJava));
+      const normGenerated = normalize(generatedCode);
+      const normExpected = normalize(expectedJava);
+      assert.strictEqual(
+        normGenerated,
+        normExpected,
+        `Generated code does not match expected output.\n\nACTUAL:\n${normGenerated}\n\nEXPECTED:\n${normExpected}`
+      );
     } finally {
       workspace.dispose();
     }
@@ -87,6 +98,12 @@ describe('Blockly to Java Translation Tests', () => {
   describe('Project: twomethod_parameters', () => {
     it('should translate twomethod_parameters/Main correctly to Java', () => {
       runTestCase('Main', path.join(fixturesDir, 'twomethod_parameters', 'Main.json'), path.join(fixturesDir, 'twomethod_parameters', 'Main.java'));
+    });
+  });
+
+  describe('Project: arrays', () => {
+    it('should translate arrays/Main correctly to Java', () => {
+      runTestCase('Main', path.join(fixturesDir, 'arrays', 'Main.json'), path.join(fixturesDir, 'arrays', 'Main.java'));
     });
   });
 });

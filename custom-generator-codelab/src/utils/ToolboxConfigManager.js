@@ -339,18 +339,30 @@ export class ToolboxConfigManager {
     text_replace:             'Ersetzen',
     text_reverse:             'Umkehren (Text)',
     text_prompt_ext:          'Eingabe (prompt)',
+    // Arrays
+    lists_create_with:        'Array erstellen',
+    lists_repeat:             'Array wiederholen',
+    lists_length:             'Länge des Arrays',
+    lists_isEmpty:            'Array leer?',
+    lists_indexOf:            'Index suchen (Array)',
+    lists_getIndex:           'Element lesen (Array)',
+    lists_setIndex:           'Element setzen (Array)',
+    lists_getSublist:         'Teil-Array',
+    lists_split:              'Aufteilen (Array)',
+    lists_sort:               'Sortieren (Array)',
+    lists_reverse:            'Umkehren (Array)',
     // Listen
-    lists_create_with:        'Liste erstellen',
-    lists_repeat:             'Liste wiederholen',
-    lists_length:             'Länge der Liste',
-    lists_isEmpty:            'Liste leer?',
-    lists_indexOf:            'Index suchen',
-    lists_getIndex:           'Element lesen',
-    lists_setIndex:           'Element setzen',
-    lists_getSublist:         'Teilliste',
-    lists_split:              'Aufteilen',
-    lists_sort:               'Sortieren',
-    lists_reverse:            'Umkehren (Liste)',
+    list_create_with:         'Liste erstellen',
+    list_repeat:              'Liste wiederholen',
+    list_length:              'Länge der Liste',
+    list_isEmpty:             'Liste leer?',
+    list_indexOf:             'Index suchen (Liste)',
+    list_getIndex:            'Element lesen (Liste)',
+    list_setIndex:            'Element setzen (Liste)',
+    list_getSublist:          'Teil-Liste',
+    list_split:               'Aufteilen (Liste)',
+    list_sort:                'Sortieren (Liste)',
+    list_reverse:             'Umkehren (Liste)',
     // Farben
     colour_picker:            'Farbwähler',
     colour_random:            'Zufallsfarbe',
@@ -375,7 +387,7 @@ export class ToolboxConfigManager {
    * @returns {string}
    */
   static _formatBlockType(type) {
-    const prefixes = ['controls_', 'logic_', 'math_', 'text_', 'lists_', 'java_', 'colour_', 'variables_'];
+    const prefixes = ['controls_', 'logic_', 'math_', 'text_', 'lists_', 'list_', 'java_', 'colour_', 'variables_'];
     let name = type;
     for (const p of prefixes) {
       if (name.startsWith(p)) { name = name.slice(p.length); break; }

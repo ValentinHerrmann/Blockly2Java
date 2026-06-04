@@ -91,7 +91,7 @@ export const TYPES = {
   INTEGER: 'int',
   STRING: 'String',
   DOUBLE: 'double',
-  LIST: 'List<Object>',
+  LIST: 'Object[]',
   OBJECT: 'Object',
   FORINT: 'forint',
   UNKNOWN: 'var',
@@ -302,7 +302,6 @@ export function getType(var_type) {
     case 'lists_create_empty': 
     case 'lists_create_with': 
     case 'lists_repeat': 
-    case 'lists_getSublist': 
     case 'lists_split': 
     case 'lists_sort':
       return TYPES.LIST;
@@ -439,6 +438,38 @@ const GETTER_ARG_TYPES = new Set([
  */
 export function resolveArgBlockType(argBlock, workspace) {
   if (!argBlock) return TYPES.UNKNOWN;
+  if (argBlock.type === 'math_number') {
+    const numValue = Number(argBlock.getFieldValue('NUM'));
+    if (Number.isInteger(numValue)) {
+      return TYPES.INTEGER;
+    }
+    return TYPES.DOUBLE;
+  }
+  if (argBlock.type === 'gfx_new_shape') {
+    return argBlock.getFieldValue('SHAPE') || 'Shape';
+  }
+  if (argBlock.type === 'text_prompt_ext' || argBlock.type === 'text_prompt') {
+    const t = argBlock.getFieldValue('TYPE');
+    return (t === 'NUMBER') ? TYPES.DOUBLE : TYPES.STRING;
+  }
+  if (argBlock.type === 'lists_split') {
+    const mode = argBlock.getFieldValue('MODE');
+    return mode === 'SPLIT' ? 'String[]' : 'String';
+  }
+  if (argBlock.type === 'lists_repeat') {
+    const type = argBlock.getFieldValue('TYPE') || 'Object';
+    return type + '[]';
+  }
+  if (argBlock.type === 'lists_getIndex') {
+    const arrayBlock = argBlock.getInputTargetBlock('VALUE');
+    if (arrayBlock) {
+      const arrayType = resolveArgBlockType(arrayBlock, workspace);
+      if (arrayType && arrayType.endsWith('[]')) {
+        return arrayType.slice(0, -2);
+      }
+    }
+    return 'Object';
+  }
   if (argBlock.type === 'callconstructor') return _resolveConstructorArgType(argBlock);
   if (argBlock.type === 'java_method_call_return' ||
       argBlock.type === 'java_static_method_call_return') {
@@ -561,7 +592,7 @@ function findCommonSupertype(types) {
 }
 
 /** Primitive / built-in Java types that are NOT class names. */
-const PRIMITIVE_TYPES = new Set(['int', 'double', 'boolean', 'String', 'Object', 'List<Object>', 'forint', 'void']);
+const PRIMITIVE_TYPES = new Set(['int', 'double', 'boolean', 'String', 'Object', 'Object[]', 'forint', 'void']);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -644,6 +675,26 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
   if (valueBlock.type === 'gfx_new_shape') {
     return valueBlock.getFieldValue('SHAPE') || 'Shape';
   }
+  if (valueBlock.type === 'lists_create_with') {
+    if (valueBlock.itemCount_ > 0) {
+      const elementTypes = [];
+      for (let i = 0; i < valueBlock.itemCount_; i++) {
+        const target = valueBlock.getInputTargetBlock('ADD' + i);
+        elementTypes.push(resolveArgBlockType(target, workSpace));
+      }
+      const firstType = elementTypes[0];
+      if (firstType && firstType !== TYPES.UNKNOWN) {
+        if (elementTypes.every(t => t === firstType)) {
+          return firstType + '[]';
+        }
+        if (elementTypes.every(t => t && t !== TYPES.UNKNOWN && !PRIMITIVE_TYPES.has(t) && !t.endsWith('[]'))) {
+          const commonType = findCommonSupertype(elementTypes);
+          return commonType + '[]';
+        }
+      }
+    }
+    return 'Object[]';
+  }
   if (valueBlock.type === 'callconstructor') {
     const dv = valueBlock.getFieldValue('CONSTRUCTOR_CLASS') || '';
     const si = dv.indexOf(':::');
@@ -707,7 +758,7 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
     const t = valueBlock.getFieldValue('TYPE');
     return (t === 'NUMBER') ? TYPES.DOUBLE : TYPES.STRING;
   }
-  return getType(valueBlock.type);
+  return resolveArgBlockType(valueBlock, workSpace);
 }
 
 /** Checks math_change blocks; returns type or null. */
@@ -859,7 +910,7 @@ function _resolveByAssignedVars(workSpace, vars, recursionDeepness) {
 function _resolveSetterType(setterTypes) {
   if (setterTypes.length === 0) return null;
   if (setterTypes.every(t => t === setterTypes[0])) return setterTypes[0];
-  if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t))) return findCommonSupertype(setterTypes);
+  if (setterTypes.every(t => !PRIMITIVE_TYPES.has(t) && !t.endsWith('[]'))) return findCommonSupertype(setterTypes);
   return setterTypes[0];
 }
 

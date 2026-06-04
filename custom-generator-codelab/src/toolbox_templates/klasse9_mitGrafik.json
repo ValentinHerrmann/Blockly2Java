@@ -196,7 +196,7 @@
       ]
     },
     {
-      "name": "Listen",
+      "name": "Arrays",
       "active": false,
       "blocks": [
         {
@@ -216,31 +216,61 @@
           "active": true
         },
         {
-          "type": "lists_indexOf",
-          "active": true
-        },
-        {
           "type": "lists_getIndex",
           "active": true
         },
         {
           "type": "lists_setIndex",
           "active": true
-        },
+        }
+      ]
+    },
+    {
+      "name": "Listen",
+      "active": false,
+      "blocks": [
         {
-          "type": "lists_getSublist",
+          "type": "list_create_with",
           "active": true
         },
         {
-          "type": "lists_split",
+          "type": "list_repeat",
           "active": true
         },
         {
-          "type": "lists_sort",
+          "type": "list_length",
           "active": true
         },
         {
-          "type": "lists_reverse",
+          "type": "list_isEmpty",
+          "active": true
+        },
+        {
+          "type": "list_indexOf",
+          "active": true
+        },
+        {
+          "type": "list_getIndex",
+          "active": true
+        },
+        {
+          "type": "list_setIndex",
+          "active": true
+        },
+        {
+          "type": "list_getSublist",
+          "active": true
+        },
+        {
+          "type": "list_split",
+          "active": true
+        },
+        {
+          "type": "list_sort",
+          "active": true
+        },
+        {
+          "type": "list_reverse",
           "active": true
         }
       ]
