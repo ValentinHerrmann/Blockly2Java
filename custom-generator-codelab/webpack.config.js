@@ -8,7 +8,7 @@ let appVersion = 'local';
 try {
   appVersion = fs.readFileSync(path.resolve(__dirname, '../VERSION'), 'utf8').trim();
 } catch (e) {
-  // Fallback if VERSION file is missing
+  console.log(e);
 }
 
 const gitBranch = process.env.CF_PAGES_BRANCH || process.env.APP_BRANCH || 'dev';
