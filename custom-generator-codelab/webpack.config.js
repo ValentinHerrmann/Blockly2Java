@@ -15,6 +15,16 @@ const gitBranch = process.env.CF_PAGES_BRANCH || process.env.APP_BRANCH || 'dev'
 const gitSha = process.env.CF_PAGES_COMMIT_SHA || process.env.APP_SHA || 'dev';
 const buildDate = process.env.BUILD_DATE || new Date().toISOString();
 
+// If we are not on the release branch and a valid commit SHA is available, format as {last_released}-{sha}
+if (gitBranch !== 'release' && gitSha && gitSha !== 'dev') {
+  const shortSha = gitSha.slice(0, 7);
+  if (appVersion === 'local' || appVersion === 'dev') {
+    appVersion = shortSha;
+  } else if (!appVersion.endsWith(shortSha)) {
+    appVersion = `${appVersion}-${shortSha}`;
+  }
+}
+
 const appVersionLink = (gitBranch === 'release' && !appVersion.startsWith('local') && !appVersion.startsWith('dev'))
   ? `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${appVersion}`
   : `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
@@ -211,6 +221,9 @@ const config = {
           from: '../VERSION',
           to: '.',
           noErrorOnMissing: true,
+          transform() {
+            return appVersion;
+          }
         },
         {
           // Copy the legal/privacy page from src so it's tracked by git
