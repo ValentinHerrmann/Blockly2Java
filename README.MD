@@ -121,7 +121,7 @@ Detailed deployment information is available in [DEPLOYMENT.md](file:///home/val
 The static web frontend is hosted on **Cloudflare Pages** and served at **https://blockly2java.de**.
 
 - **Production Environment:**
-  - Automatically deployed when changes are pushed or merged to the `release` branch.
+  - Automatically deployed when changes are force-pushed to the `release` branch.
 - **Preview / Staging Environment:**
   - Active Pull Requests trigger the [Push PR to Preview Branch](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/push_preview.yml) workflow, which force-pushes the PR branch to the `preview` branch on GitHub.
   - Cloudflare Pages is configured to build and deploy only the `preview` branch for preview environments.
@@ -149,7 +149,7 @@ The repository uses GitHub Actions for workflow automation:
 
 1. **Manage Release Branch** ([release.yml](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/release.yml))
    - **Trigger:** Automatic when a new GitHub Release is published, or manual via `workflow_dispatch`.
-   - **Action:** Merges the staging branch (`onlineide`) into the production branch (`release`), triggering the Cloudflare Pages production deployment.
+   - **Action:** Force-pushes the target commit/HEAD to the production branch (`release`), triggering the Cloudflare Pages production deployment.
 2. **Push PR to Preview Branch** ([push_preview.yml](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/push_preview.yml))
    - **Trigger:** On pull request events (non-drafts).
    - **Action:** Force-pushes the PR HEAD commit to the `preview` branch to trigger a Cloudflare Pages preview build.

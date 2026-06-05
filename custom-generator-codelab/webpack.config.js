@@ -30,17 +30,36 @@ const getCommitMessage = () => {
   }
 };
 
+const getGitTag = () => {
+  try {
+    return cp.execSync('git describe --tags --exact-match', { encoding: 'utf8' }).trim();
+  } catch {
+    try {
+      const tags = cp.execSync('git tag --points-at HEAD', { encoding: 'utf8' }).trim();
+      return tags ? tags.split('\n')[0] : '';
+    } catch {
+      return '';
+    }
+  }
+};
+
 const gitBranch = getGitBranch();
 const gitSha = getGitSha();
 const shortSha = gitSha.slice(0, 7);
+const gitTag = getGitTag();
 const commitMsg = getCommitMessage();
 let appVersion = shortSha;
 let appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
 if (gitBranch === 'release') {
-  const firstLine = commitMsg.split('\n')[0].trim();
-  if (firstLine) {
-    appVersion = firstLine;
-    appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${firstLine}`;
+  if (gitTag) {
+    appVersion = gitTag;
+    appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${gitTag}`;
+  } else {
+    const firstLine = commitMsg.split('\n')[0].trim();
+    if (firstLine && /^v\d/.test(firstLine)) {
+      appVersion = firstLine;
+      appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${firstLine}`;
+    }
   }
 }
 const buildDate = new Date().toISOString();

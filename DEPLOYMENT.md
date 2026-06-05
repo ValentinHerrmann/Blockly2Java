@@ -26,10 +26,10 @@ We maintain two primary deployment environments on Cloudflare Pages using Git br
 Releases are managed using GitHub Actions via the [Manage Release Branch](.github/workflows/release.yml) workflow:
 
 1. When a new GitHub Release is **published** (or the workflow is manually dispatched via `workflow_dispatch`), the workflow triggers automatically.
-2. The workflow checks out the code, checks out (or creates) the `release` branch, and merges `onlineide` with the `--no-ff` (no fast-forward) flag.
-3. The merge commit on the `release` branch is named exactly after the **Release name / Tag name** (e.g. `v3.0.0`).
-4. Pushing this commit to `release` triggers Cloudflare Pages to build and deploy to production.
-5. During the build, the webpack build detects the `release` branch and pulls the commit message (the release name) to display it unobtrusively in the footer. For preview deployments, the short commit SHA is shown instead.
+2. The workflow checks out the repository at the release's git tag (or selected branch) and force-pushes the HEAD commit directly to the `release` branch.
+3. Force-pushing to `release` triggers Cloudflare Pages to build and deploy to the production environment.
+4. During the build, the Webpack compilation detects the `release` branch and resolves the release name/tag using git tags (e.g. `v3.0.0`) pointing at HEAD. If no exact tag is found, it falls back to parsing a version from the latest commit message, or displaying the short commit SHA. This version info is then displayed in the footer.
+
 
 ---
 
