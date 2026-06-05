@@ -12,6 +12,14 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queue.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   push-to-release:
@@ -21,6 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: onlineide
+          submodules: recursive
           fetch-depth: 0
 
       - name: Push to release branch
@@ -47,4 +56,39 @@ jobs:
           
           # Force-push this commit directly to the release branch
           git push origin HEAD:refs/heads/release --force
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        env:
+          GITHUB_PAGES: 'true'
+          APP_BRANCH: 'release'
+          APP_SHA: ${{ github.sha }}
+          CORS_PROXY_URL: ${{ secrets.CORS_PROXY_URL }}
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+        run: npm run build
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: custom-generator-codelab/dist
+
+  deploy-github-pages:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: push-to-release
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
 
