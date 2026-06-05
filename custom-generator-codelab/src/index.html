@@ -305,10 +305,11 @@
             </div>
         </div><!-- /#contentWrapper -->
         <footer id="appFooter" class="app-footer">
-            <div class="app-footer__left"><a style="color: var(--text-primary);" href="https://valentin-herrmann.com" target="_blank" rel="noopener noreferrer">&copy; Valentin Herrmann 2026</a><span class="app-footer__sep"> &middot; </span><a class="app-footer__link" href="datenschutz.html">Impressum &amp; Datenschutz</a></div>
+            <div class="app-footer__left"><a style="color: var(--text-primary);" href="https://valentin-herrmann.com" target="_blank" rel="noopener noreferrer">&copy; Valentin Herrmann 2026</a><span class="app-footer__sep"> &middot; </span><a class="app-footer__link" href="datenschutz.html">Impressum &amp; Datenschutz</a><span class="app-footer__sep"> &middot; </span><a id="app-version" class="app-footer__link app-footer__version" href="<%= htmlWebpackPlugin.options.templateParameters.appVersionLink %>"><%= htmlWebpackPlugin.options.templateParameters.appVersion %></a></div>
             <div class="app-footer__center"><img src="assets/B2J_flat.svg" alt="Blockly2Java" class="app-footer__logo"></div>
             <div class="app-footer__right">Powered by <a style="color: var(--text-primary);" href="https://github.com/martin-pabst/Online-IDE-new-compiler" target="_blank" rel="noopener noreferrer">OnlineIDE</a> & <a style="color: var(--text-primary);" href="https://developers.google.com/blockly" target="_blank" rel="noopener noreferrer">Blockly</a></div>
         </footer>
+        <!-- build_stamp: version=<%= htmlWebpackPlugin.options.templateParameters.appVersion %> branch=<%= htmlWebpackPlugin.options.templateParameters.appBranch %> sha=<%= htmlWebpackPlugin.options.templateParameters.appSha %> date=<%= htmlWebpackPlugin.options.templateParameters.buildDate %> -->
     </div>
   </body>
     <script>

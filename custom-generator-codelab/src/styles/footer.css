@@ -34,6 +34,11 @@
 .app-footer__right  { text-align: right; }
 .app-footer__title  { font-weight: 700; }
 .app-footer__sep    { opacity: 0.5; }
+.app-footer__version {
+    opacity: 0.5;
+    font-size: 11px;
+    font-family: var(--font-family-monospace, monospace);
+}
 
 .app-footer__logo {
     margin: 5px;
@@ -86,6 +91,7 @@
     .app-footer__right { display: none; }
 
     .app-footer__left .app-footer__link,
+    .app-footer__left .app-footer__version,
     .app-footer__left .app-footer__sep { display: none; }
 
     .app-footer__left {

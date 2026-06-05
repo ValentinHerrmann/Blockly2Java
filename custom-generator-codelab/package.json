@@ -17,7 +17,6 @@
     "start": "serve build -l ${PORT:-8080}",
     "serve": "serve build -l ${PORT:-8080}",
     "build": "webpack --mode production",
-    "postbuild": "node scripts/add-build-stamp.js",
     "build:all": "npm run setup && npm run build",
     "deploy": "npm run build:all",
     "deploy:prod": "CORS_PROXY_URL=https://YOUR-CORS-PROXY.example.workers.dev npm run build:all"

@@ -1,60 +1,57 @@
-Deployment workflow and required secrets
-This repo includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that:
-- builds a Docker image for the app
-- pushes the image to a container registry
-- SSHes to your server and pulls the image from the registry
-- loads the image and (re)starts a container
+# Deployment Documentation
 
-Required repository secrets (add under Settings → Secrets):
-- `DEPLOY_HOST` — server hostname or IP (e.g. example.com)
-- `DEPLOY_USER` — SSH username on the server
-- `SSH_PRIVATE_KEY` — private key (PEM) matching an authorized key for `DEPLOY_USER`
-- `DEPLOY_PORT` — SSH port (optional, default behavior if empty may vary)
-- `DOCKER_REGISTRY` — registry host (e.g. `ghcr.io` or `docker.io`)
-- `DOCKER_IMAGE` — image name to tag in the registry (e.g. myorg/myapp)
-- `REGISTRY_USERNAME` — username for the registry (or `OWNER` for GHCR)
-- `REGISTRY_PASSWORD` — password/token for the registry
-- `DEPLOY_CONTAINER_NAME` — name of the container to run on the server
-- `DEPLOY_APP_PORT` — internal host port to bind the container to (default: `3000`)
-- `DEPLOY_SERVER_NAME` — nginx `server_name` to use for the site (e.g. `example.com`). If empty, nginx will use the default server.
-- `CORS_PROXY_URL` — absolute URL of the deployed CORS proxy worker used for browser-side git operations (required for production builds)
+Blockly2Java uses a hybrid deployment model consisting of a static web frontend hosted on Cloudflare Pages and a Dockerized backup/backend hosted on an IONOS server.
 
-Optional HTTPS secrets
-- `DEPLOY_ENABLE_HTTPS` — set to `true` to attempt obtaining TLS certs via `certbot`
-- `CERTBOT_EMAIL` — email for certbot registration (required when `DEPLOY_ENABLE_HTTPS=true`)
-This repo includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that:
-- builds a Docker image for the app
-- The workflow runs on `pull_request` events when a pull request is marked **Ready for review**, and on manual runs via the **Run workflow** button (`workflow_dispatch`). Adjust the `on:` block in `.github/workflows/deploy.yml` if you prefer different triggers.
-- The remote `docker run` command binds container port `80` to `127.0.0.1:$DEPLOY_APP_PORT` on the server. Change `DEPLOY_APP_PORT` or the `docker run` flags in `.github/workflows/deploy.yml` if you need a different port binding.
-- nginx is configured to reverse-proxy the configured `DEPLOY_SERVER_NAME` to `http://127.0.0.1:$DEPLOY_APP_PORT`, so the app is served via the domain without exposing the container port directly.
+---
 
-Required repository secrets (add under Settings → Secrets):
-- `DEPLOY_HOST` — server hostname or IP (e.g. example.com)
-- `DEPLOY_USER` — SSH username on the server
-- `SSH_PRIVATE_KEY` — private key (PEM) matching an authorized key for `DEPLOY_USER`
-- `DEPLOY_PORT` — SSH port (optional, default behavior if empty may vary)
-- `DOCKER_IMAGE` — image name to tag locally (e.g. myorg/myapp)
-- `DEPLOY_CONTAINER_NAME` — name of the container to run on the server
- - `DEPLOY_APP_PORT` — internal host port to bind the container to (default: `3000`)
- - `DEPLOY_SERVER_NAME` — nginx `server_name` to use for the site (e.g. `example.com`). If empty, nginx will use the default server.
-Additional registry & HTTPS secrets
-- `DOCKER_REGISTRY` — registry host (e.g. `ghcr.io` or `docker.io`)
-- `REGISTRY_USERNAME` — username for the registry (or `OWNER` for GHCR)
-- `REGISTRY_PASSWORD` — password/token for the registry
-- `DEPLOY_ENABLE_HTTPS` — set to `true` to attempt obtaining TLS certs via `certbot`
-- `CERTBOT_EMAIL` — email for certbot registration (required when `DEPLOY_ENABLE_HTTPS=true`)
+## 1. Frontend Web App (Cloudflare Pages)
 
-Notes and customization
-- The workflow triggers on pushes to branch `onlineide`. Change `on.push.branches` in the workflow if you prefer a different branch.
-- The remote `docker run` command maps host port `80` to container port `80`. Edit `.github/workflows/deploy.yml` to change ports, environment variables, volumes, or other runtime flags.
- - The workflow now binds the container to `127.0.0.1:$DEPLOY_APP_PORT` and writes an nginx server block that reverse-proxies to that port. This avoids port conflicts with existing nginx instances and makes the app immediately available via the configured domain.
+The main frontend web application is hosted on **Cloudflare Pages**, which automatically builds and deploys branches of the repository.
 
-Registry-based deployment
-- The workflow now builds and pushes the image to the registry (`DOCKER_REGISTRY/DOCKER_IMAGE:SHA`) and then SSHes to the server to `docker pull` that image and run it. This is more efficient and keeps build artifacts out of the CI runner.
-- The workflow uses `appleboy/scp-action` and `appleboy/ssh-action` to transfer and run commands. If your server only allows image pulls from a registry, consider changing the workflow to `docker push` + remote `docker pull` instead.
+### Release Workflow & Branch Management
 
-Permissions note
-- The deploy step writes to `/etc/nginx` and reloads nginx using `sudo`. Ensure `DEPLOY_USER` can run `sudo tee /etc/nginx/...`, `sudo ln -sf`, and `sudo systemctl reload nginx`. If you prefer not to allow full sudo access, create a limited sudoers entry for these exact commands.
-If your server does not have `certbot` or the `certbot --nginx` plugin installed, install `certbot` first (distribution package or snap) before enabling `DEPLOY_ENABLE_HTTPS`.
+We maintain two primary deployment environments on Cloudflare Pages using Git branches:
 
-If you prefer the earlier scp-based flow instead of registry push/pull, let me know and I can revert or provide both options behind a workflow input flag.
+- **Develop / Staging:**
+  - Branch: `onlineide`
+  - Every commit pushed or merged into `onlineide` is automatically built by Cloudflare and deployed to the **Preview environment**.
+- **Production:**
+  - Branch: `releases`
+  - Cloudflare Pages is configured to build and deploy any commit on `releases` directly to the **Production environment**.
+
+### Automated Releases
+
+Releases are managed using GitHub Actions via the [Manage Release Branch](.github/workflows/release.yml) workflow:
+
+1. When a new GitHub Release is **published** (or the workflow is manually dispatched via `workflow_dispatch`), the workflow triggers automatically.
+2. The workflow checks out the code, checks out (or creates) the `releases` branch, and merges `onlineide` with the `--no-ff` (no fast-forward) flag.
+3. The merge commit on the `releases` branch is named exactly after the **Release name / Tag name** (e.g. `v3.0.0`).
+4. Pushing this commit to `releases` triggers Cloudflare Pages to build and deploy to production.
+5. During the build, the `add-build-stamp.js` script detects the `releases` branch and pulls the commit message (the release name) to display it unobtrusively in the footer. For preview deployments, the short commit SHA is shown instead.
+
+---
+
+## 2. Docker Containers (Self-Hosted Staging/Production)
+
+We continue to build and deploy Docker images to our self-hosted IONOS server via the [Build and Deploy Docker image](.github/workflows/deploy_docker.yml) workflow.
+
+### Triggering Docker Deploys
+
+The Docker workflow runs on:
+- Any `pull_request` when marked **Ready for review**.
+- When a new GitHub **Release** is created.
+- Manual triggers via `workflow_dispatch`.
+
+### Required Repository Secrets
+
+To support Docker builds and server SSH deployments, add the following secrets under **Settings → Secrets and variables → Actions → Secrets**:
+
+- `DEPLOY_HOST` — Server hostname or IP address (e.g. `example.com`).
+- `DEPLOY_USER` — SSH username on the target server.
+- `SSH_PRIVATE_KEY` — PEM private key matching the authorized keys on the server.
+- `DEPLOY_PORT` — SSH port (optional).
+- `DOCKER_REGISTRY` — Container registry host (e.g. `ghcr.io` or `docker.io`).
+- `DOCKER_IMAGE` — Image repository/name (e.g. `valentinherrmann/blockly2java`).
+- `DEPLOY_CONTAINER_NAME` — Name of the Docker container on the server (e.g. `blockly2java`).
+- `DEPLOY_APP_PORT` — Port bound on localhost to proxy requests (default: `8080`).
+- `CORS_PROXY_URL` — Absolute URL of the deployed CORS proxy worker.

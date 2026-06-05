@@ -1,0 +1,68 @@
+name: Manage Release Branch
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Version/Release name (e.g. v3.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  merge-to-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge onlineide into releases
+        run: |
+          # Determine the release name
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RELEASE_NAME="${{ inputs.release_name }}"
+          else
+            RELEASE_NAME="${{ github.event.release.name || github.event.release.tag_name }}"
+          fi
+
+          if [ -z "$RELEASE_NAME" ]; then
+            echo "ERROR: Release name could not be determined" >&2
+            exit 1
+          fi
+
+          echo "Releasing version: $RELEASE_NAME"
+
+          # Ensure we have local branch tracking onlineide
+          git fetch origin
+          git checkout onlineide
+          git pull origin onlineide
+
+          # Manage releases branch
+          if git show-ref --verify --quiet refs/remotes/origin/releases; then
+            git checkout releases
+            git pull origin releases
+            git merge origin/onlineide --no-ff -m "$RELEASE_NAME"
+          else
+            # Branch does not exist on remote; create it
+            if git rev-parse origin/onlineide~1 >/dev/null 2>&1; then
+              git checkout -b releases origin/onlineide~1
+              git merge origin/onlineide --no-ff -m "$RELEASE_NAME"
+            else
+              git checkout -b releases origin/onlineide
+              git commit --allow-empty -m "$RELEASE_NAME"
+            fi
+          fi
+
+          # Push back to origin
+          git push origin releases
