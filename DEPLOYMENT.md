@@ -13,22 +13,23 @@ The main frontend web application is hosted on **Cloudflare Pages**, which autom
 We maintain two primary deployment environments on Cloudflare Pages using Git branches:
 
 - **Develop / Staging / Previews:**
-  - Branch: `onlineide` (and other feature branches)
-  - Every commit pushed or merged is processed by Cloudflare Pages.
-  - **Conditional Preview Builds:** To optimize build usage, the custom build script (`custom-generator-codelab/build.sh`) runs during the Cloudflare Pages build. For branches other than `releases`, it checks if an active, open GitHub Pull Request exists for that branch. If no open PR is found, the build is skipped (deploying a simple placeholder page) to save build minutes.
+  - Branch: `preview`
+  - Instead of building all commits across all feature branches, preview deployments are managed via GitHub Actions.
+  - Whenever a Pull Request is opened, synchronized, reopened, or marked ready for review (and is not a draft), the [Push PR to Preview Branch](.github/workflows/push_preview.yml) workflow automatically force-pushes the PR head commit to the `preview` branch.
+  - Cloudflare Pages is configured to build only the `preview` branch for preview deployments, saving significant build minutes.
 - **Production:**
-  - Branch: `releases`
-  - Cloudflare Pages is configured to build and deploy any commit on `releases` directly to the **Production environment**.
+  - Branch: `release`
+  - Cloudflare Pages is configured to build and deploy any commit on `release` directly to the **Production environment**.
 
 ### Automated Releases
 
 Releases are managed using GitHub Actions via the [Manage Release Branch](.github/workflows/release.yml) workflow:
 
 1. When a new GitHub Release is **published** (or the workflow is manually dispatched via `workflow_dispatch`), the workflow triggers automatically.
-2. The workflow checks out the code, checks out (or creates) the `releases` branch, and merges `onlineide` with the `--no-ff` (no fast-forward) flag.
-3. The merge commit on the `releases` branch is named exactly after the **Release name / Tag name** (e.g. `v3.0.0`).
-4. Pushing this commit to `releases` triggers Cloudflare Pages to build and deploy to production.
-5. During the build, the `add-build-stamp.js` script detects the `releases` branch and pulls the commit message (the release name) to display it unobtrusively in the footer. For preview deployments, the short commit SHA is shown instead.
+2. The workflow checks out the code, checks out (or creates) the `release` branch, and merges `onlineide` with the `--no-ff` (no fast-forward) flag.
+3. The merge commit on the `release` branch is named exactly after the **Release name / Tag name** (e.g. `v3.0.0`).
+4. Pushing this commit to `release` triggers Cloudflare Pages to build and deploy to production.
+5. During the build, the webpack build detects the `release` branch and pulls the commit message (the release name) to display it unobtrusively in the footer. For preview deployments, the short commit SHA is shown instead.
 
 ---
 

@@ -121,10 +121,10 @@ Detailed deployment information is available in [DEPLOYMENT.md](file:///home/val
 The static web frontend is hosted on **Cloudflare Pages** and served at **https://blockly2java.de**.
 
 - **Production Environment:**
-  - Automatically deployed when changes are pushed or merged to the `releases` branch.
+  - Automatically deployed when changes are pushed or merged to the `release` branch.
 - **Preview / Staging Environment:**
-  - Triggered by pushes to the staging branch (`onlineide`) and other feature branches.
-  - To optimize build usage, the build process uses a custom script ([build.sh](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/custom-generator-codelab/build.sh)) to check if there is an active/open GitHub Pull Request for the branch. If no open PR exists, the build is skipped.
+  - Active Pull Requests trigger the [Push PR to Preview Branch](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/push_preview.yml) workflow, which force-pushes the PR branch to the `preview` branch on GitHub.
+  - Cloudflare Pages is configured to build and deploy only the `preview` branch for preview environments.
 
 ### Docker Deployment
 
@@ -149,8 +149,11 @@ The repository uses GitHub Actions for workflow automation:
 
 1. **Manage Release Branch** ([release.yml](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/release.yml))
    - **Trigger:** Automatic when a new GitHub Release is published, or manual via `workflow_dispatch`.
-   - **Action:** Merges the staging branch (`onlineide`) into the production branch (`releases`), triggering the Cloudflare Pages production deployment.
-2. **Build and Deploy Docker image** ([deploy_docker.yml](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/deploy_docker.yml))
+   - **Action:** Merges the staging branch (`onlineide`) into the production branch (`release`), triggering the Cloudflare Pages production deployment.
+2. **Push PR to Preview Branch** ([push_preview.yml](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/push_preview.yml))
+   - **Trigger:** On pull request events (non-drafts).
+   - **Action:** Force-pushes the PR HEAD commit to the `preview` branch to trigger a Cloudflare Pages preview build.
+3. **Build and Deploy Docker image** ([deploy_docker.yml](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/.github/workflows/deploy_docker.yml))
    - **Trigger:** On pull request events, when a release is created, or manually.
    - **Action:** Builds and pushes the Docker image to the container registry, then deploys it to the self-hosted IONOS server via SSH.
 
