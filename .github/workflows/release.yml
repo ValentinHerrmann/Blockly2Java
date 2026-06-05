@@ -54,7 +54,8 @@ jobs:
           git commit -m "chore: update VERSION to $release_version [skip ci]" --allow-empty
           git push origin HEAD:refs/heads/onlineide
           
-          # Force-push this commit directly to the release branch
+          # Create a version of the commit without [skip ci] for the release branch so Cloudflare Pages deploys it
+          git commit --amend -m "chore: update VERSION to $release_version"
           git push origin HEAD:refs/heads/release --force
 
       - name: Set up Node.js
