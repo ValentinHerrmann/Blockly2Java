@@ -96,7 +96,8 @@ jobs:
           done
 
       - name: Deploy on server via SSH (pull image and restart container)
-        if: github.event_name == 'release'
+        if: false 
+        #if:github.event_name == 'release'
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ vars.DEPLOY_HOST }}
