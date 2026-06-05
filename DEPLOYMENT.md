@@ -12,9 +12,10 @@ The main frontend web application is hosted on **Cloudflare Pages**, which autom
 
 We maintain two primary deployment environments on Cloudflare Pages using Git branches:
 
-- **Develop / Staging:**
-  - Branch: `onlineide`
-  - Every commit pushed or merged into `onlineide` is automatically built by Cloudflare and deployed to the **Preview environment**.
+- **Develop / Staging / Previews:**
+  - Branch: `onlineide` (and other feature branches)
+  - Every commit pushed or merged is processed by Cloudflare Pages.
+  - **Conditional Preview Builds:** To optimize build usage, the custom build script (`custom-generator-codelab/build.sh`) runs during the Cloudflare Pages build. For branches other than `releases`, it checks if an active, open GitHub Pull Request exists for that branch. If no open PR is found, the build is skipped (deploying a simple placeholder page) to save build minutes.
 - **Production:**
   - Branch: `releases`
   - Cloudflare Pages is configured to build and deploy any commit on `releases` directly to the **Production environment**.

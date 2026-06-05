@@ -92,29 +92,13 @@ Blockly2Java/
 │   ├── package.json
 │   ├── setup.js                   # Cross-platform setup script
 │   └── setup.sh                   # Bash setup script
-├── CNAME                          # Custom domain for GitHub Pages
+├── CNAME                          # Legacy custom domain configuration
 └── README.MD
 ```
 
-## GitHub Pages Deployment
+## Deployment
 
-The project is automatically deployed to GitHub Pages via GitHub Actions on manual trigger.
-
-### How Deployment Works
-
-1. Checkout code with submodules
-2. Install dependencies in both main and submodule
-3. Build Online-IDE_B2J embedded version
-4. Build Blockly2Java with webpack
-5. Deploy the `dist/` folder to `gh-pages` branch
-
-### Manual Deployment
-
-To deploy manually, go to the Actions tab on GitHub and trigger the "Build and Deploy to Pages" workflow.
-
-### Custom Domain
-
-The project is configured to use `blockly2java.de` as a custom domain. The `CNAME` file is automatically copied to the build output.
+Hosting and deployment processes (including Cloudflare Pages for the frontend and self-hosted Docker for the backend) are documented in [DEPLOYMENT.md](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/DEPLOYMENT.md).
 
 ## Development Workflow
 
@@ -155,6 +139,31 @@ If you're actively developing Online-IDE_B2J:
 git submodule update --init --recursive
 ```
 
+### OnlineIDE Panel Not Displaying
+
+**Symptoms:**
+- Blockly editor loads but OnlineIDE panel is empty.
+- Browser console shows 404 errors for `assets/*.js` files.
+
+**Solution:**
+```bash
+cd custom-generator-codelab
+node setup.js --build-from-submodule
+npm start
+```
+
+### Code Not Updating in OnlineIDE
+
+**Symptoms:**
+- Blockly blocks change but Java code doesn't update.
+- `window.online_ide_access` is undefined.
+
+**Solutions:**
+1. Check browser console for errors.
+2. Verify OnlineIDE loaded: `console.log(window.online_ide_access)`
+3. Restart development server: `Ctrl+C` then `npm start`
+4. Clear browser cache and cookies.
+
 ### "Cannot find module 'copy-webpack-plugin'"
 
 Run `npm install` to install all dependencies.
@@ -172,12 +181,32 @@ lsof -ti:8080 | xargs kill -9
 
 Or change the port in [webpack.config.js](webpack.config.js#L13).
 
-### Build fails in GitHub Actions
+### Build Failures
 
-Make sure:
-- The submodule is properly committed
-- Both `package.json` files are valid
-- The `build-embedded` script exists in Online-IDE_B2J
+**Problem:** `npm run build` fails.
+
+**Solutions:**
+1. Clean and reinstall:
+   ```bash
+   rm -rf node_modules custom-generator-codelab/node_modules
+   rm -rf custom-generator-codelab/online-ide-source/node_modules
+   npm install
+   ```
+2. Rebuild OnlineIDE:
+   ```bash
+   npm run setup:submodule
+   ```
+3. Check Node.js version (should be 18.x or higher).
+
+### Cookie/Persistence Issues
+
+**Problem:** Workspace doesn't save between sessions.
+
+**Solution:**
+Clear browser cookies for the domain:
+1. Open browser DevTools → Application → Cookies.
+2. Delete all cookies for the domain (e.g. `blockly2java.de` or `localhost`).
+3. Reload the page.
 
 ### Changes to Online-IDE not reflected
 
@@ -189,10 +218,10 @@ npm run dev
 
 ### Files not loading in browser
 
-1. Check if `public/` directory exists and contains `lib/`, `assets/`, and the embedded files
-2. Open browser DevTools and check Network tab for 404 errors
-3. Clear browser cache
-4. Restart the dev server
+1. Check if `public/` directory exists and contains `lib/`, `assets/`, and the embedded files.
+2. Open browser DevTools and check Network tab for 404 errors.
+3. Clear browser cache.
+4. Restart the dev server.
 
 ## Build Artifacts
 
@@ -219,22 +248,4 @@ When contributing to this project:
 - [Blockly Documentation](https://developers.google.com/blockly)
 - [Webpack Documentation](https://webpack.js.org/)
 - [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
-- [GitHub Pages Deployment](https://docs.github.com/en/pages)
-
-1. Check if `public/` directory exists and contains `lib/`, `assets/`, and the embedded files
-2. Run `npm run setup` again
-3. Clear browser cache and restart the dev server
-
-### Need to update Online-IDE files
-
-If you've made changes to Online-IDE_B2J:
-```bash
-npm run setup:build
-```
-
-## Development Workflow
-
-1. Make changes to your code in `src/`
-2. The dev server will automatically reload
-3. If you update Online-IDE_B2J, run `npm run setup:build`
-4. For production, run `npm run build` and deploy the `dist/` folder
+- [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages/)
