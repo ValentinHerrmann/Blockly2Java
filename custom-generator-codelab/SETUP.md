@@ -1,72 +1,54 @@
 # Blockly2Java Setup Guide
 
-This guide explains how to set up and run the Blockly2Java application with the Online-IDE widget.
+This guide explains how to set up and run the Blockly2Java application.
 
 ## Quick Start for Developers
 
-The repository uses a git submodule for the Online-IDE_B2J component. Here's how to get started:
+To run the application locally for development:
 
-1. **Clone the repository with submodules:**
+1. **Clone the repository:**
    ```bash
-   git clone --recursive https://github.com/ValentinHerrmann/Blockly2Java.git
-   cd Blockly2Java/custom-generator-codelab
-   ```
-   
-   Or if you've already cloned:
-   ```bash
-   git submodule update --init --recursive
+   git clone https://github.com/ValentinHerrmann/Blockly2Java.git
+   cd Blockly2Java
    ```
 
-2. **Install dependencies and build:**
+2. **Install dependencies:**
    ```bash
    npm install
-   npm start
    ```
 
-The `npm install` command will automatically initialize the submodules, and `npm start` will build everything and open the application in your browser at `http://localhost:8080`.
+3. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+The `npm run dev` command starts the Webpack dev server with hot reloading and live preview. The app will open in your browser at `http://localhost:8080`.
 
 ## Architecture
 
-This project consists of two components:
-- **Blockly2Java**: The main application that provides the Blockly interface for Java code generation
-- **Online-IDE_B2J**: A git submodule at `online-ide-source/` that provides the embedded IDE widget
+This project is structured as follows:
+- **Blockly2Java**: The main application that provides the Blockly interface, custom blocks, and Java code generation.
+- **Online-IDE Integration**: The embedded Online-IDE widget (on the right-hand side of the page) is loaded dynamically at runtime from `https://onlineide.blockly2java.de`. The script and stylesheet are injected by the template in [index.html](src/index.html). No local compilation of the IDE is needed.
 
-### Why Submodules?
-
-Git submodules allow us to:
-- Keep the Online-IDE_B2J repository separate and independently versioned
-- Avoid duplication of code
-- Ensure all developers work with the same version of dependencies
-- Keep build artifacts out of version control
+### Historical Submodules & Setup Scripts
+Previously, the project included the Online-IDE repository as a git submodule (`online-ide-source/`) and built it locally using setup scripts (`setup.sh` and `setup.js`). This local embedding has been removed. The setup scripts are kept as legacy placeholders (no-ops) for backward compatibility with workflows and will not run any build steps.
 
 ## Build Process
 
 The build process is automated through npm scripts:
 
-1. **`npm install`**: Installs dependencies and initializes git submodules (via postinstall hook)
-2. **`npm start`**: 
-   - Checks if `public/lib` exists
-   - If not, runs the setup script to build Online-IDE from the submodule
-   - Starts the webpack dev server with hot reloading
-3. **`npm run build`**: Creates a production build in the `dist/` folder
-
-### Setup Script Details
-
-The `setup.js` and `setup.sh` scripts:
-1. Build the Online-IDE_B2J embedded version from the submodule
-2. Copy the built files (`online-ide-embedded.js`, `online-ide-embedded.css`) to `public/`
-3. Copy static assets (`lib/`, `assets/`) to `public/`
+1. **`npm install`**: Installs dependencies.
+2. **`npm run dev`**: Starts the Webpack dev server with hot reloading and live preview.
+3. **`npm run build`**: Creates a production build in the `dist/` folder.
 
 ## Available Scripts
 
-- **`npm start`** - Start development server with auto-setup (recommended)
-- **`npm run dev`** - Force rebuild and start dev server  
-- **`npm run build`** - Create production build
-- **`npm run build:all`** - Force rebuild Online-IDE and create production build
-- **`npm run setup`** - Build from submodule (runs automatically when needed)
-- **`npm run setup:submodule`** - Explicitly build from submodule
-- **`npm run setup:external`** - Build from external Online-IDE_B2J folder (for special cases)
-- **`npm run setup:dummy`** - Copy from dummy_test (legacy, for reference only)
+Run these scripts from the repository root or within the `custom-generator-codelab` directory:
+
+- **`npm run dev`** - Start Webpack dev server at `http://localhost:8080` with hot reloading (recommended for development).
+- **`npm start`** - Start a static file server to serve the `build/` directory on port 8080 (primarily used by Docker or local testing of pre-compiled builds).
+- **`npm run build`** - Create production build in `dist/`.
+- **`npm run build:all`** - Runs setup (legacy placeholder) and creates a production build in `dist/`.
 
 ## Project Structure
 
@@ -74,83 +56,56 @@ The `setup.js` and `setup.sh` scripts:
 Blockly2Java/
 ├── .github/
 │   └── workflows/
-│       └── deploy_to_pages.yml    # GitHub Actions for deployment
+│       ├── deploy_docker.yml      # CI/CD workflow to build/push Docker and deploy to IONOS
+│       ├── push_preview.yml       # Pushes PR commits to preview branch
+│       ├── release.yml            # Manages release branch and deploys to GitHub Pages
+│       └── unit_tests.yml         # Runs unit tests on pushes/PRs
 ├── custom-generator-codelab/
-│   ├── online-ide-source/         # Git submodule (Online-IDE_B2J)
-│   ├── public/                    # Built files (not in git)
-│   │   ├── lib/                   # Third-party libraries
-│   │   ├── assets/                # Fonts, graphics, etc.
-│   │   ├── online-ide-embedded.js
-│   │   └── online-ide-embedded.css
-│   ├── src/
-│   │   ├── index.html
-│   │   ├── index.js
-│   │   └── ...
+│   ├── src/                       # Main source code
+│   │   ├── index.html             # Main HTML template
+│   │   ├── index.js               # Webpack entry point
+│   │   ├── generators/            # Java code generators
+│   │   └── blocks/                # Custom block definitions
 │   ├── dist/                      # Production build output (not in git)
 │   ├── build/                     # Development build output (not in git)
-│   ├── webpack.config.js
-│   ├── package.json
-│   ├── setup.js                   # Cross-platform setup script
-│   └── setup.sh                   # Bash setup script
-├── CNAME                          # Legacy custom domain configuration
-└── README.MD
+│   ├── webpack.config.js          # Webpack config
+│   └── package.json
+├── VERSION                        # App version file
+├── DEPLOYMENT.md                  # Deployment documentation
+└── README.MD                      # Main readme
 ```
 
 ## Deployment
 
-Hosting and deployment processes (including Cloudflare Pages for the frontend and self-hosted Docker for the backend) are documented in [DEPLOYMENT.md](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/DEPLOYMENT.md).
+Hosting and deployment processes (including Cloudflare Pages for the frontend and self-hosted Docker for the backend) are documented in [DEPLOYMENT.md](../DEPLOYMENT.md).
 
 ## Development Workflow
 
-### Working on Blockly2Java Only
+### Working on Blockly2Java
 
+1. Make changes to files in `custom-generator-codelab/src/`.
+2. Run `npm run dev` to start the development server.
+3. Webpack dev server will auto-reload the application on code changes.
+
+To test the application in a production-like environment locally:
 ```bash
-# Make changes to files in src/
-# Webpack dev server will auto-reload
+npm run build:all
+# Copy the built assets to build/ for the static server to find them
+cp -r custom-generator-codelab/dist/* custom-generator-codelab/build/
+npm start
 ```
-
-### Updating Online-IDE_B2J
-
-If you need to update the submodule to a newer version:
-
-```bash
-cd online-ide-source
-git pull origin main
-cd ..
-git add online-ide-source
-git commit -m "Update Online-IDE_B2J submodule"
-npm run dev  # Rebuild and restart
-```
-
-### Working on Both Projects Simultaneously
-
-If you're actively developing Online-IDE_B2J:
-
-1. Make changes in the `online-ide-source/` directory
-2. Run `npm run dev` to rebuild and test
-3. Commit changes in the submodule separately
-4. Commit submodule reference update in main project
 
 ## Troubleshooting
-
-### "Submodule not initialized" Error
-
-```bash
-git submodule update --init --recursive
-```
 
 ### OnlineIDE Panel Not Displaying
 
 **Symptoms:**
 - Blockly editor loads but OnlineIDE panel is empty.
-- Browser console shows 404 errors for `assets/*.js` files.
+- Browser console shows network/resource loading errors.
 
 **Solution:**
-```bash
-cd custom-generator-codelab
-node setup.js --build-from-submodule
-npm start
-```
+- The OnlineIDE widget loads from `https://onlineide.blockly2java.de`. Verify you have a working internet connection and that this domain is accessible from your network.
+- Check the browser console (F12) for detailed error logs or security/CORS blocks.
 
 ### Code Not Updating in OnlineIDE
 
@@ -161,16 +116,12 @@ npm start
 **Solutions:**
 1. Check browser console for errors.
 2. Verify OnlineIDE loaded: `console.log(window.online_ide_access)`
-3. Restart development server: `Ctrl+C` then `npm start`
+3. Restart development server: `Ctrl+C` then `npm run dev`
 4. Clear browser cache and cookies.
 
 ### "Cannot find module 'copy-webpack-plugin'"
 
-Run `npm install` to install all dependencies.
-
-### Public directory is empty
-
-Run `npm run setup` to build the Online-IDE files.
+Run `npm install` in the workspace root or the `custom-generator-codelab` directory to install all dependencies.
 
 ### Port 8080 already in use
 
@@ -179,24 +130,7 @@ Kill the process using port 8080:
 lsof -ti:8080 | xargs kill -9
 ```
 
-Or change the port in [webpack.config.js](webpack.config.js#L13).
-
-### Build Failures
-
-**Problem:** `npm run build` fails.
-
-**Solutions:**
-1. Clean and reinstall:
-   ```bash
-   rm -rf node_modules custom-generator-codelab/node_modules
-   rm -rf custom-generator-codelab/online-ide-source/node_modules
-   npm install
-   ```
-2. Rebuild OnlineIDE:
-   ```bash
-   npm run setup:submodule
-   ```
-3. Check Node.js version (should be 18.x or higher).
+Or change the port in [webpack.config.js](webpack.config.js#L77).
 
 ### Cookie/Persistence Issues
 
@@ -208,44 +142,24 @@ Clear browser cookies for the domain:
 2. Delete all cookies for the domain (e.g. `blockly2java.de` or `localhost`).
 3. Reload the page.
 
-### Changes to Online-IDE not reflected
-
-Clear the build output and rebuild:
-```bash
-rm -rf public/ build/ dist/
-npm run dev
-```
-
-### Files not loading in browser
-
-1. Check if `public/` directory exists and contains `lib/`, `assets/`, and the embedded files.
-2. Open browser DevTools and check Network tab for 404 errors.
-3. Clear browser cache.
-4. Restart the dev server.
-
 ## Build Artifacts
 
 The following directories are generated during build and **should not be committed to git**:
-- `public/` - Built Online-IDE files and assets
-- `build/` - Development build output
-- `dist/` - Production build output
-- `online-ide-source/node_modules/` - Submodule dependencies
-- `online-ide-source/dist/` - Submodule build output
+- `custom-generator-codelab/build/` - Development build output
+- `custom-generator-codelab/dist/` - Production build output
 
-These are all excluded via `.gitignore`.
+These are excluded via `.gitignore`.
 
 ## Contributing
 
 When contributing to this project:
 
-1. Never commit build artifacts (`public/`, `dist/`, `build/`)
-2. Update the submodule reference when Online-IDE_B2J changes
-3. Test the build process locally before pushing
-4. Update this documentation if you change the build process
+1. Never commit build artifacts (`build/`, `dist/`)
+2. Test the build process locally before pushing
+3. Update this documentation if you change the build process
 
 ## Additional Resources
 
 - [Blockly Documentation](https://developers.google.com/blockly)
 - [Webpack Documentation](https://webpack.js.org/)
-- [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 - [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages/)

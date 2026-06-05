@@ -48,30 +48,27 @@ A visual programming environment that converts Blockly blocks into Java code. Bl
 
 - **Node.js** 18.x or higher
 - **npm** 9.x or higher
-- **Git** with submodule support
+- **Git**
 
 ---
 
 ## Quick Start
 
 ```bash
-# Clone the repository with submodules
-git clone --recursive https://github.com/ValentinHerrmann/Blockly2Java.git
+# Clone the repository
+git clone https://github.com/ValentinHerrmann/Blockly2Java.git
 cd Blockly2Java
 
 # Install dependencies
 npm install
 
-# Start development server (Blockly UI only)
-npm start
+# Start development server with hot reloading
+npm run dev
 ```
 
 The application will open automatically at `http://localhost:8080`.
 
-Note: The Online-IDE is no longer bundled in this repository. It is provided
-as a separate Docker container/service. Local development of the Blockly UI
-works without the Online-IDE; for full integration tests run the external
-Online-IDE container alongside this app.
+Note: The Online-IDE is loaded dynamically from `https://onlineide.blockly2java.de` so it is not bundled locally. Local development of the Blockly UI works out-of-the-box using this remote service.
 
 ---
 
@@ -103,18 +100,18 @@ Run these scripts from the repository root directory:
 
 | Script | Description |
 |--------|-------------|
-| `npm start` | Start development server at http://localhost:8080 |
-| `npm run dev` | Start development server with hot reloading |
+| `npm run dev` | Start development server with hot reloading at http://localhost:8080 |
+| `npm start` | Serve pre-compiled build directory on port 8080 (static server) |
 | `npm run build` | Create production build in `custom-generator-codelab/dist/` |
-| `npm run build:all` | Force rebuild OnlineIDE submodule and create production build |
+| `npm run build:all` | Run setup and create production build |
 
-For detailed documentation on Codelab-level scripts, development workflows, and managing the Git submodule for the OnlineIDE, refer to the [Setup Guide](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/custom-generator-codelab/SETUP.md).
+For detailed documentation on Codelab-level scripts, development workflows, and the OnlineIDE integration, refer to the [Setup Guide](custom-generator-codelab/SETUP.md).
 
 ---
 
 ## Deployment
 
-Detailed deployment information is available in [DEPLOYMENT.md](file:///home/vale/_GITHUB/ValentinHerrmann/Blockly2Java/DEPLOYMENT.md).
+Detailed deployment information is available in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Frontend Deployment (Cloudflare Pages)
 
@@ -160,7 +157,7 @@ The repository uses GitHub Actions for workflow automation:
 ### Deployment Checklist
 
 Before deploying:
-- [ ] Test locally with `npm start`
+- [ ] Test locally with `npm run dev`
 - [ ] Run production build: `npm run build:all`
 - [ ] Test production build locally
 - [ ] Verify OnlineIDE panel displays correctly
@@ -181,7 +178,6 @@ For solutions to common setup, submodule, build, caching, or integration issues,
 ## Related Documentation
 
 - **Setup Guide:** [custom-generator-codelab/SETUP.md](custom-generator-codelab/SETUP.md)
-- **Integration Status:** [INTEGRATION_STATUS.md](INTEGRATION_STATUS.md)
 - **Changelog:** [B2J_CHANGELOG.MD](B2J_CHANGELOG.MD)
 - **OnlineIDE Repository:** [NewOnlineIDE_B2J](https://github.com/ValentinHerrmann/NewOnlineIDE_B2J)
 - **BlueJ Extension:** [BlueJBlocklyExtension](https://github.com/ValentinHerrmann/BlueJBlocklyExtension)

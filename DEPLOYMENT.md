@@ -28,7 +28,7 @@ Releases are managed using GitHub Actions via the [Manage Release Branch](.githu
 1. When a new GitHub Release is **published** (or the workflow is manually dispatched via `workflow_dispatch`), the workflow triggers automatically.
 2. The workflow checks out the repository at the release's git tag (or selected branch) and force-pushes the HEAD commit directly to the `release` branch.
 3. Force-pushing to `release` triggers Cloudflare Pages to build and deploy to the production environment.
-4. During the build, the Webpack compilation detects the `release` branch and resolves the release name/tag using git tags (e.g. `v3.0.0`) pointing at HEAD. If no exact tag is found, it falls back to parsing a version from the latest commit message, or displaying the short commit SHA. This version info is then displayed in the footer.
+4. During the build, the Webpack compilation reads the application version from the root `VERSION` file (which is written to and committed by the GitHub Actions release workflow). If Webpack is compiling a development or preview build (non-`release` branch), it appends the short commit SHA to the version. The footer then displays this version info, linking to the GitHub release tag or the commit tree respectively.
 5. In parallel to the Cloudflare trigger, the workflow builds the static frontend with Webpack (`GITHUB_PAGES=true`), packages it, and deploys it to GitHub Pages.
 
 ### GitHub Pages Fallback Deployment
