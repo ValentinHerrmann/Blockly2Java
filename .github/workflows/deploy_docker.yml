@@ -152,4 +152,5 @@ jobs:
               docker ps -a --filter "name=$CONTAINER_NAME" >&2 || true
               exit 1
             fi
+            docker system prune -af
             # nginx configuration and external proxying are managed outside this workflow
