@@ -2,67 +2,19 @@ const path = require('node:path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const cp = require('node:child_process');
+const fs = require('node:fs');
 
-const getGitBranch = () => {
-  if (process.env.CF_PAGES_BRANCH) return process.env.CF_PAGES_BRANCH.trim();
-  try {
-    return cp.execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-  } catch {
-    return 'unknown';
-  }
-};
-
-const getGitSha = () => {
-  if (process.env.CF_PAGES_COMMIT_SHA) return process.env.CF_PAGES_COMMIT_SHA.trim();
-  try {
-    return cp.execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-  } catch {
-    return 'unknown';
-  }
-};
-
-const getCommitMessage = () => {
-  try {
-    return cp.execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trim();
-  } catch {
-    return '';
-  }
-};
-
-const getGitTag = () => {
-  try {
-    return cp.execSync('git describe --tags --exact-match', { encoding: 'utf8' }).trim();
-  } catch {
-    try {
-      const tags = cp.execSync('git tag --points-at HEAD', { encoding: 'utf8' }).trim();
-      return tags ? tags.split('\n')[0] : '';
-    } catch {
-      return '';
-    }
-  }
-};
-
-const gitBranch = getGitBranch();
-const gitSha = getGitSha();
-const shortSha = gitSha.slice(0, 7);
-const gitTag = getGitTag();
-const commitMsg = getCommitMessage();
-let appVersion = shortSha;
-let appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
-if (gitBranch === 'release') {
-  if (gitTag) {
-    appVersion = gitTag;
-    appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${gitTag}`;
-  } else {
-    const firstLine = commitMsg.split('\n')[0].trim();
-    if (firstLine && /^v\d/.test(firstLine)) {
-      appVersion = firstLine;
-      appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${firstLine}`;
-    }
-  }
+let appVersion = 'local';
+try {
+  appVersion = fs.readFileSync(path.resolve(__dirname, '../VERSION'), 'utf8').trim();
+} catch (e) {
+  // Fallback if VERSION file is missing
 }
-const buildDate = new Date().toISOString();
+
+const gitBranch = process.env.APP_BRANCH || 'dev';
+const gitSha = process.env.APP_SHA || 'dev';
+const appVersionLink = process.env.APP_VERSION_LINK || `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
+const buildDate = process.env.BUILD_DATE || new Date().toISOString();
 
 
 // Determine the publicPath for GitHub Pages
@@ -248,6 +200,12 @@ const config = {
         {
           // Copy the versioned manifest from src so it's tracked by git
           from: 'src/manifest.json',
+          to: '.',
+          noErrorOnMissing: true,
+        },
+        {
+          // Copy the version file so it's accessible in the final deployment
+          from: '../VERSION',
           to: '.',
           noErrorOnMissing: true,
         },
