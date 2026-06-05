@@ -1,0 +1,29 @@
+name: Manage Release Branch
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Version/Release name (e.g. v3.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  push-to-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to release branch
+        run: |
+          git fetch origin
+          git push origin HEAD:refs/heads/release --force
+

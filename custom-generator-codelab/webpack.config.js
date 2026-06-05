@@ -2,6 +2,68 @@ const path = require('node:path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const cp = require('node:child_process');
+
+const getGitBranch = () => {
+  if (process.env.CF_PAGES_BRANCH) return process.env.CF_PAGES_BRANCH.trim();
+  try {
+    return cp.execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
+const getGitSha = () => {
+  if (process.env.CF_PAGES_COMMIT_SHA) return process.env.CF_PAGES_COMMIT_SHA.trim();
+  try {
+    return cp.execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
+const getCommitMessage = () => {
+  try {
+    return cp.execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+};
+
+const getGitTag = () => {
+  try {
+    return cp.execSync('git describe --tags --exact-match', { encoding: 'utf8' }).trim();
+  } catch {
+    try {
+      const tags = cp.execSync('git tag --points-at HEAD', { encoding: 'utf8' }).trim();
+      return tags ? tags.split('\n')[0] : '';
+    } catch {
+      return '';
+    }
+  }
+};
+
+const gitBranch = getGitBranch();
+const gitSha = getGitSha();
+const shortSha = gitSha.slice(0, 7);
+const gitTag = getGitTag();
+const commitMsg = getCommitMessage();
+let appVersion = shortSha;
+let appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
+if (gitBranch === 'release') {
+  if (gitTag) {
+    appVersion = gitTag;
+    appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${gitTag}`;
+  } else {
+    const firstLine = commitMsg.split('\n')[0].trim();
+    if (firstLine && /^v\d/.test(firstLine)) {
+      appVersion = firstLine;
+      appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${firstLine}`;
+    }
+  }
+}
+const buildDate = new Date().toISOString();
+
 
 // Determine the publicPath for GitHub Pages
 // If GITHUB_PAGES env var is set and no custom domain (CNAME), use /Blockly2Java/
@@ -164,6 +226,13 @@ const config = {
     // created above added in a script tag.
     new HtmlWebpackPlugin({
       template: 'src/index.html',
+      templateParameters: {
+        appVersion: appVersion,
+        appVersionLink: appVersionLink,
+        appBranch: gitBranch,
+        appSha: gitSha,
+        buildDate: buildDate,
+      }
     }),
     // Copy static files (lib, assets, and Online-IDE embedded files) to output directory
     new CopyWebpackPlugin({
