@@ -1,2 +1,3 @@
 #!/bin/bash
-npx webpack --mode production
+cd "$(dirname "$0")"
+npm run build
