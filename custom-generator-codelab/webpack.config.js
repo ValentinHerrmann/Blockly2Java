@@ -36,7 +36,7 @@ const shortSha = gitSha.slice(0, 7);
 const commitMsg = getCommitMessage();
 let appVersion = shortSha;
 let appVersionLink = `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
-if (gitBranch === 'releases') {
+if (gitBranch === 'release') {
   const firstLine = commitMsg.split('\n')[0].trim();
   if (firstLine) {
     appVersion = firstLine;
