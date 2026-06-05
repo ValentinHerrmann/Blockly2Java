@@ -4,9 +4,9 @@ Blockly2Java uses a hybrid deployment model consisting of a static web frontend 
 
 ---
 
-## 1. Frontend Web App (Cloudflare Pages)
+## 1. Frontend Web App (Cloudflare Pages & GitHub Pages Fallback)
 
-The main frontend web application is hosted on **Cloudflare Pages**, which automatically builds and deploys branches of the repository.
+The main frontend web application is hosted on **Cloudflare Pages**, which automatically builds and deploys branches of the repository. Additionally, a backup fallback is deployed to **GitHub Pages** during release builds.
 
 ### Release Workflow & Branch Management
 
@@ -28,7 +28,25 @@ Releases are managed using GitHub Actions via the [Manage Release Branch](.githu
 1. When a new GitHub Release is **published** (or the workflow is manually dispatched via `workflow_dispatch`), the workflow triggers automatically.
 2. The workflow checks out the repository at the release's git tag (or selected branch) and force-pushes the HEAD commit directly to the `release` branch.
 3. Force-pushing to `release` triggers Cloudflare Pages to build and deploy to the production environment.
-4. During the build, the Webpack compilation detects the `release` branch and resolves the release name/tag using git tags (e.g. `v3.0.0`) pointing at HEAD. If no exact tag is found, it falls back to parsing a version from the latest commit message, or displaying the short commit SHA. This version info is then displayed in the footer.
+4. During the build, the Webpack compilation reads the application version from the root `VERSION` file (which is written to and committed by the GitHub Actions release workflow). If Webpack is compiling a development or preview build (non-`release` branch), it appends the short commit SHA to the version. The footer then displays this version info, linking to the GitHub release tag or the commit tree respectively.
+5. In parallel to the Cloudflare trigger, the workflow builds the static frontend with Webpack (`GITHUB_PAGES=true`), packages it, and deploys it to GitHub Pages.
+
+### GitHub Pages Fallback Deployment
+
+To protect against downtime of Cloudflare Pages, a fallback deployment of the production application is automatically built and deployed to **GitHub Pages** during the release workflow:
+
+1. When the release workflow publishes the release, it also compiles the production frontend assets using Webpack.
+2. The compilation process sets `GITHUB_PAGES=true`, which configures the router/assets public path to `/Blockly2Java/` (standard for `https://<owner>.github.io/Blockly2Java/`).
+3. The built assets (`custom-generator-codelab/dist`) are uploaded and deployed directly to GitHub Pages using the official `actions/deploy-pages` action.
+
+#### Setup Requirements
+
+For the GitHub Pages fallback deployment to succeed, configure the following settings in your GitHub Repository:
+
+1. Go to **Settings → Pages**.
+2. Under **Build and deployment**, set the **Source** to **GitHub Actions** (instead of "Deploy from a branch").
+3. (Optional) If you use a custom domain for GitHub Pages, set the `CUSTOM_DOMAIN` repository variable under **Settings → Secrets and variables → Actions → Variables**. If defined, the build will use `/` as the base path and place your domain into the `CNAME` file.
+
 
 
 ---
