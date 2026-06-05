@@ -26,4 +26,26 @@ jobs:
       - name: Push to preview branch
         run: |
           git fetch origin
+          
+          # Read last released version from VERSION file
+          last_released=$(cat VERSION 2>/dev/null | tr -d '\r\n[:space:]' || echo "v0.0.0-unknown")
+          if [ -z "$last_released" ] || [ "$last_released" = "local" ]; then
+            last_released="v0.0.0-unknown"
+          fi
+          
+          # Short SHA of the PR HEAD
+          short_sha=$(git rev-parse --short HEAD)
+          
+          # Write preview version to VERSION
+          echo "${last_released}-${short_sha}" > VERSION
+          
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Commit the updated VERSION file
+          git add VERSION
+          git commit -m "chore: update VERSION for preview deployment [skip ci]" --allow-empty
+          
+          # Push to preview branch
           git push origin HEAD:refs/heads/preview --force

@@ -11,10 +11,13 @@ try {
   // Fallback if VERSION file is missing
 }
 
-const gitBranch = process.env.APP_BRANCH || 'dev';
-const gitSha = process.env.APP_SHA || 'dev';
-const appVersionLink = process.env.APP_VERSION_LINK || `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
+const gitBranch = process.env.CF_PAGES_BRANCH || process.env.APP_BRANCH || 'dev';
+const gitSha = process.env.CF_PAGES_COMMIT_SHA || process.env.APP_SHA || 'dev';
 const buildDate = process.env.BUILD_DATE || new Date().toISOString();
+
+const appVersionLink = (gitBranch === 'release' && !appVersion.startsWith('local') && !appVersion.startsWith('dev'))
+  ? `https://github.com/ValentinHerrmann/Blockly2Java/releases/tag/${appVersion}`
+  : `https://github.com/ValentinHerrmann/Blockly2Java/tree/${gitSha}`;
 
 
 // Determine the publicPath for GitHub Pages
