@@ -4,11 +4,11 @@
 PROD_BRANCH="releases"
 
 # If it's a preview branch, check if there is an active PR
-if [ "$WORKERS_CI_BRANCH" != "$PROD_BRANCH" ]; then
-  echo "Checking if an active PR exists for branch: $WORKERS_CI_BRANCH..."
+if [ "$CF_PAGES_BRANCH" != "$PROD_BRANCH" ]; then
+  echo "Checking if an active PR exists for branch: $CF_PAGES_BRANCH..."
   
   # Call GitHub API (no token needed for public repos)
-  PR_JSON=$(curl -s "https://api.github.com/repos/ValentinHerrmann/Blockly2Java/pulls?head=ValentinHerrmann:$WORKERS_CI_BRANCH&state=open")
+  PR_JSON=$(curl -s "https://api.github.com/repos/ValentinHerrmann/Blockly2Java/pulls?head=ValentinHerrmann:$CF_PAGES_BRANCH&state=open")
   
   # Count the number of non-draft open PRs returned (using Node since jq might not be installed)
   PR_COUNT=$(echo "$PR_JSON" | node -e "
