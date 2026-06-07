@@ -45,7 +45,7 @@ const getCorsProxyUrl = () => {
   }
   return process.env.WEBPACK_SERVE === 'true'
     ? '/cors-proxy'
-    : 'https://b2j-cors-proxy.b2j-cors-proxy.workers.dev';
+    : 'https://cors-proxy.blockly2java.de';
 };
 
 // Base config that applies to either development or production mode.
