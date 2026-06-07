@@ -51,6 +51,22 @@ describe('Blockly to Java Translation Tests', () => {
   }
 
   function runTestCase(className, jsonPath, javaPath) {
+    // Check that fixture files exist before attempting to read them.
+    if (!fs.existsSync(jsonPath)) {
+      assert.fail(
+        `Missing fixture file: ${jsonPath}\n` +
+        `  Class: ${className}\n` +
+        `  Did you mean to create the directory "test/fixtures/${className}/" with a "${path.basename(jsonPath)}" file?`
+      );
+    }
+    if (!fs.existsSync(javaPath)) {
+      assert.fail(
+        `Missing fixture file: ${javaPath}\n` +
+        `  Class: ${className}\n` +
+        `  Did you mean to create the directory "test/fixtures/${className}/" with a "${path.basename(javaPath)}" file?`
+      );
+    }
+
     const workspaceJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
     const expectedJava = fs.readFileSync(javaPath, 'utf-8');
 
@@ -104,6 +120,12 @@ describe('Blockly to Java Translation Tests', () => {
   describe('Project: arrays', () => {
     it('should translate arrays/Main correctly to Java', () => {
       runTestCase('Main', path.join(fixturesDir, 'arrays', 'Main.json'), path.join(fixturesDir, 'arrays', 'Main.java'));
+    });
+  });
+
+  describe('Project: arrays_types', () => {
+    it('should translate arrays_types/Main correctly to Java', () => {
+      runTestCase('Main', path.join(fixturesDir, 'arrays_types', 'Main.json'), path.join(fixturesDir, 'arrays_types', 'Main.java'));
     });
   });
 });

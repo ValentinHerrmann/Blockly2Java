@@ -265,7 +265,6 @@ export function getType(var_type) {
     case 'controls_if':
       return TYPES.BOOLEAN;
     case 'lists_length': 
-    case 'lists_getIndex': 
     case 'text_length': 
     case 'text_indexOf':
     case 'math_random_int':
@@ -413,14 +412,52 @@ function _resolveGetterType(argBlock, workspace) {
   if (!varId) return TYPES.UNKNOWN;
   const t = getVariableType(workspace, varId, false);
   if (t && t !== 'var' && t !== TYPES.UNKNOWN) return t;
-  // Check callsite hints for constructor parameters from other classes.
-  const ctorBlocks = workspace.getBlocksByType('defconstructor', false);
-  for (const ctorBlock of ctorBlocks) {
-    const varModels = ctorBlock.getVarModels?.() ?? [];
-    const idx = varModels.findIndex(v => v.getId() === varId);
+
+  // Get the display name from the workspace variable model.
+  // Strip any explicit type prefix to get just the parameter name.
+  const varModel = workspace?.getVariableById?.(varId);
+  let rawName = varModel?.name ?? '';
+  if (!rawName) return TYPES.UNKNOWN;
+
+  // Strip explicit type prefix from the variable name to get the bare parameter name.
+  // E.g. "String[] arr" → "arr", "int count" → "count"
+  const parsedName = parseExplicitSignature(rawName);
+  const paramName = parsedName ? parsedName.name : rawName;
+  if (!paramName) return TYPES.UNKNOWN;
+
+  // Check method/constructor blocks for explicit param types by matching
+  // the parameter name against arguments_ (the param name list).
+  // Note: arguments_ stores full names like "String[] arr", so we need to
+  // strip the type prefix before comparing with the bare paramName.
+  const allDefBlocks = [
+    ...workspace.getBlocksByType('defconstructor', false),
+    ...workspace.getBlocksByType('java_method_return', false),
+    ...workspace.getBlocksByType('java_method_noreturn', false),
+    ...workspace.getBlocksByType('java_static_method_return', false),
+    ...workspace.getBlocksByType('java_static_method_noreturn', false),
+  ];
+  for (const defBlock of allDefBlocks) {
+    const argNames = defBlock.arguments_ || [];
+    const pTypes = defBlock.paramTypes_ || [];
+    // Find the index where the bare parameter name matches (after stripping type prefix).
+    let idx = -1;
+    for (let i = 0; i < argNames.length; i++) {
+      const parsedArg = parseExplicitSignature(argNames[i]);
+      const argBareName = parsedArg ? parsedArg.name : argNames[i];
+      if (argBareName === paramName) {
+        idx = i;
+        break;
+      }
+    }
     if (idx >= 0) {
-      const callsiteHints = LocalStorageManager.getConstructorCallsiteHints(getClassName());
-      if (callsiteHints?.[idx] != null) return callsiteHints[idx];
+      // Found matching parameter slot by name — check explicit type first.
+      const paramType = pTypes[idx];
+      if (paramType) return paramType;
+      // For constructors, also check callsite hints from other classes.
+      if (defBlock.type === 'defconstructor') {
+        const callsiteHints = LocalStorageManager.getConstructorCallsiteHints(getClassName());
+        if (callsiteHints?.[idx] != null) return callsiteHints[idx];
+      }
       break;
     }
   }
@@ -461,7 +498,16 @@ export function resolveArgBlockType(argBlock, workspace) {
     return type + '[]';
   }
   if (argBlock.type === 'lists_getIndex') {
-    const arrayBlock = argBlock.getInputTargetBlock('VALUE');
+    // Get the VALUE input target. Try real connection first, then fall back to shadow block.
+    let arrayBlock = argBlock.getInputTargetBlock('VALUE');
+    if (!arrayBlock) {
+      // Shadow blocks are not returned by getInputTargetBlock, so check the shadow DOM.
+      const shadowDom = argBlock.getInput('VALUE')?.getShadowDom?.();
+      if (shadowDom) {
+        const shadowBlock = Blockly.Xml.domToBlock(shadowDom, workspace);
+        arrayBlock = shadowBlock;
+      }
+    }
     if (arrayBlock) {
       const arrayType = resolveArgBlockType(arrayBlock, workspace);
       if (arrayType && arrayType.endsWith('[]')) {
@@ -686,6 +732,13 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
       if (firstType && firstType !== TYPES.UNKNOWN) {
         if (elementTypes.every(t => t === firstType)) {
           return firstType + '[]';
+        }
+        // Numeric type promotion: when mixing int with double/float, promote to the widest.
+        const numericTypes = new Set(['int', 'double', 'float']);
+        if (elementTypes.every(t => numericTypes.has(t))) {
+          if (elementTypes.includes('double')) return 'double[]';
+          if (elementTypes.includes('float')) return 'float[]';
+          return 'double[]'; // fallback for mixed numeric
         }
         if (elementTypes.every(t => t && t !== TYPES.UNKNOWN && !PRIMITIVE_TYPES.has(t) && !t.endsWith('[]'))) {
           const commonType = findCommonSupertype(elementTypes);
