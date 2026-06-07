@@ -116,39 +116,14 @@ export function controls_for(block, generator) {
   else 
   {
     code = '';
-    // Cache non-trivial values to variables to prevent repeated look-ups.
-    let startVar = argument0;
-
-    // Only cache values that are likely to have side-effects or be expensive
-    // (function calls, property access, indexing, or assignment). Simple
-    // arithmetic like "x + 1" is safe to inline.
-    const needsCachingExpr = (s) => /\w+\s*\(|\.|\[|=/.test(String(s));
-    if (needsCachingExpr(argument0)) {
-      startVar = generator.nameDB_.getDistinctName(
-          variable0 + '_start', Blockly.Names.NameType.VARIABLE);
-      code += 'int ' + startVar + ' = ' + argument0 + ';\n';
-    }
-    let endVar = argument1;
-    if (needsCachingExpr(argument1)) {
-      endVar = generator.nameDB_.getDistinctName(
-          variable0 + '_end', Blockly.Names.NameType.VARIABLE);
-      code += 'int ' + endVar + ' = ' + argument1 + ';\n';
-    }
-    // Determine loop direction at start, in case one of the bounds
-    // changes during loop execution.
-    const incVar = generator.nameDB_.getDistinctName(
-        variable0 + '_inc', Blockly.Names.NameType.VARIABLE);
-
     var comparison = ' != ';
     if(Blockly.utils.string.isNumber(increment))
       {
         comparison = Number(increment) < 0 ? ' > ' : ' < '
       }
-        
-    const varType = 'int';
-    code += 
-    'for (' + varType + ' ' + variable0 + ' = ' + startVar + '; ' + 
-      variable0 + comparison + endVar + '; ' + 
+
+    code += 'for (int ' + variable0 + ' = ' + argument0 + '; ' +
+      variable0 + comparison + argument1 + '; ' +
       variable0 + inc + ') {\n' +
       branch + '}\n';
   }
