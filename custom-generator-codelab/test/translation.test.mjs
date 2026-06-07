@@ -106,5 +106,11 @@ describe('Blockly to Java Translation Tests', () => {
       runTestCase('Main', path.join(fixturesDir, 'arrays', 'Main.json'), path.join(fixturesDir, 'arrays', 'Main.java'));
     });
   });
+
+  describe('Project: arrays_types', () => {
+    it('should translate arrays_types/Main correctly to Java', () => {
+      runTestCase('Main', path.join(fixturesDir, 'arrays_types', 'Main.json'), path.join(fixturesDir, 'arrays_types', 'Main.java'));
+    });
+  });
 });
 

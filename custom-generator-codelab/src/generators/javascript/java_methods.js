@@ -14,7 +14,7 @@
  * the existing getVariableType helper.
  */
 
-import {getType, getVariableType, parseExplicitSignature, Order, getClassName, TYPES} from './javascript_generator.js';
+import {getType, getVariableType, parseExplicitSignature, Order, getClassName, TYPES, resolveArgBlockType} from './javascript_generator.js';
 import * as Blockly from 'blockly';
 import LocalStorageManager from '../../utils/LocalStorageManager.js';
 
@@ -96,8 +96,11 @@ function _inferParamTypeInScope(methodBlock, paramIndex) {
 function _computeReturnType(block) {
   const retBlock = block.getInputTargetBlock('RETURN');
   if (!retBlock) return 'void';
-  let returnType = getType(retBlock.type);
-  if (returnType === 'var') {
+  // Use resolveArgBlockType which handles lists_getIndex by extracting the
+  // element type from the array parameter, rather than getType which would
+  // return 'var' for lists_getIndex blocks.
+  let returnType = resolveArgBlockType(retBlock, block.workspace);
+  if (returnType === 'var' || returnType === TYPES.UNKNOWN) {
     const id = retBlock.getFieldValue('VAR');
     if (id) {
       returnType = getVariableType(Blockly.getMainWorkspace(), id, true);

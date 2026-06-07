@@ -38,10 +38,13 @@ const paramMixin = {
    *      "count"      → { type: null,    name: 'count' }
    */
   _parseParamName_: function (name) {
-    // Common Java types to check for.
+    // Common Java types to check for (including array forms).
+    // Array types must be checked before their non-array counterparts
+    // so that "String[] arr" matches String[] before String.
     const knownTypes = [
-      'int', 'long', 'float', 'double', 'boolean', 'char', 'byte', 'short',
-      'String', 'Object', 'boolean',
+      'String[]', 'Object[]', 'boolean[]', 'int[]', 'double[]', 'char[]',
+      'long', 'float', 'double', 'boolean', 'char', 'byte', 'short',
+      'String', 'Object',
     ];
     for (const t of knownTypes) {
       const regex = new RegExp(String.raw`^${t}\s+(.+)`);
