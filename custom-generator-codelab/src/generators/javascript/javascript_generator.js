@@ -265,7 +265,6 @@ export function getType(var_type) {
     case 'controls_if':
       return TYPES.BOOLEAN;
     case 'lists_length': 
-    case 'lists_getIndex': 
     case 'text_length': 
     case 'text_indexOf':
     case 'math_random_int':
