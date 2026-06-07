@@ -498,7 +498,16 @@ export function resolveArgBlockType(argBlock, workspace) {
     return type + '[]';
   }
   if (argBlock.type === 'lists_getIndex') {
-    const arrayBlock = argBlock.getInputTargetBlock('VALUE');
+    // Get the VALUE input target. Try real connection first, then fall back to shadow block.
+    let arrayBlock = argBlock.getInputTargetBlock('VALUE');
+    if (!arrayBlock) {
+      // Shadow blocks are not returned by getInputTargetBlock, so check the shadow DOM.
+      const shadowDom = argBlock.getInput('VALUE')?.getShadowDom?.();
+      if (shadowDom) {
+        const shadowBlock = Blockly.Xml.domToBlock(shadowDom, workspace);
+        arrayBlock = shadowBlock;
+      }
+    }
     if (arrayBlock) {
       const arrayType = resolveArgBlockType(arrayBlock, workspace);
       if (arrayType && arrayType.endsWith('[]')) {
