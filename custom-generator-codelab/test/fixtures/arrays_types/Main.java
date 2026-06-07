@@ -16,4 +16,10 @@ public class Main {
         return arr2[1];
     }
 
+    public double m3() {
+        double[] arr3 = {123, 123, 123.1};
+        double tmp3 = arr3[1];
+        return arr3[1];
+    }
+
 }

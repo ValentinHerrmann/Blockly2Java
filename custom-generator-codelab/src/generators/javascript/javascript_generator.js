@@ -733,6 +733,13 @@ function _resolveAssignedBlockType(workSpace, valueBlock) {
         if (elementTypes.every(t => t === firstType)) {
           return firstType + '[]';
         }
+        // Numeric type promotion: when mixing int with double/float, promote to the widest.
+        const numericTypes = new Set(['int', 'double', 'float']);
+        if (elementTypes.every(t => numericTypes.has(t))) {
+          if (elementTypes.includes('double')) return 'double[]';
+          if (elementTypes.includes('float')) return 'float[]';
+          return 'double[]'; // fallback for mixed numeric
+        }
         if (elementTypes.every(t => t && t !== TYPES.UNKNOWN && !PRIMITIVE_TYPES.has(t) && !t.endsWith('[]'))) {
           const commonType = findCommonSupertype(elementTypes);
           return commonType + '[]';
