@@ -299,10 +299,15 @@ export function getType(var_type) {
     case 'text_append':
       return TYPES.STRING;
     case 'lists_create_empty': 
+    case 'list_create_empty': 
     case 'lists_create_with': 
+    case 'list_create_with': 
     case 'lists_repeat': 
+    case 'list_repeat': 
     case 'lists_split': 
+    case 'list_split': 
     case 'lists_sort':
+    case 'list_sort':
       return TYPES.LIST;
     case 'logic_null':
       return TYPES.OBJECT;
@@ -493,9 +498,10 @@ export function resolveArgBlockType(argBlock, workspace) {
     const mode = argBlock.getFieldValue('MODE');
     return mode === 'SPLIT' ? 'String[]' : 'String';
   }
-  if (argBlock.type === 'lists_repeat') {
+  if (argBlock.type === 'lists_repeat' || argBlock.type === 'list_repeat') {
     const type = argBlock.getFieldValue('TYPE') || 'Object';
-    return type + '[]';
+    const dim = argBlock.getFieldValue('DIM') || '[]';
+    return type + dim;
   }
   if (argBlock.type === 'lists_getIndex') {
     // Get the VALUE input target. Try real connection first, then fall back to shadow block.
