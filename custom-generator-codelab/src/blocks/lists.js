@@ -48,7 +48,7 @@ Blockly.Blocks['list_repeat'] = {
     }
 
     const defaultTypes = [
-      'int', 'double', 'boolean', 'String', 'Actor', 'Shape', 'Circle',
+      'int', 'double', 'boolean', 'String', 'Actor', 'Shape', 'FilledShape', 'Circle',
       'Ellipse', 'Rectangle', 'RoundedRectangle', 'Triangle', 'Line',
       'Text', 'Turtle', 'Group', 'Bitmap', 'Polygon'
     ];
