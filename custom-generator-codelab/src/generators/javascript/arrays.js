@@ -43,9 +43,15 @@ export function lists_create_with(block, generator) {
 export function lists_repeat(block, generator) {
   // Create an array with specified length but without values in Java.
   const type = block.getFieldValue('TYPE') || 'Object';
+  const dim = block.getFieldValue('DIM') || '[]';
   const repeatCount =
       generator.valueToCode(block, 'NUM', Order.NONE) || '0';
-  const code = 'new ' + type + '[' + repeatCount + ']';
+
+  let bracketCount = 0;
+  if (dim === '[][]') {
+    bracketCount = 1;
+  }
+  const code = 'new ' + type + '[' + repeatCount + ']' + '[]'.repeat(bracketCount);
   return [code, Order.ATOMIC];
 }
 
