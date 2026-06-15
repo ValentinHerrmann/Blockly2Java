@@ -37,7 +37,14 @@
     --opacity-marker: 0.3;
 }
 
-:root[data-theme="bright"] {
+:root[data-theme="bright"],
+:root[data-theme="bright"] #ide,
+:root[data-theme="bright"] #ideBottomSection,
+:root[data-theme="bright"] .joeCssFence,
+:root[data-theme="bright"] .joe_bottomDiv,
+:root[data-theme="bright"] .joe_bottomDivFiles,
+:root[data-theme="bright"] .jo_treeview_outer,
+:root[data-theme="bright"] .jo_console-top {
     /* Primary Colors */
     --primary-bg: #ffffff;            /* Main background */
     --secondary-bg: #f3f3f3;          /* Panels, toolbox */
