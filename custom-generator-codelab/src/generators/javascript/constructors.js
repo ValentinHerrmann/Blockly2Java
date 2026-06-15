@@ -23,9 +23,11 @@ import LocalStorageManager from '../../utils/LocalStorageManager.js';
  * Resolves the Java type for the j-th constructor parameter.
  * Falls back through callsite hints, super-call hints, then 'Object'.
  */
-function _resolveParamType(j, vars, className, superHints, variables, ws) {
-  const rawType = getVariableType(ws, vars[j].getId(), true);
-  if (rawType !== 'var') return rawType;
+function _resolveParamType(j, varId, className, superHints, variables, ws) {
+  if (varId && ws.getVariableById(varId)) {
+    const rawType = getVariableType(ws, varId, true);
+    if (rawType !== 'var') return rawType;
+  }
   const callsiteHints = LocalStorageManager.getConstructorCallsiteHints(className);
   if (callsiteHints?.[j] != null) return callsiteHints[j];
   if (superHints && variables[j] && superHints[variables[j]]) return superHints[variables[j]];
@@ -70,12 +72,12 @@ export function defconstructor(block, generator) {
   const variables = block.arguments_;
 
   if(variables !== null) {
-    let vars = block.getVarModels();
     let paramTypes = [];
     // Fetch any super-call type hints stored by sub-class workspaces.
     const superHints = LocalStorageManager.getSuperCallTypeHints(className);
-    for(let j = 0; j < vars.length; j++) {
-      paramTypes[j] = _resolveParamType(j, vars, className, superHints, variables, ws);
+    for(let j = 0; j < variables.length; j++) {
+      const varId = block.paramIds_?.[j];
+      paramTypes[j] = _resolveParamType(j, varId, className, superHints, variables, ws);
     }
     console.log("variables: " + variables);
     for (let i = 0; i < variables.length; i++) {
