@@ -10,11 +10,58 @@
     display: flex;
     flex-direction: column;
     background-color: var(--secondary-bg);
-    border-right: 1px solid rgba(255,255,255,0.06);
+    border-right: 1px solid var(--border-subtle);
     user-select: none;
     overflow: hidden;
 }
 
+/* Theme Toggle Button */
+.git-sidebar__theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.theme-toggle-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    cursor: pointer;
+    opacity: 0.60;
+    transition: background-color 0.15s, opacity 0.15s, transform 0.15s;
+}
+
+.theme-toggle-btn:hover {
+    background-color: var(--bg-hover);
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.theme-toggle-btn:active {
+    background-color: var(--bg-active);
+}
+
+.theme-toggle-btn svg {
+    flex-shrink: 0;
+}
+
+/* Toggle Sun/Moon visibility based on data-theme */
+:root:not([data-theme="bright"]) .theme-toggle-btn .icon-moon {
+    display: none;
+}
+:root[data-theme="bright"] .theme-toggle-btn .icon-sun {
+    display: none;
+}
 
 .git-sidebar__header {
     display: flex;
@@ -25,7 +72,7 @@
     height: 44px;                          /* matches .pane-header height */
     flex-shrink: 0;
     padding: 6px 4px 5px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid var(--border-subtle);
     font-size: 10.5px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -54,7 +101,7 @@
 /* Workspace management section — pinned to the bottom */
 .git-sidebar__ws-section {
     flex-shrink: 0;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid var(--border-subtle);
 }
 
 .git-sidebar__ws-header {
@@ -66,7 +113,7 @@
     height: 38px;
     flex-shrink: 0;
     padding: 5px 4px 4px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid var(--border-subtle);
     font-size: 10.5px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -102,8 +149,9 @@
 }
 
 .git-sidebar-btn svg            { flex-shrink: 0; opacity: 0.85; }
-.git-sidebar-btn:hover:not(:disabled)  { background-color: rgba(255,255,255,0.07); opacity: 1; }
-.git-sidebar-btn:active:not(:disabled) { background-color: rgba(255,255,255,0.12); }
+.git-sidebar-btn:hover:not(:disabled)  { background-color: var(--bg-hover); opacity: 1; }
+.git-sidebar-btn:active:not(:disabled) { background-color: var(--bg-active); }
+.git-sidebar-btn:disabled              { opacity: 0.22; cursor: default; }
 .git-sidebar-btn:disabled              { opacity: 0.22; cursor: default; }
 
 /* Connected state — clone button turns green when a repo is linked */
@@ -202,14 +250,14 @@
     font-family: inherit;
     color: var(--text-primary, #d4d4d4);
     background-color: var(--primary-bg, #1e1e1e);
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid var(--border-medium);
     border-radius: 4px;
     box-sizing: border-box;
     outline: none;
     transition: border-color 0.15s;
 }
 
-.git-modal-input:focus       { border-color: rgba(255,255,255,0.3); }
+.git-modal-input:focus       { border-color: var(--text-tertiary); }
 .git-modal-input::placeholder { color: var(--text-primary, #d4d4d4); opacity: 0.35; }
 
 .git-modal-buttons {
@@ -232,8 +280,8 @@
     transition: background-color 0.15s, opacity 0.15s;
 }
 
-.git-modal-btn--cancel       { background-color: rgba(255,255,255,0.08); color: var(--text-primary, #d4d4d4); }
-.git-modal-btn--cancel:hover { background-color: rgba(255,255,255,0.14); }
+.git-modal-btn--cancel       { background-color: var(--bg-active); color: var(--text-primary, #d4d4d4); }
+.git-modal-btn--cancel:hover { background-color: var(--bg-hover-strong); }
 
 .git-modal-btn--submit       { background-color: #0e639c; color: #ffffff; }
 .git-modal-btn--submit:hover { background-color: #1177bb; }
@@ -245,15 +293,15 @@
    Muted colour at full opacity preserves WCAG 2.1 AA contrast. */
 .git-modal-btn--keep {
     background-color: transparent;
-    color: rgba(255,255,255,0.35);
+    color: var(--text-tertiary);
     font-weight: 400;
-    border: 1px solid rgba(255,255,255,0.10);
+    border: 1px solid var(--border-medium);
 }
 
 .git-modal-btn--keep:hover {
-    color: rgba(255,255,255,0.60);
-    background-color: rgba(255,255,255,0.05);
-    border-color: rgba(255,255,255,0.20);
+    color: var(--text-primary);
+    background-color: var(--bg-hover-subtle);
+    border-color: var(--border-medium);
 }
 
 .git-modal-btn--keep:focus-visible {
@@ -266,7 +314,7 @@
 
 .git-toplevel-code {
     background-color: var(--primary-bg, #1e1e1e);
-    border: 1px solid rgba(255,255,255,0.10);
+    border: 1px solid var(--border-medium);
     border-radius: 4px;
     padding: 10px 12px;
     margin: 0 0 14px;
@@ -284,11 +332,12 @@
 .git-spinner {
     width: 28px;
     height: 28px;
-    border: 3px solid rgba(255,255,255,0.15);
+    border: 3px solid var(--border-spinner);
     border-top-color: var(--text-primary, #d4d4d4);
     border-radius: 50%;
     animation: git-spin 0.7s linear infinite;
 }
+
 
 @keyframes git-spin {
     to { transform: rotate(360deg); }

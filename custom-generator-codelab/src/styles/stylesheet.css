@@ -19,6 +19,15 @@
     --divider-hover: #2f2f2f;         /* Divider hover state */
     --divider-active: #2f2f2f;        /* Divider active state */
     
+    /* Transparencies & Borders */
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-medium: rgba(255, 255, 255, 0.12);
+    --bg-hover: rgba(255, 255, 255, 0.07);
+    --bg-active: rgba(255, 255, 255, 0.12);
+    --bg-hover-subtle: rgba(255, 255, 255, 0.05);
+    --bg-hover-strong: rgba(255, 255, 255, 0.14);
+    --border-spinner: rgba(255, 255, 255, 0.15);
+    
     /* Effects */
     --shadow-strong: rgba(0, 0, 0, 0.8);
     
@@ -27,3 +36,118 @@
     --opacity-scrollbar: 0.5;
     --opacity-marker: 0.3;
 }
+
+:root[data-theme="bright"],
+:root[data-theme="bright"] #ide,
+:root[data-theme="bright"] #ideBottomSection,
+:root[data-theme="bright"] .joeCssFence,
+:root[data-theme="bright"] .joe_bottomDiv,
+:root[data-theme="bright"] .joe_bottomDivFiles,
+:root[data-theme="bright"] .jo_treeview_outer,
+:root[data-theme="bright"] .jo_console-top {
+    /* Primary Colors */
+    --primary-bg: #ffffff;            /* Main background */
+    --secondary-bg: #f3f3f3;          /* Panels, toolbox */
+    --tertiary-bg: #e5e5e5;           /* Scrollbars, tertiary elements */
+    --quaternary-bg: #e8e8e8;         /* Hover states, active elements */
+    
+    /* Text Colors */
+    --text-primary: #1e1e1e;          /* Primary text */
+    --text-secondary: #000000;        /* Secondary text, markers */
+    --text-tertiary: #4a4a4a;         /* Cursor, subtle elements */
+    
+    /* Interactive Elements */
+    --divider: #e0e0e0;               /* Default divider */
+    --divider-hover: #d0d0d0;         /* Divider hover state */
+    --divider-active: #c0c0c0;        /* Divider active state */
+    
+    /* Transparencies & Borders */
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --border-medium: rgba(0, 0, 0, 0.12);
+    --bg-hover: rgba(0, 0, 0, 0.05);
+    --bg-active: rgba(0, 0, 0, 0.08);
+    --bg-hover-subtle: rgba(0, 0, 0, 0.03);
+    --bg-hover-strong: rgba(0, 0, 0, 0.10);
+    --border-spinner: rgba(0, 0, 0, 0.15);
+    
+    /* Effects */
+    --shadow-strong: rgba(0, 0, 0, 0.08);
+    
+    /* Opacity Values */
+    --opacity-flyout: 0.95;
+    --opacity-scrollbar: 0.6;
+    --opacity-marker: 0.4;
+
+    /* OnlineIDE light theme overrides */
+    --defaultPrintColor: #000000 !important;
+    --backgroundDark: white !important;
+    --backgroundLight: #f3f3f3 !important;
+    --backgroundHeading: #dcdcdc !important;
+    --backgroundSelected: #e8e8e8 !important;
+    --fontColorNormal: #000000 !important;
+    --fontColorLight: #303030 !important;
+    --slider: #b0b0b0 !important;
+    --scrollbar: #e3e3e3 !important;
+    --scrollbar-thumb: #bababa !important;
+    --scrollbar-thumb-hover: #8e8e8e !important;
+    --scrollbar-thumb-active: #616161 !important;
+    --submenu-hover: #8080ff !important;
+    --submenu-color: #ffffff !important;
+    --menuitemsdivider: #cfcfcf !important;
+    --file-hover: #e8e8e8 !important;
+    --file-active: rgba(171, 231, 255, 0.74) !important;
+    --file-active-hover: rgba(203, 212, 253, 0.61) !important;
+    --file-active-border: rgba(76, 204, 255, 0.74) !important;
+    --file-errorcount: red !important;
+    --inplace-editor: white !important;
+    --contextmenu-background: white !important;
+    --contextmenu-color: #756161 !important;
+    --contextmenu-hover-background: #8080ff !important;
+    --contextmenu-hover-color: #a0a0ff !important;
+    --error-filename: #ff0000 !important;
+    --error-line-ative: #ffa0a0 !important;
+    --error-line-hover: #ffc0c0 !important;
+    --error-position: #804040 !important;
+    --linecolumn: #14c714 !important;
+    --reveal-error: rgba(253, 101, 101, 0.745) !important;
+    --reveal-method: #babaec80 !important;
+    --reveal-errorline-background: red !important;
+    --reveal-error-whole-line: rgba(255, 0, 0, 0.555) !important;
+    --reveal-programpointer: rgba(111, 214, 27, 0.337) !important;
+    --reveal-syntaxelement: rgba(244, 255, 96, 0.61) !important;
+    --margin-breakpoint: rgba(255, 0, 0, 0.623) !important;
+    --speedcontrol-bar: #9d9d9d !important;
+    --speedcontrol-grip: #588555 !important;
+    --speedcontrol-grip-hover: #89d185 !important;
+    --speedcontrol-display-background: #e0e0e0 !important;
+    --speedcontrol-display-border: #9d9d9d !important;
+    --editorTooltip-background: #e0e0e0 !important;
+    --editorTooltip-border: #9d9d9d !important;
+    --renameInput-color: #000000 !important;
+    --bottomdiv-tabheading-hover: #424242 !important;
+    --bottomdiv-tabheading-active: #424242 !important;
+    --noErrorMessage: rgb(17, 180, 17) !important;
+    --console-top-borderbottom: #c4c4c4 !important;
+    --console-top-background: white !important;
+    --consoleEntry-withBorder: #303030 !important;
+    --consoleEntryValue: #0000a0 !important;
+    --consoleEntryIdentifier: black !important;
+    --consoleEntryNoValue: gray !important;
+    --consoleEntryCaption: #756161 !important;
+    --error-Caption: rgb(166, 165, 176) !important;
+    --console-error: rgb(155, 21, 21) !important;
+    --deIdentifier: black !important;
+    --deValue: #0000a0 !important;
+    --helper-background-color: #f3f3f3 !important;
+    --helper-border-color: #606060 !important;
+    --arrowBoxButtonOuter-background: #59a15d !important;
+    --arrowBoxButtonOuter-border: #3d3d3d !important;
+    --arrowBoxButtonOuter-color: black !important;
+    --arrowBoxButtonOuter-button-hover: #63a867 !important;
+    --arrowBox-after: rgba(136, 183, 213, 0) !important;
+    --arrowBox-before: rgba(194, 225, 245, 0) !important;
+    --defaultOutputColor: #303030 !important;
+    --runInputColor: #000000 !important;
+    --runBackgroundColor: rgba(0, 0, 0, 0.2) !important;
+}
+

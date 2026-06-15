@@ -122,10 +122,13 @@ if (mode === '--build-from-submodule' || !mode) {
 } else if (mode === '--build-from-source') {
   console.log('Building Online-IDE from external source...');
   
-  const onlineIdeDir = path.join(__dirname, '..', '..', 'Online-IDE_B2J');
+  let onlineIdeDir = path.join(__dirname, '..', '..', 'NewOnlineIDE_B2J');
+  if (!fs.existsSync(onlineIdeDir)) {
+    onlineIdeDir = path.join(__dirname, '..', '..', 'Online-IDE_B2J');
+  }
   
   if (!fs.existsSync(onlineIdeDir)) {
-    console.error(`Error: Online-IDE_B2J directory not found at ${onlineIdeDir}`);
+    console.error(`Error: Online-IDE directory not found (checked NewOnlineIDE_B2J and Online-IDE_B2J)`);
     console.error('Please run this script from the correct location or use --copy-from-dummy');
     process.exit(1);
   }

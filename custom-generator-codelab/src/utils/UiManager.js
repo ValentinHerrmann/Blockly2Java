@@ -20,7 +20,10 @@ export class UiManager {
       opacityMarker: Number.parseFloat(rootStyles.getPropertyValue('--opacity-marker').trim()),
     };
 
-    return Blockly.Theme.defineTheme('dark', {
+    const isBright = document.documentElement.getAttribute('data-theme') === 'bright';
+    const themeName = 'b2j_theme_' + (isBright ? 'bright' : 'dark') + '_' + Date.now();
+
+    return Blockly.Theme.defineTheme(themeName, {
       'base': Blockly.Themes.Classic,
       'componentStyles': {
         'workspaceBackgroundColour': colors.primaryBg,
