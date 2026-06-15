@@ -280,6 +280,14 @@ function init() {
   const initialClassName = IdeBridge.selected_file_name.replace('.java', '');
   BlocklyOverlayManager.updateForClass(initialClassName);
 
+  // Helper to update the footer logo based on the active theme
+  const updateFooterLogo = (theme) => {
+    const logo = document.getElementById('footerLogo');
+    if (logo) {
+      logo.src = theme === 'bright' ? 'assets/B2J_flat_bright.svg' : 'assets/B2J_flat.svg';
+    }
+  };
+
   // Set up theme toggle button listener
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   if (themeToggleBtn) {
@@ -302,12 +310,16 @@ function init() {
       
       // Copy variables to bottom section
       copyIdeStylesToBottomSection();
+
+      // Update footer logo
+      updateFooterLogo(newTheme);
     });
     
-    // Set initial button title based on current theme
+    // Set initial button title and footer logo based on current theme
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     themeToggleBtn.title = currentTheme === 'bright' ? 'Dunkles Design aktivieren' : 'Helles Design aktivieren';
     themeToggleBtn.setAttribute('aria-label', themeToggleBtn.title);
+    updateFooterLogo(currentTheme);
   }
 
   setupListeners(ws);

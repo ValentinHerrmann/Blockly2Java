@@ -5,6 +5,7 @@ const RESOURCES = [
   '/index.html',
   '/assets/B2J.svg',
   '/assets/B2J_flat.svg',
+  '/assets/B2J_flat_bright.svg',
   '/bundle.js'
 ];
 
