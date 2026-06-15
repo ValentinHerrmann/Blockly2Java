@@ -190,7 +190,7 @@ g.blocklyWorkspace {
     min-width: 220px;
     padding: 18px 20px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--border-medium);
     background: var(--secondary-bg, #252526);
     color: var(--text-primary, #d4d4d4);
     text-align: center;
@@ -264,7 +264,7 @@ g.blocklyWorkspace {
     max-width: 340px;
     text-align: center;
     background: var(--secondary-bg, #1e293b);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--border-medium);
     border-radius: 14px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
     color: var(--text-primary, #f8fafc);

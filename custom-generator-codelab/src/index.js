@@ -280,7 +280,87 @@ function init() {
   const initialClassName = IdeBridge.selected_file_name.replace('.java', '');
   BlocklyOverlayManager.updateForClass(initialClassName);
 
+  // Set up theme toggle button listener
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'bright' ? 'dark' : 'bright';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('b2j-theme', newTheme);
+      
+      // Update toggle button title for accessibility
+      themeToggleBtn.title = newTheme === 'bright' ? 'Dunkles Design aktivieren' : 'Helles Design aktivieren';
+      themeToggleBtn.setAttribute('aria-label', themeToggleBtn.title);
+      
+      // Update Blockly theme
+      ws.setTheme(UiManager.setupTheme());
+      
+      // Update Monaco theme
+      syncMonacoTheme();
+      
+      // Copy variables to bottom section
+      copyIdeStylesToBottomSection();
+    });
+    
+    // Set initial button title based on current theme
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    themeToggleBtn.title = currentTheme === 'bright' ? 'Dunkles Design aktivieren' : 'Helles Design aktivieren';
+    themeToggleBtn.setAttribute('aria-label', themeToggleBtn.title);
+  }
+
   setupListeners(ws);
+}
+
+/**
+ * Copies the CSS variables from the IDE container to the B2J bottom section.
+ */
+function copyIdeStylesToBottomSection() {
+  const ideDiv = document.getElementById('ide');
+  const ideBottomSection = document.getElementById('ideBottomSection');
+  if (ideDiv && ideBottomSection) {
+    // Clear all existing custom property styles first to prevent mixing
+    for (let i = ideBottomSection.style.length - 1; i >= 0; i--) {
+      const prop = ideBottomSection.style[i];
+      if (prop.startsWith('--')) {
+        ideBottomSection.style.removeProperty(prop);
+      }
+    }
+    // Copy current properties
+    for (let i = 0; i < ideDiv.style.length; i++) {
+      const prop = ideDiv.style[i];
+      if (prop.startsWith('--')) {
+        ideBottomSection.style.setProperty(prop, ideDiv.style.getPropertyValue(prop));
+      }
+    }
+  }
+}
+
+/**
+ * Updates the Monaco editor themes based on the currently set theme.
+ */
+function syncMonacoTheme() {
+  const isBright = document.documentElement.getAttribute('data-theme') === 'bright';
+  const monacoTheme = isBright ? 'myCustomThemeLight' : 'myCustomThemeDark';
+  
+  if (globalThis.online_ide_access) {
+    const ideAccess = globalThis.online_ide_access.getIDE?.('Java');
+    const ide = ideAccess?.ide;
+    if (ide) {
+      // Set main editor theme
+      const mainEditor = ide.getMainEditor?.();
+      if (mainEditor) {
+        mainEditor.updateOptions({ theme: monacoTheme });
+      }
+      
+      // Set REPL/console editor theme
+      const replEditor = ide.getReplEditor?.();
+      if (replEditor) {
+        replEditor.updateOptions({ theme: monacoTheme });
+      }
+    }
+  }
 }
 
 function hideIdeLoadingOverlayIfReady() {
@@ -753,19 +833,15 @@ function setupListeners(workspace) {
           const ideInternalSlider = bottomDiv.querySelector(':scope > .jo_slider');
           ideInternalSlider?.remove();
 
-          // The ThemeManager sets dark-mode CSS custom properties as inline
-          // styles on #ide. Since #ideBottomSection is a sibling (not a
-          // descendant), those vars won't cascade. Copy them across so the
-          // relocated bottom panel gets the same colors.
-          for (let i = 0; i < ideDiv.style.length; i++) {
-            const prop = ideDiv.style[i];
-            if (prop.startsWith('--')) {
-              ideBottomSection.style.setProperty(prop, ideDiv.style.getPropertyValue(prop));
-            }
-          }
+          // Copy theme styles
+          copyIdeStylesToBottomSection();
 
           // Relocate the bottom panel into B2J's section.
           ideBottomSection.appendChild(bottomDiv);
+
+          // Synchronize Monaco theme
+          syncMonacoTheme();
+
           // Let Monaco know its container dimensions changed.
           globalThis.dispatchEvent(new Event('resize'));
         }
